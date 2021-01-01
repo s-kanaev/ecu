@@ -59,6 +59,7 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 Ожидание (возможного) пока оправдалось. Начало отсчёта имеется. Правда, оно не совсем ВМТ первого цилиндра.
 Точнее, совсем не ВМТ. Возможное объяснение -- так сделано для лучшего удобства счёта.
 
+// Считать зубы на шкиве КВ будем по порядку их прохождения через ДПКВ, то есть, против часовой стрелки.
 
 #### Вход ДПРВ
 
@@ -66,7 +67,7 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 
 Из "камасутры". ДПРВ позволяет определить ВМТ такта сжатия (перед рабочим ходом) первого цилиндра.
 При положении середины отметчика (на распредвале) относительно оси ДПРВ коленвал должен быть повёрнут в положение,
-при котором середина первого после выреза зуба синхродиска совпадает с осью ДПКВ.
+при котором середина первого перед вырезом зуба синхродиска совпадает с осью ДПКВ.
 То есть, к моменту, когда с ДПКВ будет считан первый зуб с ДПРВ уже должна быть считана "1".
 Ширина отметчика распредвала составляет не менее `24 +/- 1` градус положения распредвала или `12 +/- 0.5` градус положения коленвала (два зуба).
 
@@ -643,6 +644,59 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 | `P1`, `P3` .. `P6`, `P9` | Logic        | -      | Аналогично `P0` и `P2`, но без доступа к внешней памяти. |
 | `P7`, `P8`               | Logic/Analog | In     | Аналоговый канал выбирается в SFR `ADCON0` (3-bit field) и `ADCON1` (4-bit field)  |
 
+Специальные функции:
+
+| Port.Pin | Function name                                         | Pin designation |
+| -------- | ----------------------------------------------------- | --------------- |
+| `P1.0`   | `INT3/CC0` - external interrupt 3/capture 0/compare 0 |
+| `P1.1`   | `INT4/CC1` - external interrupt 4/capture 1/compare 1 |
+| `P1.2`   | `INT5/CC2` - external interrupt 5/capture 2/compare 2 | ДПРВ. Срез `0 => 1` говорит о том, чте следующая ВМТ первого цилиндра будет в конце такта сжатия. |
+| `P1.3`   | `INT6/CC3` - external interrupt 6/capture 3/compare 3 | ДПКВ. Срез `0 => 1` и `1 => 0` говорит о прохождении середины зуба. |
+| `P1.4`   | `INT2/CC4` - external interrupt 2/capture 4/compare 4 |
+| `P1.5`   | `T2EX` - Timer 2 ext. reload trigger input |
+| `P1.6`   | `CLKOUT` - System clock output |
+| `P1.7`   | `T2` - Timer 2 external count input |
+| -------- | ----------------------------------------------------- | --------------- |
+| `P3.0`   | `RxD0` - serial channel 0 rx (input) | `RxD` @ MC33199 (ISO9141). |
+| `P3.1`   | `TxD0` - serial channel 0 tx (output) | `TxD` @ MC33199 (ISO9141). |
+| `P3.2`   | `INT0` - external interrupt 0 |
+| `P3.3`   | `INT1` - external interrupt 1 | `SDA` @ NM24C04 / AT24C04 (EEPROM, I2C). External interrupt 1 |
+| `P3.4`   | `T0` - Timer 0 external count input |
+| `P3.5`   | `T1` - Timer 1 external count input |
+| `P3.6`   | `WR` - External data memory write strobe |
+| `P3.7`   | `RD` - External data memory read strobe |
+| -------- | ----------------------------------------------------- | --------------- |
+| `P4.0`   | `CCM0` - compare output for the CM0 register |
+| `P4.1`   | `CCM1` - compare output for the CM1 register |
+| `P4.2`   | `CCM2` - compare output for the CM2 register |
+| `P4.3`   | `CCM3` - compare output for the CM3 register |
+| `P4.4`   | `CCM4` - compare output for the CM4 register |
+| `P4.5`   | `CCM5` - compare output for the CM5 register |
+| `P4.6`   | `CCM6` - compare output for the CM6 register |
+| `P4.7`   | `CCM7` - compare output for the CM7 register | `DO` @ TLE5216G / MC33385DH #2. |
+| -------- | ----------------------------------------------------- | --------------- |
+| `P5.0`   | `CCM0` - concurrent compare 0 output |
+| `P5.1`   | `CCM1` - concurrent compare 1 output |
+| `P5.2`   | `CCM2` - concurrent compare 2 output |
+| `P5.3`   | `CCM3` - concurrent compare 3 output |
+| `P5.4`   | `CCM4` - concurrent compare 4 output |
+| `P5.5`   | `CCM5` - concurrent compare 5 output |
+| `P5.6`   | `CCM6` - concurrent compare 6 output |
+| `P5.7`   | `CCM7` - concurrent compare 7 output | `MISO` @ HIP0045 (SPI), управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. |
+| -------- | ----------------------------------------------------- | --------------- |
+| `P6.0`   | `ADST` - external A/D converter start | `HOLD (E6)` @ TLE4267, 5V drop regulator. |
+| `P6.1`   | `RxD1` - serial channel 1 rx (input) |
+| `P6.2`   | `TxD1` - serial channel 1 tx (output) |
+| `P6.3`   | `~WRF` - write external flash |
+| -------- | ----------------------------------------------------- | --------------- |
+| `P9.0`   | `CC10` - compare output/capture input for CC10 register | `DO` @ TLE5216G #1, сведения об отказах в РХХ, СРОГ, адсорбере. |
+| `P9.1`   | `CC11` - compare output/capture input for CC11 register |
+| `P9.2`   | `CC12` - compare output/capture input for CC12 register |
+| `P9.3`   | `CC13` - compare output/capture input for CC13 register |
+| `P9.4`   | `CC14` - compare output/capture input for CC14 register |
+| `P9.5`   | `CC15` - compare output/capture input for CC15 register |
+| `P9.6`   | `CC16` - compare output/capture input for CC16 register |
+| `P9.7`   | `CC17` - compare output/capture input for CC17 register |
 
 ## Прошивка
 
