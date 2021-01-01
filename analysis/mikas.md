@@ -59,7 +59,7 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 Ожидание (возможного) пока оправдалось. Начало отсчёта имеется. Правда, оно не совсем ВМТ первого цилиндра.
 Точнее, совсем не ВМТ. Возможное объяснение -- так сделано для лучшего удобства счёта.
 
-// Считать зубы на шкиве КВ будем по порядку их прохождения через ДПКВ, то есть, против часовой стрелки.
+// Считать зубы на шкиве КВ будем по порядку их прохождения через ДПКВ, то есть, против часовой стрелки от выреза.
 
 #### Вход ДПРВ
 
@@ -414,9 +414,9 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 
 ### Итог по железу
 
-#### HIP0045
+#### HIP0045 - octal low side power driver with serial bus control and fault protection
 
-| HIP0045       | SAF-C509L        | Клемма мозгов | Назначение            | Способ подачи сигнала |
+| HIP0045       | SAF-C509L        | Клемма мозгов | Назначение            | Способ подачи сигнала на включение |
 | ------------- | ---------------- | ------------- | --------------------- | --------------------- |
 | `MOSI`        | `P5.5`           |
 | `MISO`        | `P5.7`           |
@@ -435,7 +435,7 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 | `OUT7`        |                  | 3             | Реле ЭБН              | turn on               |
 
 
-#### HIP9010/9011
+#### HIP9010/9011 - engine knock signal processor
 
 | `HIP9010` / `HIP9011` | SAF-C509L | Назначение                        |
 | --------------------- | --------- | --------------------------------- |
@@ -454,7 +454,7 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 | `S1FB`                |           | Обвязка ДД2. Вход обратной связи. |
 
 
-#### TPS2814
+#### TPS2814 - dual high-speed mosfet driver
 
 Их две.
 Одна для управления катушками зажигания. Вторая, как ни странно, управляет другими двумя катушками зажигания (V8 ?).
@@ -472,7 +472,7 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 
 Второй тут не будет.
 
-#### TLE5216G/MC33385DH
+#### TLE5216G/MC33385DH - smart quad channel low-side switch
 
 > ВНИМАНИЕ! Эти две ИС не взаимозаменяемы по распиновке, хотя и работают одинаково. Каждая ИС имеет своё семейство аналогов.
 
@@ -523,72 +523,72 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 
 ##### P1
 
-| SAF-C509L | Logic/Analog | In/Out | Designation |
-| --------- | -------------| ------ | ----------- |
-| `P1.0`    | Logic        | Out    | `IN3` @ TLE5216G / MC33385DH #1, закрытие РХХ. |
-| `P1.1`    | -            | -      | `IN1` @ TLE5216G / MC33385DH #1, открытие РХХ. |
-| `P1.2`    | -            | In     | ДПРВ. Срез `0 => 1` говорит о том, чте следующая ВМТ первого цилиндра будет в конце такта сжатия. |
-| `P1.3`    | -            | -      | ДПКВ. Срез `0 => 1` и `1 => 0` говорит о прохождении середины зуба. |
-| `P1.4`    | -            | Out    | `INTEGRATE/!HOLD` @ HIP9010 / HIP9011, настройка фильтра ДД. |
-| `P1.5`    | -            | -      | `MOSI` @ HIP9010 / HIP9011, настройка фильтра ДД. |
-| `P1.6`    | -            | -      | `OSCIN` @ HIP9010 / HIP9011, настройка фильтра ДД. |
-| `P1.7`    | -            | -      | `SCL` @ NM24C04 / AT24C04 (EEPROM, I2C). |
+| SAF-C509L | Logic/Analog | In/Out | Designation | Pin special function |
+| --------- | -------------| ------ | ----------- | -------------------- |
+| `P1.0`    | Logic        | Out    | `IN3` @ TLE5216G / MC33385DH #1, закрытие РХХ. | `INT3/CC0` - external interrupt 3/capture 0/compare 0 |
+| `P1.1`    | -            | -      | `IN1` @ TLE5216G / MC33385DH #1, открытие РХХ. | `INT4/CC1` - external interrupt 4/capture 1/compare 1 |
+| `P1.2`    | -            | In     | ДПРВ. Срез `0 => 1` говорит о том, чте следующая ВМТ первого цилиндра будет в конце такта сжатия. |  `INT5/CC2` - external interrupt 5/capture 2/compare 2 |
+| `P1.3`    | -            | -      | ДПКВ. Срез `0 => 1` и `1 => 0` говорит о прохождении середины зуба. | `INT6/CC3` - external interrupt 6/capture 3/compare 3 |
+| `P1.4`    | -            | Out    | `INTEGRATE/!HOLD` @ HIP9010 / HIP9011, настройка фильтра ДД. | `INT2/CC4` - external interrupt 2/capture 4/compare 4 |
+| `P1.5`    | -            | -      | `MOSI` @ HIP9010 / HIP9011, настройка фильтра ДД. | `T2EX` - Timer 2 ext. reload trigger input |
+| `P1.6`    | -            | -      | `OSCIN` @ HIP9010 / HIP9011, настройка фильтра ДД. | `CLKOUT` - System clock output |
+| `P1.7`    | -            | -      | `SCL` @ NM24C04 / AT24C04 (EEPROM, I2C). | `T2` - Timer 2 external count input |
 
 
 ##### P3
 
-| SAF-C509L | Logic/Analog | In/Out | Designation |
-| --------- | ------------ | ------ | ----------- |
-| `P3.0`    | Logic        | Out    | `RxD` @ MC33199 (ISO9141). |
-| `P3.1`    | -            | In     | `TxD` @ MC33199 (ISO9141). |
-| `P3.2`    |              |        | External interrupt 0 |
-| `P3.3`    | -            | In/Out | `SDA` @ NM24C04 / AT24C04 (EEPROM, I2C). External interrupt 1 |
-| `P3.4`    |
-| `P3.5`    |              |        | Датчик скорости, клемма 9 (?). |
-| `P3.6`    |
-| `P3.7`    |
+| SAF-C509L | Logic/Analog | In/Out | Designation | Pin special function |
+| --------- | ------------ | ------ | ----------- | -------------------- |
+| `P3.0`    | Logic        | In     | `RxD` @ MC33199 (ISO9141). | `RxD0` - serial channel 0 rx (input) |
+| `P3.1`    | -            | Out    | `TxD` @ MC33199 (ISO9141). | `TxD0` - serial channel 0 tx (output) |
+| `P3.2`    |              |        | External interrupt 0 | `INT0` - external interrupt 0 |
+| `P3.3`    | -            | In/Out | `SDA` @ NM24C04 / AT24C04 (EEPROM, I2C). External interrupt 1 | `INT1` - external interrupt 1 |
+| `P3.4`    | | | | `T0` - Timer 0 external count input |
+| `P3.5`    |              |        | Датчик скорости, клемма 9 (?). | `T1` - Timer 1 external count input |
+| `P3.6`    | | | | `WR` - External data memory write strobe |
+| `P3.7`    | | | | `RD` - External data memory read strobe |
 
 
 ##### P4
 
-| SAF-C509L | Logic/Analog | In/Out | Designation |
-| --------- | ------------ | ------ | ----------- |
-| `P4.0`    | Logic        | Out    | `IN2` @ TLE5216G / MC33385DH #2, форсунка 1. |
-| `P4.1`    | -            | -      | `IN3` @ TLE5216G / MC33385DH #2, форсунка 2. |
-| `P4.2`    | -            | -      | `IN1` @ TLE5216G / MC33385DH #2, форсунка 3. |
-| `P4.3`    | -            | -      | `IN4` @ TLE5216G / MC33385DH #2, форсунка 4. |
-| `P4.4`    | -            | -      | `IN2` @ TLE5216G / MC33385DH #1, продувка адсорбера. |
-| `P4.5`    | -            | -      | `IN4` @ TLE5216G / MC33385DH #1, клапан СРОГ. |
-| `P4.6`    | -            | -      | `CLK` @ TLE5216G / MC33385DH #1, #2. |
-| `P4.7`    | -            | In     | `DO` @ TLE5216G / MC33385DH #2. |
+| SAF-C509L | Logic/Analog | In/Out | Designation | Pin special function |
+| --------- | ------------ | ------ | ----------- | -------------------- |
+| `P4.0`    | Logic        | Out    | `IN2` @ TLE5216G / MC33385DH #2, форсунка 1. | `CCM0` - compare output for the CM0 register |
+| `P4.1`    | -            | -      | `IN3` @ TLE5216G / MC33385DH #2, форсунка 2. | `CCM1` - compare output for the CM1 register |
+| `P4.2`    | -            | -      | `IN1` @ TLE5216G / MC33385DH #2, форсунка 3. | `CCM2` - compare output for the CM2 register |
+| `P4.3`    | -            | -      | `IN4` @ TLE5216G / MC33385DH #2, форсунка 4. | `CCM3` - compare output for the CM3 register |
+| `P4.4`    | -            | -      | `IN2` @ TLE5216G / MC33385DH #1, продувка адсорбера. | `CCM4` - compare output for the CM4 register |
+| `P4.5`    | -            | -      | `IN4` @ TLE5216G / MC33385DH #1, клапан СРОГ. | `CCM5` - compare output for the CM5 register |
+| `P4.6`    | -            | -      | `CLK` @ TLE5216G / MC33385DH #1, #2. | `CCM6` - compare output for the CM6 register |
+| `P4.7`    | -            | In     | `DO` @ TLE5216G / MC33385DH #2. | `CCM7` - compare output for the CM7 register |
 
 
 ##### P5
 
-| SAF-C509L | Logic/Analog | In/Out | Designation |
-| --------- | ------------ | ------ | ----------- |
-| `P5.0`    | Logic        | Out    | `!IN1` @ TPS2814 #1, КЗ 2/3. |
-| `P5.1`    | -            | -      | `!IN2` @ TPS2814 #1, КЗ 1/4. |
-| `P5.2`    | -            | -      | `!IN1` @ TPS2814 #2, КЗ #3 (?). |
-| `P5.3`    | -            | -      | `!IN2` @ TPS2814 #2, КЗ #4 (?). |
-| `P5.4`    | -            | -      | `IN0` @ HIP0045, управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. |
-| `P5.5`    | -            | -      | `MOSI` @ HIP0045 (SPI), управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. |
-| `P5.6`    | -            | -      | `CLK` @ HIP0045 (SPI), управдение прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. |
-| `P5.7`    | -            | In     | `MISO` @ HIP0045 (SPI), управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. |
+| SAF-C509L | Logic/Analog | In/Out | Designation | Pin special function |
+| --------- | ------------ | ------ | ----------- | -------------------- |
+| `P5.0`    | Logic        | Out    | `!IN1` @ TPS2814 #1, КЗ 2/3. | `CCM0` - concurrent compare 0 output |
+| `P5.1`    | -            | -      | `!IN2` @ TPS2814 #1, КЗ 1/4. | `CCM1` - concurrent compare 1 output |
+| `P5.2`    | -            | -      | `!IN1` @ TPS2814 #2, КЗ #3 (?). | `CCM2` - concurrent compare 2 output |
+| `P5.3`    | -            | -      | `!IN2` @ TPS2814 #2, КЗ #4 (?). | `CCM3` - concurrent compare 3 output |
+| `P5.4`    | -            | -      | `IN0` @ HIP0045, управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. | `CCM4` - concurrent compare 4 output |
+| `P5.5`    | -            | -      | `MOSI` @ HIP0045 (SPI), управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. | `CCM5` - concurrent compare 5 output |
+| `P5.6`    | -            | -      | `CLK` @ HIP0045 (SPI), управдение прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. | `CCM6` - concurrent compare 6 output |
+| `P5.7`    | -            | In     | `MISO` @ HIP0045 (SPI), управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. | `CCM7` - concurrent compare 7 output |
 
 
 ##### P6
 
-| SAF-C509L | Logic/Analog | In/Out | Designation |
-| --------- | ------------ | ------ | ----------- |
-| `P6.0`    | Logic        | Out    | `HOLD (E6)` @ TLE4267, 5V drop regulator. |
-| `P6.1`    |
-| `P6.2`    |
-| `P6.3`    |
-| `P6.4`    |
-| `P6.5`    |              | In (?) | `+5 V` sensor (?). |
-| `P6.6`    | Logic        | Out    | `!CE` @ HIP0045, управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. |
-| `P6.7`    | Logic        | -      | `!CS` @ TLE5216G / MC33385DH #1, #2, управление РХХ, продувкой адсорбера и клапаном СРОГ и форсунками. |
+| SAF-C509L | Logic/Analog | In/Out | Designation | Pin special function |
+| --------- | ------------ | ------ | ----------- | -------------------- |
+| `P6.0`    | Logic        | Out    | `HOLD (E6)` @ TLE4267, 5V drop regulator. | `ADST` - external A/D converter start |
+| `P6.1`    | | | | `RxD1` - serial channel 1 rx (input) |
+| `P6.2`    | | | | `TxD1` - serial channel 1 tx (output) |
+| `P6.3`    | | | | `~WRF` - write external flash |
+| `P6.4`    | | | | None |
+| `P6.5`    |              | In (?) | `+5 V` sensor (?). | None |
+| `P6.6`    | Logic        | Out    | `!CE` @ HIP0045, управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. | None |
+| `P6.7`    | Logic        | -      | `!CS` @ TLE5216G / MC33385DH #1, #2, управление РХХ, продувкой адсорбера и клапаном СРОГ и форсунками. | None |
 
 
 ##### P7
@@ -620,16 +620,16 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 
 ##### P9
 
-| SAF-C509L | Logic/Analog | In/Out | Designation |
-| --------- | ------------ | ------ |  ---------- |
-| `P9.0`    | Logic        | In     | `DO` @ TLE5216G #1, сведения об отказах в РХХ, СРОГ, адсорбере. |
-| `P9.1`    | Logic        | Out    | `IN1` @ HIP0045, управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. |
-| `P9.2`    |              |        | `PWM` @ TPIC0107B, ФВН 1 и ФВН 2. |
-| `P9.3`    |              |        | `DIR` @ TPIC0107B, ФВН 1 и ФВН 2. |
-| `P9.4`    |              |        | `STATUS2` @ TPIC0107B, ФВН 1 и ФВН 2. |
-| `P9.5`    | Logic        | Out    | `LO` @ MC33199 (ISO9141). |
-| `P9.6`    | Logic        | Out    | `SCK` @ HIP9010/HIP9011 (SPI). |
-| `P9.7`    | Logic        | Out    | `!CS` @ HIP9010/HIP9011. |
+| SAF-C509L | Logic/Analog | In/Out | Designation | Pin special function |
+| --------- | ------------ | ------ |  ---------- | -------------------- |
+| `P9.0`    | Logic        | In     | `DO` @ TLE5216G #1, сведения об отказах в РХХ, СРОГ, адсорбере. |`CC10` - compare output/capture input for CC10 register |
+| `P9.1`    | Logic        | Out    | `IN1` @ HIP0045, управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. | `CC11` - compare output/capture input for CC11 register |
+| `P9.2`    |              |        | `PWM` @ TPIC0107B, ФВН 1 и ФВН 2. | `CC12` - compare output/capture input for CC12 register |
+| `P9.3`    |              |        | `DIR` @ TPIC0107B, ФВН 1 и ФВН 2. | `CC13` - compare output/capture input for CC13 register |
+| `P9.4`    |              |        | `STATUS2` @ TPIC0107B, ФВН 1 и ФВН 2. | `CC14` - compare output/capture input for CC14 register |
+| `P9.5`    | Logic        | Out    | `LO` @ MC33199 (ISO9141). | `CC15` - compare output/capture input for CC15 register |
+| `P9.6`    | Logic        | Out    | `SCK` @ HIP9010/HIP9011 (SPI). | `CC16` - compare output/capture input for CC16 register |
+| `P9.7`    | Logic        | Out    | `!CS` @ HIP9010/HIP9011. | `CC17` - compare output/capture input for CC17 register |
 
 
 #### Вопросы
@@ -644,60 +644,7 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 | `P1`, `P3` .. `P6`, `P9` | Logic        | -      | Аналогично `P0` и `P2`, но без доступа к внешней памяти. |
 | `P7`, `P8`               | Logic/Analog | In     | Аналоговый канал выбирается в SFR `ADCON0` (3-bit field) и `ADCON1` (4-bit field)  |
 
-Специальные функции:
-
-| Port.Pin | Function name                                         | Pin designation |
-| -------- | ----------------------------------------------------- | --------------- |
-| `P1.0`   | `INT3/CC0` - external interrupt 3/capture 0/compare 0 |
-| `P1.1`   | `INT4/CC1` - external interrupt 4/capture 1/compare 1 |
-| `P1.2`   | `INT5/CC2` - external interrupt 5/capture 2/compare 2 | ДПРВ. Срез `0 => 1` говорит о том, чте следующая ВМТ первого цилиндра будет в конце такта сжатия. |
-| `P1.3`   | `INT6/CC3` - external interrupt 6/capture 3/compare 3 | ДПКВ. Срез `0 => 1` и `1 => 0` говорит о прохождении середины зуба. |
-| `P1.4`   | `INT2/CC4` - external interrupt 2/capture 4/compare 4 |
-| `P1.5`   | `T2EX` - Timer 2 ext. reload trigger input |
-| `P1.6`   | `CLKOUT` - System clock output |
-| `P1.7`   | `T2` - Timer 2 external count input |
-| -------- | ----------------------------------------------------- | --------------- |
-| `P3.0`   | `RxD0` - serial channel 0 rx (input) | `RxD` @ MC33199 (ISO9141). |
-| `P3.1`   | `TxD0` - serial channel 0 tx (output) | `TxD` @ MC33199 (ISO9141). |
-| `P3.2`   | `INT0` - external interrupt 0 |
-| `P3.3`   | `INT1` - external interrupt 1 | `SDA` @ NM24C04 / AT24C04 (EEPROM, I2C). External interrupt 1 |
-| `P3.4`   | `T0` - Timer 0 external count input |
-| `P3.5`   | `T1` - Timer 1 external count input |
-| `P3.6`   | `WR` - External data memory write strobe |
-| `P3.7`   | `RD` - External data memory read strobe |
-| -------- | ----------------------------------------------------- | --------------- |
-| `P4.0`   | `CCM0` - compare output for the CM0 register |
-| `P4.1`   | `CCM1` - compare output for the CM1 register |
-| `P4.2`   | `CCM2` - compare output for the CM2 register |
-| `P4.3`   | `CCM3` - compare output for the CM3 register |
-| `P4.4`   | `CCM4` - compare output for the CM4 register |
-| `P4.5`   | `CCM5` - compare output for the CM5 register |
-| `P4.6`   | `CCM6` - compare output for the CM6 register |
-| `P4.7`   | `CCM7` - compare output for the CM7 register | `DO` @ TLE5216G / MC33385DH #2. |
-| -------- | ----------------------------------------------------- | --------------- |
-| `P5.0`   | `CCM0` - concurrent compare 0 output |
-| `P5.1`   | `CCM1` - concurrent compare 1 output |
-| `P5.2`   | `CCM2` - concurrent compare 2 output |
-| `P5.3`   | `CCM3` - concurrent compare 3 output |
-| `P5.4`   | `CCM4` - concurrent compare 4 output |
-| `P5.5`   | `CCM5` - concurrent compare 5 output |
-| `P5.6`   | `CCM6` - concurrent compare 6 output |
-| `P5.7`   | `CCM7` - concurrent compare 7 output | `MISO` @ HIP0045 (SPI), управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. |
-| -------- | ----------------------------------------------------- | --------------- |
-| `P6.0`   | `ADST` - external A/D converter start | `HOLD (E6)` @ TLE4267, 5V drop regulator. |
-| `P6.1`   | `RxD1` - serial channel 1 rx (input) |
-| `P6.2`   | `TxD1` - serial channel 1 tx (output) |
-| `P6.3`   | `~WRF` - write external flash |
-| -------- | ----------------------------------------------------- | --------------- |
-| `P9.0`   | `CC10` - compare output/capture input for CC10 register | `DO` @ TLE5216G #1, сведения об отказах в РХХ, СРОГ, адсорбере. |
-| `P9.1`   | `CC11` - compare output/capture input for CC11 register |
-| `P9.2`   | `CC12` - compare output/capture input for CC12 register |
-| `P9.3`   | `CC13` - compare output/capture input for CC13 register |
-| `P9.4`   | `CC14` - compare output/capture input for CC14 register |
-| `P9.5`   | `CC15` - compare output/capture input for CC15 register |
-| `P9.6`   | `CC16` - compare output/capture input for CC16 register |
-| `P9.7`   | `CC17` - compare output/capture input for CC17 register |
-
 ## Прошивка
 
+Ожидания:
 
