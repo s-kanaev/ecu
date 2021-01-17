@@ -1,0 +1,240 @@
+/*
+TYPES:
+ - byte - a byte
+ - pin - a pin
+*/
+
+typedef uint8_t byte;
+typedef int pin;
+
+// FUNCTIONS:
+/* Send DATA byte over SPI interface described by
+   MOSI (output), MISO (input) and CLK pins.
+   Sends data over MOSI pin.
+   Returns byte fetched on MISO pin.
+   0 for MISO - no input. */
+byte send_by_spi(byte DATA, pin MOSI, pin MISO, pin CLK);
+
+void enable_access_to_xram();
+void disable_access_to_xram();
+
+#define WAIT_MACHINE_CYCLES_BY_2(x) /* waits for x*2 machine cycles, x = 0 is 0x100 */
+
+// constants
+#define KNOCK_SENSOR_TEST_CONFIG_WORD ((byte)(0x00))
+#define KNOCK_SENSOR_TEST_CONFIG_WORD_PREFIX ((byte)0xE0)
+#define KNOCK_SENSOR_INTEGRATOR_TIME_CONSTANT_CONFIG_WORD_PREFIX ((byte)0xC0)
+#define KNOCK_SENSOR_BALANCE_CONTROL_CONFIG_WORD_PREFIX ((byte)0x80)
+#define KNOCK_SENSOR_REFERENCE_FILTER_FREQUENCY_CONFIG_WORD_PREFIX ((byte)0x40)
+#define KNOCK_SENSOR_FILTER_FREQUENCY_CONFIG_WORD_MASK ((byte)0x3F)
+
+#define KNOCK_SENSOR_REFERENCE_FILTER_FREQUENCY_CONFIG_WORD ((byte)0x01)
+
+
+// MEMORY SECTIONS
+
+// RAM MAP
+byte RAM[128];
+
+// FLASH MAP
+byte FLASH[0x10000] = {
+  /* knock_sensor_balance_control_gain_ratio_table configuration words (bytes), lengts = 0x40 bytes  */
+  [0x24EF] = 0x3F,
+  [0x24F0] = 0x3F, 0x3F, 0x3F, 0x39, 0x34, 0x31, 0x2F, 0x2D, 0x2A, 0x28, 0x27, 0x25, 0x24, 0x23, 0x22, 0x21,
+  [0x2500] = 0x20, 0x1F, 0x1E, 0x1D, 0x1D, 0x1D, 0x1C, 0x1C, 0x1B, 0x1B, 0x1A, 0x19, 0x19, 0x18, 0x18, 0x18,
+  [0x2510] = 0x17, 0x16, 0x16, 0x16, 0x15, 0x15, 0x15, 0x14, 0x14, 0x14, 0x14, 0x13, 0x13, 0x13, 0x13, 0x13,
+  [0x2520] = 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+
+  /* knock sensor knock filter frequency configuration word */
+  [0x87A7] = 0x2C,
+
+  /* offset for knowck sensor balance control gain ratio table @ 0x24EF */
+  [0x87A9] = 0x30,
+
+  /* knock sensor integration time constant configuration word */
+  [0xAE01] = 0x00,
+};
+
+// Pins
+
+enum Pins {
+  P0_0 = 1,
+  P0_1,
+  // and so on and on and on ...
+  P9_7
+};
+
+/*
+INTERRUPTS:
+ - reset
+ */
+
+void reset_init() {
+  disable_interrupts();
+  clear_stack();
+  reset_interrupt_requests();
+  disable_access_to_xram();
+  set_clk_out_prescaler(12); // clkout freq = f_osc/12
+  select_dptr(0);
+}
+
+void init_pins() {
+/*
+  *** SUMMARY ***
+  Bidirectional port structure employed.
+
+  PORTS' DIRECTIONS:
+  P0 - all in
+  P1 - 2, 3 - in; other - out
+  P2 - all in
+  P3 - 0, 3, 5 - in; other - out
+  P4 - 7 - in; others - out
+  P5 - 7 - in; others - out
+  P6 - all out
+  P7 - 
+  P8 - 
+  P9 - 0, 4, 5 - in; other - out
+
+  PORTS' CONTENTS:
+  P1 - 0xFF
+  P3 - 0xFF
+  P4 - 0xBF
+  P5 - 0x9F
+  P6 - 0xFF
+  P7 - 
+  P8 - 
+  P9 - 0xB3
+*/
+  RAM[0x7E] = 0x40;
+  RAM[0x7F] = 0x40;
+}
+
+void init_HIP0045() {
+  P6 &= 0xBF; // enable HIP0045 by setting P6_6 (!CE @HIP0045) low
+  
+  RAM[0x7F] = RAM[0x7E];
+
+  send_by_spi(RAM[0x7E], P5_5, P5_7, P5_6);
+/*
+  HIP0045 configured with byte 0x44 sent in following order: 
+  D7I..D1I = 0010 0010
+
+  D7I: out1 = 0 - RTFM
+  D6I: out3 = 0
+  D5I: out5 = 1 - main relay switch on
+  D4I: out7 = 0
+
+  D3I: out0 = 0 & P5.4 = on - tachometer off (?)
+  D2I: out2 = 0
+  D1I: out4 = 1 - MAF burnout (off ?)
+  D0I: out5 = 0
+*/
+}
+
+void init_HIP9010() {
+  ADCON0_6 = 1; // ADCON0.6 = ADCON0.CLK = 1 - clock output enable through P1.6 (CLKOUT = OSCIN @ HIP9010)
+  SYSCON &= 0x7F; // clear CLKP bit - CLKOUT freq = f_osc/6
+  
+  WAIT_MACHINE_CYCLES_BY_2(0x33);
+  WAIT_MACHINE_CYCLES_BY_2(0);
+  WAIT_MACHINE_CYCLES_BY_2(0);
+  WAIT_MACHINE_CYCLES_BY_2(0);
+  WAIT_MACHINE_CYCLES_BY_2(0);
+  WAIT_MACHINE_CYCLES_BY_2(0);
+
+#define turn_on_hip9010 P9 &= 0x7F /* enable SPI @ HIP9010 by setting P9.7 low = !CS @ HIP9010 */
+#define turn_off_hip9010 P9 |= 0x80 /* disable SPI @ HIP9010 by setting P9.7 high = !CS @ HIP9010 */
+/*  
+  send 0x2C over SPI to HIP9010/9011 in the following order:
+  B7..B0 = 0010 1100
+
+  address = 00 - knock filter frequency
+  data = 101100 = 44 (dec) = 8.02 kHz
+*/
+  turn_on_hip9010; 
+  send_by_spi(FLASH[0x87A7] & KNOCK_SENSOR_FILTER_FREQUENCY_CONFIG_WORD_MASK, P1_5, NULL, P9_6);
+  turn_off_hip9010;
+  
+  WAIT_MACHINE_CYCLES_BY_2(0x0E);
+  
+/*
+  send 0x41 over SPI to HIP9010/9011 in the following order:
+  0100 0001
+
+  address = 01 - reference filter frequency
+  data = 000001 = 1 = 1.26 kHz
+*/
+  turn_on_hip9010;
+  send_by_spi(KNOCK_SENSOR_REFERENCE_FILTER_FREQUENCY_CONFIG_WORD | KNOCK_SENSOR_REFERENCE_FILTER_FREQUENCY_CONFIG_WORD_PREFIX, P1_5, NULL, P9_6);
+  turn_off_hip9010;
+  
+  WAIT_MACHINE_CYCLES_BY_2(0x0E);
+
+/*
+  send 0x93 over SPI to HIP9010/9011 in the following order:
+  1001 0011
+
+  address = 10 - balance control (gain ratio)
+  data = 010011 = 13(dec) = 0.649
+*/
+  turn_on_hip9010;
+  send_by_spi(FLASH[0x24EF + (FLASH[0x87A9] & 0x3F)] | KNOCK_SENSOR_BALANCE_CONTROL_CONFIG_WORD_PREFIX, P1_5, NULL, P9_6);
+  turn_off_hip9010;
+
+  WAIT_MACHINE_CYCLES_BY_2(0x0E);
+
+/*
+  send 0xC0 over SPI to HIP9010/9011 in the following order:
+  1100 0000
+
+  address = 110 - integrator time constant
+  data = 0 = 40 usec
+*/
+  turn_on_hip9010;
+  send_by_spi(FLASH[0xAE01 & 0x1F] | KNOCK_SENSOR_INTEGRATOR_TIME_CONSTANT_CONFIG_WORD_PREFIX, P1_5, NULL, P9_6);
+  turn_off_hip9010;
+  
+  WAIT_MACHINE_CYCLES_BY_2(0x0E);
+
+/*
+  send 0xE0 over SPI to HIP9010/9011 in the following order:
+  1110 0000
+
+  address = 110 - test/channel select/channel attenuate control
+  data = 0:
+  ta, tb, tc = 0 - output knock rectifier,
+  channel 0 selected
+  attenuation applied to knock filter
+*/
+  turn_on_hip9010;
+  send_by_spi(KNOCK_SENSOR_TEST_CONFIG_WORD | KNOCK_SENSOR_TEST_CONFIG_WORD_PREFIX, P1_5, NULL, P9_6);
+  turn_off_hip9010;
+  
+  WAIT_MACHINE_CYCLES_BY_2(0x0E);
+
+#undef turn_off_hip9010
+#undef turn_on_hip9010
+}
+
+void reset_interrupt() noreturn {
+  reset_init();
+  
+  if (PSW.F0) {
+    init_pins();
+  } else {
+    init_pins();
+  }
+
+  P6 &= 0xFE; // hold 5V drop regulator by setting P6_0 (HOLD @ TLE4267) low
+  RAM[0x7E] |= 0x4;
+  
+  for (R0 = 0x7C; R0 != 0x7E; ++R0)
+    RAM[R0] = 0;
+
+  init_HIP0045();
+  init_HIP9010();
+  
+  enable_access_to_xram();
+}
+
+
