@@ -81,6 +81,15 @@ byte FLASH[0x10000] = {
 
   [0x873F] = 0x3F,  // some status byte ??? 0011 1111
   [0x8741] = 0x23,  // some status byte ??? 0010 0011
+                    // bit 0 - is there IROM; default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 1 - should DAC be corrected from IROM; default = 1; 0 => FLASH[0xFFFF] = 0x01, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 2 - 
+                    // bit 3 - 
+                    // bit 4 - 
+                    // bit 5 - 
+                    // bit 6 - 
+                    // bit 7 - 
+
   [0x8743] = 0x13,  // some status byte ??? 0001 0011
 
   /* knock sensor knock filter frequency configuration word */
