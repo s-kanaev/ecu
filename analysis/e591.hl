@@ -16,12 +16,21 @@ typedef int pin;
    0 for MISO - no input. */
 byte send_by_spi(byte DATA, pin MOSI, pin MISO, pin CLK);
 
+/* Send DATA byte over I2C bus described by
+   SDA (I/O), SCL (output).
+   Returns if byte was ACK'ed */
+bool send_by_i2c(byte DATA, pin SDA, pin SCL);
+/* Read single byte over I2C bus described by
+   SDA (I/O), SCL (output).
+   Returns byte read */
+byte read_on_i2c(pin SDA, pin SCL);
+
 void enable_access_to_xram();
 void disable_access_to_xram();
 
 #define WAIT_MACHINE_CYCLES_BY_2(x) /* waits for x*2 machine cycles, x = 0 is 0x100 */
-/* BIT_AT(1, 3) = 0x08*/
-#define BIT_AT(val, bit) (((val) & 1) << ((bit) & 8))
+/* SET_BIT_AT(1, 3) = 0x08*/
+#define SET_BIT_AT(val, bit) (((val) & 1) << ((bit) & 8))
 /* CHECK_BIT_AT(0x10, 4) is true */
 #define CHECK_BIT_AT(val, bit) ((val) & (1 << ((bit) & 8)))
 
@@ -34,6 +43,11 @@ void disable_access_to_xram();
 #define KNOCK_SENSOR_FILTER_FREQUENCY_CONFIG_WORD_MASK ((byte)0x3F)
 
 #define KNOCK_SENSOR_REFERENCE_FILTER_FREQUENCY_CONFIG_WORD ((byte)0x01)
+
+#define EEPROM_ADDRESS ((byte)0xA0)
+#define EEPROM_SELECT_PAGE_BLOCK(addr, block) (((addr) & 0xFD) | (((bl) & 0x01) << 1))
+// r = 1 - read, r = 0 - write
+#define I2C_READ_ADDRESS(addr, r) (((addr) & 0xFE) | ((r) & 0x01)) 
 
 //////////////////////////////// General purpose flags:
 /*
@@ -55,7 +69,8 @@ byte RAM[128] = {
   [0x20] = 0x00, // bit 6 (bit address 0x06) = copy of PSW.F1
                  // bit 7 (bit address 0x07) = if xram check sum was not valid
 
-  [0x21..0x26] = 0x00,
+  [0x21] = 0x00, // bit 0 (bit address 0x08) = 1 if failed to read first 0x42 bytes from eeprom
+  [0x22..0x26] = 0x00,
 
   [0x27] = 0x00, // bit 3 (bit address 0x3B) = copy of PSW.F0
 
@@ -78,6 +93,10 @@ byte FLASH[0x10000] = {
   [0x2500] = 0x20, 0x1F, 0x1E, 0x1D, 0x1D, 0x1D, 0x1C, 0x1C, 0x1B, 0x1B, 0x1A, 0x19, 0x19, 0x18, 0x18, 0x18,
   [0x2510] = 0x17, 0x16, 0x16, 0x16, 0x15, 0x15, 0x15, 0x14, 0x14, 0x14, 0x14, 0x13, 0x13, 0x13, 0x13, 0x13,
   [0x2520] = 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+
+  [0x8069] = 0x00, // fallback data for XRAM[0xFF74]
+  [0x806A] = 0x00, // fallback data for XRAM[0xFF75]
+  [0x8093] = 0x00, // fallback data for XRAM[0xF770]
 
   [0x873F] = 0x3F,  // some status byte ??? 0011 1111
   [0x8741] = 0x23,  // some status byte ??? 0010 0011
@@ -135,7 +154,7 @@ byte FLASH[0x10000] = {
 };
 
 ////////////// XRAM MAP
-byte XRAM[0xC00] = [0xF400..0x10000] = {
+byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
   [0xF400..0xF657] = 0,                       //
   [0xF658] = 0,                               // checksum low byte (for 0xFx00..0xF657)
   [0xF659] = 0                                // checksum high byte (for 0xFx00..0xF657)
@@ -145,9 +164,19 @@ byte XRAM[0xC00] = [0xF400..0x10000] = {
   [0xF97E] = 0x00,
   [0xF972] = 0x00,
   [0xF973] = 0x00,
-  [0xF974] = 0x00
+  [0xF974] = 0x00,
+  
+  [0xFF00..0xFF41] = EEPROM[0x00..0x41],
+  [0xFF42..0xFF73] = EEPROM[0x41..0x73],
+  [0xFF74..0xFF7F] = EEPROM[0x74..0x7F]
 };
 
+////////////// EEPROM MAP
+byte EEPROM[0x200] = {
+  [0x00..0x41] = 0x00, // oh, rly?
+  [0x41..0x73] = 0x00, // oh, rly?
+  [0x74..0x7F] = 0x00, // oh, rly?
+};
 
 //////////////////////////////// Pins
 
@@ -368,6 +397,103 @@ void init_xram(void) {
   XRAM[0xF974] = 0x00;
 }
 
+void nullify_xram(word XramPtr, byte Bytes) {
+  do {
+    XRAM[XramPtr++] = 0x00;
+  } while (Bytes != 0);
+}
+
+word sum_xram(word XramPtr, byte WordCount) {
+  word Sum = 0x0001;
+
+  do {
+    Sum += *(word *)(&XRAM[XramPtr++]);
+    --WordCount;
+  } (WordCount != 0);
+  
+  return Sum;
+}
+
+void mark_eeprom_failure(void) {
+  RAM[0x21] |= BIT_AT(1, 0);
+}
+
+void read_eeprom(void) {
+  word XramPtr = 0xFF00;
+  byte Offset = 0;
+  
+  // send slave address + page block selector (0)
+  if (!send_by_i2c(0, P3_3, P1_7)) {
+    mark_eeprom_failure();
+    nullify_xram(0xFF30, 0x10);
+  }
+  
+  // send word address (byte offset in page block)
+  if (!send_by_i2c(Offset, P3_3, P1_7)) {
+    mark_eeprom_failure();
+    nullify_xram(0xFF30, 0x10);
+  }
+  
+  byte Size = 0x42;
+  for (int Idx = 0; Idx < Size; ++Idx)
+    XRAM[XramPtr++] = read_on_i2c(P3_3, P1_7);
+  
+  if (sum_xram(XramPtr - Size, Size >> 1)) {
+    mark_eeprom_failure();
+  }
+  
+  Offset += Size;
+
+  //////////////////////////////////////////////////////
+
+  // send slave address + page block selector (0)
+  if (!send_by_i2c(0, P3_3, P1_7)) {
+    mark_eeprom_failure();
+    nullify_xram(0xFF30, 0x10);
+  }
+
+  // send word address (byte offset in page block)
+  if (!send_by_i2c(Offset, P3_3, P1_7)) {
+    mark_eeprom_failure();
+  }
+
+  Size = 0x32;
+  for (int Idx = 0; Idx < Size; ++Idx)
+    XRAM[XramPtr++] = read_on_i2c(P3_3, P1_7);
+
+  if (sum_xram(XramPtr - Size, Size >> 1)) {
+    mark_eeprom_failure();
+  }
+  
+  Offset += Size;
+  
+  //////////////////////////////////////////////////////
+
+  // send slave address + page block selector (0)
+  if (!send_by_i2c(0, P3_3, P1_7)) {
+    mark_eeprom_failure();
+    nullify_xram(0xFF30, 0x10);
+  }
+
+  // send word address (byte offset in page block)
+  if (!send_by_i2c(Offset, P3_3, P1_7)) {
+    mark_eeprom_failure();
+  }
+
+  Size = 0x0C;
+  for (int Idx = 0; Idx < Size; ++Idx)
+    XRAM[XramPtr++] = read_on_i2c(P3_3, P1_7);
+
+  if (sum_xram(XramPtr - Size, Size >> 1)) {
+    mark_eeprom_failure();
+  }
+}
+
+void no_eeprom(void) {
+  XRAM[0xFF74] = FLASH[0x8069];
+  XRAM[0xFF75] = FLASH[0x806A];
+  XRAM[0xF770] = FLASH[0x8093];
+}
 
 /*
 INTERRUPTS:
@@ -432,20 +558,25 @@ void reset_interrupt() noreturn {
   for (R0 = 0x01; R0 != 0x7C; ++R0)
     RAM[R0] = 0x00;
   
-  RAM[0x27] |= BIT_AT(PSW.F0, 3);
-  RAM[0x20] |= BIT_AT(PSW.F1, 6);
+  RAM[0x27] |= SET_BIT_AT(PSW.F0, 3);
+  RAM[0x20] |= SET_BIT_AT(PSW.F1, 6);
   
   word R1_R0 = check_sum_xram_fx00_to_f657(); // R0 - low, R1 - high
   word R3_R2 = *(word *)(&XRAM[0xF658]);        // R2 - low, R3 - high
   R1_R0 = subtract_word(R1_R0, R3_R2);
   
-  RAM[0x20] |= BIT_AT(R0 || R1, 7);
+  RAM[0x20] |= SET_BIT_AT(R0 || R1, 7);
   
   init_xram();
   
-  RAM[0x2D] |= BIT_AT(CHECK_BIT_AT(FLASH[0x873F], 4), 7);
-  RAM[0x2E] |= BIT_AT(CHECK_BIT_AT(FLASH[0x873F], 5), 0);
-  RAM[0x2E] |= BIT_AT(CHECK_BIT_AT(FLASH[0x873F], 2), 1);
+  RAM[0x2D] |= SET_BIT_AT(CHECK_BIT_AT(FLASH[0x873F], 4), 7);
+  RAM[0x2E] |= SET_BIT_AT(CHECK_BIT_AT(FLASH[0x873F], 5), 0);
+  RAM[0x2E] |= SET_BIT_AT(CHECK_BIT_AT(FLASH[0x873F], 2), 1);
+  
+  if (CHECK_BIT_AT(FLASH[0x8741], 0))
+    read_eeprom();
+  else
+    no_eeprom();
 }
 
 
