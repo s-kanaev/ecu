@@ -532,11 +532,11 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 
 ##### P1
 
-| SAF-C509L | Logic/Analog | In/Out | Designation | Pin special function |
-| --------- | -------------| ------ | ----------- | -------------------- |
-| `P1.0`    | Logic        | Out    | `IN3` @ TLE5216G / MC33385DH #1, закрытие РХХ. | `INT3/CC0` - external interrupt 3/capture 0/compare 0 |
-| `P1.1`    | -            | -      | `IN1` @ TLE5216G / MC33385DH #1, открытие РХХ. | `INT4/CC1` - external interrupt 4/capture 1/compare 1 |
-| `P1.2`    | -            | In     | ДПРВ. Срез `0 => 1` говорит о том, чте следующая ВМТ первого цилиндра будет в конце такта сжатия. |  `INT5/CC2` - external interrupt 5/capture 2/compare 2 |
+| SAF-C509L | Logic/Analog | In/Out | Designation | Pin special function | Action to turn on (for outputs) |
+| --------- | -------------| ------ | ----------- | -------------------- | ------------------------------- |
+| `P1.0`    | Logic        | Out    | `IN3` @ TLE5216G / MC33385DH #1, закрытие РХХ. | `INT3/CC0` - external interrupt 3/capture 0/compare 0 | Set high |
+| `P1.1`    | -            | -      | `IN1` @ TLE5216G / MC33385DH #1, открытие РХХ. | `INT4/CC1` - external interrupt 4/capture 1/compare 1 | -        |
+| `P1.2`    | -            | In     | ДПРВ. Срез `0 => 1` говорит о том, чте следующая ВМТ первого цилиндра будет в конце такта сжатия. | `INT5/CC2` - external interrupt 5/capture 2/compare 2 |
 | `P1.3`    | -            | -      | ДПКВ. Срез `0 => 1` и `1 => 0` говорит о прохождении середины зуба. | `INT6/CC3` - external interrupt 6/capture 3/compare 3 |
 | `P1.4`    | -            | Out    | `INTEGRATE/!HOLD` @ HIP9010 / HIP9011, настройка фильтра ДД. | `INT2/CC4` - external interrupt 2/capture 4/compare 4 |
 | `P1.5`    | -            | -      | `MOSI` @ HIP9010 / HIP9011, настройка фильтра ДД. | `T2EX` - Timer 2 ext. reload trigger input |
@@ -546,8 +546,8 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 
 ##### P3
 
-| SAF-C509L | Logic/Analog | In/Out | Designation | Pin special function |
-| --------- | ------------ | ------ | ----------- | -------------------- |
+| SAF-C509L | Logic/Analog | In/Out | Designation | Pin special function | Action to turn on (for outputs) |
+| --------- | ------------ | ------ | ----------- | -------------------- | ------------------------------- |
 | `P3.0`    | Logic        | In     | `RxD` @ MC33199 (ISO9141). | `RxD0` - serial channel 0 rx (input) |
 | `P3.1`    | -            | Out    | `TxD` @ MC33199 (ISO9141). | `TxD0` - serial channel 0 tx (output) |
 | `P3.2`    |              |        | External interrupt 0 | `INT0` - external interrupt 0 |
@@ -560,27 +560,27 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 
 ##### P4
 
-| SAF-C509L | Logic/Analog | In/Out | Designation | Pin special function |
-| --------- | ------------ | ------ | ----------- | -------------------- |
-| `P4.0`    | Logic        | Out    | `IN2` @ TLE5216G / MC33385DH #2, форсунка 1. | `CCM0` - compare output for the CM0 register |
-| `P4.1`    | -            | -      | `IN3` @ TLE5216G / MC33385DH #2, форсунка 2. | `CCM1` - compare output for the CM1 register |
-| `P4.2`    | -            | -      | `IN1` @ TLE5216G / MC33385DH #2, форсунка 3. | `CCM2` - compare output for the CM2 register |
-| `P4.3`    | -            | -      | `IN4` @ TLE5216G / MC33385DH #2, форсунка 4. | `CCM3` - compare output for the CM3 register |
-| `P4.4`    | -            | -      | `IN2` @ TLE5216G / MC33385DH #1, продувка адсорбера. | `CCM4` - compare output for the CM4 register |
-| `P4.5`    | -            | -      | `IN4` @ TLE5216G / MC33385DH #1, клапан СРОГ. | `CCM5` - compare output for the CM5 register |
+| SAF-C509L | Logic/Analog | In/Out | Designation | Pin special function | Action to turn on (for outputs) |
+| --------- | ------------ | ------ | ----------- | -------------------- | ------------------------------- |
+| `P4.0`    | Logic        | Out    | `IN2` @ TLE5216G / MC33385DH #2, форсунка 1. | `CCM0` - compare output for the CM0 register | Set high |
+| `P4.1`    | -            | -      | `IN3` @ TLE5216G / MC33385DH #2, форсунка 2. | `CCM1` - compare output for the CM1 register | - |
+| `P4.2`    | -            | -      | `IN1` @ TLE5216G / MC33385DH #2, форсунка 3. | `CCM2` - compare output for the CM2 register | - |
+| `P4.3`    | -            | -      | `IN4` @ TLE5216G / MC33385DH #2, форсунка 4. | `CCM3` - compare output for the CM3 register | - |
+| `P4.4`    | -            | -      | `IN2` @ TLE5216G / MC33385DH #1, продувка адсорбера. | `CCM4` - compare output for the CM4 register | - |
+| `P4.5`    | -            | -      | `IN4` @ TLE5216G / MC33385DH #1, клапан СРОГ. | `CCM5` - compare output for the CM5 register | - |
 | `P4.6`    | -            | -      | `CLK` @ TLE5216G / MC33385DH #1, #2. | `CCM6` - compare output for the CM6 register |
 | `P4.7`    | -            | In     | `DO` @ TLE5216G / MC33385DH #2. | `CCM7` - compare output for the CM7 register |
 
 
 ##### P5
 
-| SAF-C509L | Logic/Analog | In/Out | Designation | Pin special function |
-| --------- | ------------ | ------ | ----------- | -------------------- |
-| `P5.0`    | Logic        | Out    | `!IN1` @ TPS2814 #1, КЗ 2/3. | `CCM0` - concurrent compare 0 output |
-| `P5.1`    | -            | -      | `!IN2` @ TPS2814 #1, КЗ 1/4. | `CCM1` - concurrent compare 1 output |
-| `P5.2`    | -            | -      | `!IN1` @ TPS2814 #2, КЗ #3 (?). | `CCM2` - concurrent compare 2 output |
-| `P5.3`    | -            | -      | `!IN2` @ TPS2814 #2, КЗ #4 (?). | `CCM3` - concurrent compare 3 output |
-| `P5.4`    | -            | -      | `IN0` @ HIP0045, управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. | `CCM4` - concurrent compare 4 output |
+| SAF-C509L | Logic/Analog | In/Out | Designation | Pin special function | Action to turn on (for outputs) |
+| --------- | ------------ | ------ | ----------- | -------------------- | ------------------------------- |
+| `P5.0`    | Logic        | Out    | `!IN1` @ TPS2814 #1, КЗ 2/3. | `CCM0` - concurrent compare 0 output | Set low |
+| `P5.1`    | -            | -      | `!IN2` @ TPS2814 #1, КЗ 1/4. | `CCM1` - concurrent compare 1 output | - |
+| `P5.2`    | -            | -      | `!IN1` @ TPS2814 #2, КЗ #3 (?). | `CCM2` - concurrent compare 2 output | - |
+| `P5.3`    | -            | -      | `!IN2` @ TPS2814 #2, КЗ #4 (?). | `CCM3` - concurrent compare 3 output | - |
+| `P5.4`    | -            | -      | `IN0` @ HIP0045, управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. | `CCM4` - concurrent compare 4 output | Depends on config word |
 | `P5.5`    | -            | -      | `MOSI` @ HIP0045 (SPI), управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. | `CCM5` - concurrent compare 5 output |
 | `P5.6`    | -            | -      | `CLK` @ HIP0045 (SPI), управдение прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. | `CCM6` - concurrent compare 6 output |
 | `P5.7`    | -            | In     | `MISO` @ HIP0045 (SPI), управление прожигом ДМРВ, РГл, Реле ЭБН, Реле карлсона, Реле кондиционера, диагностической лампой, расходомером и тахометром. | `CCM7` - concurrent compare 7 output |
@@ -739,6 +739,8 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 6. Назначение `RAM[7E]`, `RAM[7F]` - инициализируются значением `0x40`
 7. Назначение `RAM[7C..7F]` - ?
 8. Назначение `FLASH[87A7] = 2C`?
+9. Механизм управления РХХ
+10. Вывод диагностических сообщений (ощибок, тут нет опечатки, просто мне не нравится слово "ошибка", применяемоле тут не к месту)
 
 
 ### Реальная работа
