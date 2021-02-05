@@ -66,7 +66,7 @@ byte RAM[128] = {
   [0x18..0x1f] = 0, // R0..R7 @ register bank 3
 
   // the rest (up to 0x7B, incl.) is initialized with nil
-  [0x20] = 0x00, // bit 6 (bit address 0x06) = copy of PSW.F1
+  [0x20] = 0x00, // bit 6 (bit address 0x06) = copy of PSW.F1 // watchdog triggered?
                  // bit 7 (bit address 0x07) = if xram check sum was not valid
 
   [0x21] = 0x00, // bit 0 (bit address 0x08) = 1 if failed to read first 0x42 bytes from eeprom
@@ -77,8 +77,14 @@ byte RAM[128] = {
   [0x28..0x2C] = 0x00,
   [0x2D] = 0x00,  // bit 7 = FLASH[873F] bit 4
   [0x2E] = 0x00,  // bit 0 = FLASH[873F] bit 5, bit 1 = FLASH[873F] bit 2
-  [0x2F..0x7B] = 0x00,
+  [0x2F..0x5E] = 0x00,
 
+  [0x5F] = 0x20,
+  [0x60] = 0x03,
+  [0x61] = 0x21,
+  [0x62] = 0x00,
+
+  [0x63..0x7B] = 0x00;
 
   [0x7C..0x7D] = 0x00,
 
@@ -98,18 +104,64 @@ byte FLASH[0x10000] = {
   [0x806A] = 0x00, // fallback data for XRAM[0xFF75]
   [0x8093] = 0x00, // fallback data for XRAM[0xF770]
 
-  [0x873F] = 0x3F,  // some status byte ??? 0011 1111
-  [0x8741] = 0x23,  // some status byte ??? 0010 0011
+  [0x873F] = 0x3F,  // kitting bits: 0011 1111
+                    // bit 0 - is there constant power for ECU; default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 1 - is there EGO (exhaust gas oxygen) sensor; default = 1; 0 => FLASH[0xFFFF] = 0x01, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 2 - is there knock sensor; default = 1; 0 => FLASH[0xFFFF] = 0x03, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 3 - is there air temperature sensor; default = 1; 0 => FLASH[0xFFFF] = 0x07, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 4 - is there camshaft position sensor; default = 1; 0 => FLASH[0xFFFF] = 0x0F, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 5 - camshaft position sensor cross-section is aligned with TDC; default = 1; 0 => FLASH[0xFFFF] = 0x1F, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 6 - is there speed sensor; default = 0; 1 => FLASH[0xFFFF] = 0xBF, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 7 - is there CO potentiometer; default = 0; 1 => FLASH[0xFFFF] = 0x7F, 0 => FLASH[0xFFFF] = 0xFF
+  [0x8740] = 0xC0,  // kitting bits: 1100 0000
+                    // bit 0 - is there ABS; default = 0; 1 => FLASH[0xFFFE] = 0xFE, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 1 - is there EGR valve position sensor; default = 0; 1 => FLASH[0xFFFE] = 0xFD, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 2 - is there adsorber valve position; default = 0; 1 => FLASH[0xFFFE] = 0xFB, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 3 - is there power steering pressure sensor; default = 0; 1 => FLASH[0xFFFE] = 0xF7, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 4 - is there additional oxygen sensor (at absorber?); default = 0; 1 => FLASH[0xFFFE] = 0xEF, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 5 - does MAF have burnout function; default = 0; 1 = FLASH[0xFFFE] = 0xDF, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 6 - is there throttle position sensor; default = 1; 0 => FLASH[0xFFFE] = 0x3F, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
+                    // bit 7 - is there coolant temperature sensor; default = 1; 0 => FLASH[0xFFFE] = 0x7F, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
+  [0x8741] = 0x23,  // kitting bits: 0010 0011
                     // bit 0 - is there IROM; default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
                     // bit 1 - should DAC be corrected from IROM; default = 1; 0 => FLASH[0xFFFF] = 0x01, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 2 - 
-                    // bit 3 - 
-                    // bit 4 - 
-                    // bit 5 - 
-                    // bit 6 - 
-                    // bit 7 - 
+                    // bit 2 - is there immobilizer; default = 0; 1 => FLASH[0xFFFF] = 0xFB, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 3 - should RCO be corrected from IROM; default = 0; 1 => FLASH[0xFFFF] = 0xF7, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 4 - should fuel be blocked; default = 0; 1 => FLASH[0xFFFF] = 0xEF, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 5 - should fuel intake be asynchronous on second launch attempt; default = 1; 0 => FLASH[0xFFFF] = 0x1F, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 6 - should throttle position sensor adaptation be done; default = 0; 1 => FLASH[0xFFFF] = 0xBF, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 7 - should idle speed be adapted; default = 0; 1 => FLASH[0xFFFF] = 0x7F, 0 => FLASH[0xFFFF] = 0xFF
+  [0x8742] = 0xC0,  // kitting bits: 1100 0000
+                    // bit 0 - should bypass valve be adapted at idle; default = 0; 1 => FLASH[0xFFFE] = 0xFE, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 1 - is EGO with heating control; default = 0; 1 => FLASH[0xFFFE] = 0xFD, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 2 - reserved?
+                    // bit 3 - reserved?
+                    // bit 4 - reserved?
+                    // bit 5 - reserved?
+                    // bit 6 - are there injectors; default = 1; 0 => FLASH[0xFFFE] = 0x3F, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
+                    // bit 7 - are there ignition coils; default = 1; 0 => FLASH[0xFFFE] = 0x7F, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
 
-  [0x8743] = 0x13,  // some status byte ??? 0001 0011
+  [0x8743] = 0x13,  // kitting bits: 0001 0011
+                    // bit 0 - is there check-engine lamp; default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 1 - is there fuel pump; default = 1; 0 => FLASH[0xFFFF] = 0x01, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 2 - is there start injector; default = 0; 1 => FLASH[0xFFFF] = 0xFB, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 3 - is there EGR valve; default = 0; 1 => FLASH[0xFFFF] = 0xF7, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 4 - is there adsorber; default = 1; 0 => FLASH[0xFFFF] = 0x0F, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 5 - is there tachometer; default = 0; 1 => FLASH[0xFFFF] = 0xDF, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 6 - is there fuel meter display; default = 0; 1 => FLASH[0xFFFF] = 0xBF, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 7 - is there AirConditioner; default = 0; 1 => FLASH[0xFFFF] = 0x7F, 0 => FLASH[0xFFFF] = 0xFF
+
+  [0x8744] = 0x05,  // kitting bits: 0000 0101
+                    // bit 0 - is there fan; default = 1; 0 => FLASH[0xFFFE] = 0x00, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
+                    // bit 1 - reserved?
+                    // bit 2 - is there bypass valve; default = 1; 0 => FLASH[0xFFFE] = 0x03, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
+                    // bit 3 - is there idle economizer valve (carb); default = 0; 1 => FLASH[0xFFFE] = 0xF7, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 4 - is there secondary air compressor; default = 0; 1 => FLASH[0xFFFE] = 0xEF, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 5 - is intake controlled; default = 0; 1 => FLASH[0xFFFE] = 0xDF, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 6 - is there VVT; default = 0; 1 => FLASH[0xFFFE] = 0xBF, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 7 - reserved?
+
+  [0x8761] = 0x00,  // ???
 
   /* knock sensor knock filter frequency configuration word */
   [0x87A7] = 0x2C,
@@ -151,6 +203,9 @@ byte FLASH[0x10000] = {
 
   /* knock sensor integration time constant configuration word */
   [0xAE01] = 0x00,
+
+  [0xFFFE] = 0xFF,
+  [0xFFFF] = 0xFF
 };
 
 ////////////// XRAM MAP
@@ -356,12 +411,12 @@ IP0.OWDS and IP0.WDTS are cleared.
 word check_sum_xram_fx00_to_f657(void) {
   word Result = 0x0001;
   
-  if (!CHECK_BIT_AT(FLASH[0x873F], 1))
+  if (!CHECK_BIT_AT(FLASH[0x873F], 1)) // There is no EGO
     DPTR = 0xF600;
-  else if (!CHECK_BIT_AT(FLASH[0x8743], 4))
+  else if (!CHECK_BIT_AT(FLASH[0x8743], 4)) // There is no absorber
     DPTR = 0xF500;
   else
-    DPTR = 0xF400;  // current case
+    DPTR = 0xF400;  // current case: both EGO and absorber are present
 
   do {
     Result += XRAM[DPTR];
@@ -418,7 +473,7 @@ void mark_eeprom_failure(void) {
   RAM[0x21] |= BIT_AT(1, 0);
 }
 
-void read_eeprom(void) {
+void read_eeprom_to_xram(void) {
   word XramPtr = 0xFF00;
   byte Offset = 0;
   
@@ -495,6 +550,18 @@ void no_eeprom(void) {
   XRAM[0xF770] = FLASH[0x8093];
 }
 
+// close idle air intake valve
+void close_bypass_air_valve(void) {
+  P1 &= ~SET_BIT_AT(1, 0);
+  P1 |= SET_BIT_AT(1, 1);
+}
+
+// open idle air intake valve
+void open_bypass_air_valve(void) {
+  P1 &= ~SET_BIT_AT(1, 1);
+  P1 |= SET_BIT_AT(1, 0);
+}
+
 /*
 INTERRUPTS:
  - reset
@@ -509,6 +576,34 @@ void reset_interrupt() noreturn {
     init_pins();
   }
 
+/********************************
+  CMEN = 0
+  CCEN = 0
+  CC4EN = 0
+  TCON = 0
+  TMOD = 0
+  T2CON = 0
+  CTCON = 0x40, compare timer freq = f_osc/2
+  CT1CON = 0x40, freq = f_osc / 2
+  IEN0 = 0 - disable interrupts: all, timer2, serial channel 0, timer1 overflow, external 1, timer0 overflow, external 0
+  IEN1 = 0 - disable interrupts: timer2 external reload, external interrupts 2-6, adc
+  IEN2 = 0 - disable interrupts: register compare match interrupt, compare timer interrupt, CM0-7 compare match interrupt, serial iface1
+  IEN3 = 0 - disable interrupts: compare timer1 overflow, compare timer1 - general capture/compare interrupt.
+  PRSC = 0xD5 - T2P1 = 0; T2P0 = 1 - set timer2 freq = f_osc/12 or f_osc/24
+                T1P1 = 0; T1P0 = 1 - divider ration = 1:2
+                T0P1 = 0; T0P0 = 1 - divider ration = 1:2
+
+
+  CMSEL
+  CAFR
+  CRCH CRCL
+  COMSETL COMSETL
+  SETMSK CLRMSK
+  CTRELH CTRELL
+  CT1RELH CT1RELL
+  TH2 TL2
+********************************/
+
   RAM[0x7E] = 0x40;
   RAM[0x7F] = 0x40;
 
@@ -522,30 +617,57 @@ void reset_interrupt() noreturn {
   init_HIP9010();
   
   enable_access_to_xram(); // xram = 0xF400..0xFFFF
-  set_negative_edge_trigger_ext_int(0); // P3_2
-  set_negative_edge_trigger_ext_int(1); // P3.3
+  // TCON.IT0 = 1, negative edge triggered external interrupt 0 (external interrupt 0 is at P3.2, which isn't connected to anywhere)
+  // TCON.IT1 = 1, negative edge triggered external interrupt 1 (external interrupt 1 is at P3.3 - SDA @ NM24C04 / AT24C04 (EEPROM, I2C))
+  TCON |= SET_BIT_AT(1, 0) | SET_BIT_AT(1, 2);
+  //set_negative_edge_trigger_ext_int(0); // P3_2
+  //set_negative_edge_trigger_ext_int(1); // P3.3
   
-  set_watchdog_frequency_divider(12 or 192); // TODO see WPSEL
-  enable_serial0_badu_rate_prescaler();
-  
-  set_timer2_input_clock_divider(192); // timer2 input clock freq = f_osc/192
-  disable_timer2_reload();
-  timer2_compare_mode(1);
-  set_timer2_function_timer_with_selected_frequency();
-  
-  set_prescaler_divider_ratio(timer1, 1, 2); // ratio for timer1 = 1:2
-  set_prescaler_divider_ratio(timer0, 1, 2); // ratio for timer0 = 1:2
+  PRSC = 0xE5;  // PRSC = 0xE5 = 1110 0101
+                // WDTP = 1 - watchdog freq f_osc/12 or f_osc/192
+                // S0P = 1 - serial interface0 baud rate prescaler by 2 is active
+                // T2P1 = 1; T2P0 = 0 - timer2 input clock = f_osc/192 (see T2PS and T2PS1)
+                // T1P1 = 0; T1P0 = 1 - prescaler divider ratio for timer1 = 1:2
+                // T0P1 = 0; T0P0 = 1 - prescaler divider ratio for timer0 = 1:2
 
-  set_positive_edge_trigger_ext_int(3); // P1_0
-  set_positive_edge_trigger_ext_int(2); // P1_4
+  T2CON = 0xE5; // T2CON = 0xE5 = 1110 0101
+                // T2PS = 1 - select timer2 frequency
+                // I3FR = 1 - external interrupt 3 on positive edge on INT3 (P1.0)
+                // I2FR = 1 - external interrupt 2 on positive edge on INT2 (P1.4)
+                // T2R1 = 0; T2R0 = 0 - timer2 reload disabled
+                // T2CM = 1 - timer2 compare mode 1 selected
+                // T2I1 = 0; T2I0 = 1 - timer2 function - timer with selected frequency
+
+  CTCON = 0xC0; // CTCON = 0xC0 = 1100 0000
+                // T2PS1 = 1 - select timer2 freq
+                // ICR = 0; ICS = 0; CTF = 0 - these bits are set by hw on interrupt
+                // CTP = 1; CLK2 = 0; CLK1 = 0; CLK0 = 0 - compare timer input clock at f_osc/2
+
+  //set_watchdog_frequency_divider(12 or 192); // TODO see WPSEL
+  //enable_serial0_baud_rate_prescaler();
   
-  set_compare_timer_input_clock_divider(2); // compare timer input clock at f_osc/2
+  //set_timer2_input_clock_divider(192); // timer2 input clock freq = f_osc/192
+  //disable_timer2_reload();
+  //timer2_compare_mode(1);
+  //set_timer2_function_timer_with_selected_frequency();
   
-  CTRELL = CTRELH = 0x00; // compare timer reload register (low and high halves)
-  TL2 = TH2 = 0x00; // timer2 register
+  //set_prescaler_divider_ratio(timer1, 1, 2); // ratio for timer1 = 1:2
+  //set_prescaler_divider_ratio(timer0, 1, 2); // ratio for timer0 = 1:2
+
+  //set_positive_edge_trigger_ext_int(3); // P1_0
+  //set_positive_edge_trigger_ext_int(2); // P1_4
   
-  assign_registers_to_compare_timer_with_mode0(5); // CMH5/CML5 registers are assigned to compare timer and compare mode 0 selected
-  assign_registers_to_compare_timer2_with_mode1(0, 1, 2, 3, 4, 6, 7); // CMHx/CMLx (x=0..4, 6, 7) registers are assigned to compare timer2 and compare mode 1 selected
+  //set_compare_timer_input_clock_divider(2); // compare timer input clock at f_osc/2
+  
+  CTRELL = CTRELH = 0x00; // launch compare timer ; compare timer reload register (low and high halves)
+  TL2 = TH2 = 0x00; // launch timer2? ; timer2 register
+  
+  CMSEL = 0x20; // CMSEL = 0x20 = 0010 0000
+                // Assign CML5/CMH5 registers to the compare timer and compare mode 0 selected.
+                // Other CMLx/CMHx (x = 0..4, 6, 7) registers are assigned to compare timer 2 and compare mode 1 selected.
+                // CMEN = 0 for the time being
+  //assign_registers_to_compare_timer_with_mode0(5); // CMH5/CML5 registers are assigned to compare timer and compare mode 0 selected
+  //assign_registers_to_compare_timer2_with_mode1(0, 1, 2, 3, 4, 6, 7); // CMHx/CMLx (x=0..4, 6, 7) registers are assigned to compare timer2 and compare mode 1 selected
   
   PSW.F1 = 0;
   if (IP0.OWDS | IP0.WDTS) {
@@ -569,14 +691,42 @@ void reset_interrupt() noreturn {
   
   init_xram();
   
-  RAM[0x2D] |= SET_BIT_AT(CHECK_BIT_AT(FLASH[0x873F], 4), 7);
-  RAM[0x2E] |= SET_BIT_AT(CHECK_BIT_AT(FLASH[0x873F], 5), 0);
-  RAM[0x2E] |= SET_BIT_AT(CHECK_BIT_AT(FLASH[0x873F], 2), 1);
+  RAM[0x2D] |= SET_BIT_AT(CHECK_BIT_AT(FLASH[0x873F], 4), 7); // Has camshaft position sensor
+  RAM[0x2E] |= SET_BIT_AT(CHECK_BIT_AT(FLASH[0x873F], 5), 0); // Camshaft position sensor cross-section is aligned with TDC
+  RAM[0x2E] |= SET_BIT_AT(CHECK_BIT_AT(FLASH[0x873F], 2), 1); // Is there knock sensor
   
-  if (CHECK_BIT_AT(FLASH[0x8741], 0))
-    read_eeprom();
+  if (CHECK_BIT_AT(FLASH[0x8741], 0)) // Is there IROM?
+    read_eeprom_to_xram();
   else
     no_eeprom();
+  
+  PCON |= SET_BIT_AT(1, 7); // PCON.SMOD = 1, When set, the baud rate of serial interface 0 in modes 1, 2, 3 is doubled
+  ADCON0 |= SET_BIT_AT(1, 7); // ADCON0.BD = 1, When set, the baud rate of serial interface 0 is derived from a dedicated baud rate generator.
+  
+  RAM[0x5F] = 0x20;
+  RAM[0x60] = 0x03;
+  RAM[0x61] = 0x21;
+  RAM[0x62] = 0x00;
+  
+  open_bypass_air_valve();
+  
+  CCL1 = RAM[0x5F]; CCH1 = RAM[0x60];
+  CRCL = CCL1 + 0x28; CRCH = CCH1 + 0x00;
+  
+  CCEN |= SET_BIT_AT(1, 1) | SET_BIT_AT(1, 3); // Timer2: Compare enabled for CC register 0 (CRC = CRCH:CRCL) and CC register 1 (CC1 = CCH1:CCL1)
+                                               // FYI:
+                                               //  - Timer2 is in compare mode 1;
+                                               //  - freq = f_osc/192;
+                                               //  - reload disabled;
+                                               //  - input - timer with selected frequency; 
+                                               //  - external interrupt 3 on positive edge on INT3 (P1.0);
+                                               //  - external interrupt 2 on positive edge on INT2 (P1.4);
+  close_bypass_air_valve();
+  
+  IEN1 |= SET_BIT_AT(1, 2);     // External interrupt 3 / capture/compare interrupt 0 enable
+  IEN1 &= ~SET_BIT_AT(1, 3);    // External interrupt 4 / capture/compare interrupt 0 enable
+  
+  // Closing of bypass intake air valve is scheduled at TH2:TL2 = CRC (mode 1 of timer2 operation)
 }
 
 
