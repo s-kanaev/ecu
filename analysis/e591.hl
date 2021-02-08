@@ -43,6 +43,8 @@ void disable_access_to_xram();
 #define SET_LOW(b) ((byte)(b))
 #define COMPOSE_WORD(h, l) (SET_HIGH((h)) | SET_LOW((l)))
 
+#define IS_NEGATIVE(x) ((x) & (1 << (8 * sizeof(x) - 1))) /* x < 0 */
+
 //////////////////////////////// CONSTANTS
 #define KNOCK_SENSOR_TEST_CONFIG_WORD ((byte)(0x00))
 #define KNOCK_SENSOR_TEST_CONFIG_WORD_PREFIX ((byte)0xE0)
@@ -93,14 +95,17 @@ byte RAM[0x100] = {
                   // factor - least significant three bits, will be SHL 5 = xxx0 0000
                   // offset - most significant five bits, will be SHR 3, max value = 0x1F
 
-  [0x3E..0x5E] = 0x00,
+  [0x3E..0x5C] = 0,
+  [0x5D] = 0, // ???
+  [0x5E] = 0x00,
 
-  [0x5F] = 0x20,
-  [0x60] = 0x03,
-  [0x61] = 0x21,
-  [0x62] = 0x00,
+  [0x5F] = 0x20,  // ???
+  [0x60] = 0x03,  // ???
+  [0x61] = 0x21,  // ???
+  [0x62] = 0x00,  // ???
 
-  [0x63..0x7B] = 0x00;
+  [0x63] = 0x00,  // ???
+  [0x64..0x7B] = 0x00;
 
   [0x7C..0x7D] = 0x00,
 
@@ -692,6 +697,21 @@ word TableLookup(word FlashPtr, byte Input, bool Negate) {
   return Result;
 }
 
+void init_ram_63(byte TableDataHigh) {
+  RAM[0x63] = TableDataHigh;
+  byte XramData = XRAM[0xF602];
+
+  if (IS_NEGATIVE(TableDataHigh)) {  // TableDataHigh & 0x80
+    if (TableDataHigh >= XramData)
+      RAM[0x63] = XramData - 1;
+
+    return;
+  }
+
+  if (TableDataHigh < XramData)
+    RAM[0x63] = XramData;
+}
+
 
 /*
 INTERRUPTS:
@@ -781,7 +801,7 @@ void reset_interrupt() noreturn {
   //disable_timer2_reload();
   //timer2_compare_mode(1);
   //set_timer2_function_timer_with_selected_frequency();
-  
+
   //set_prescaler_divider_ratio(timer1, 1, 2); // ratio for timer1 = 1:2
   //set_prescaler_divider_ratio(timer0, 1, 2); // ratio for timer0 = 1:2
 
@@ -881,7 +901,8 @@ void reset_interrupt() noreturn {
     }
   }
 
-  byte A = TableLookup(0xA2FD, 0, false);
+  word TableData = TableLookup(0xA2FD, 0, false);
+  init_ram_63(HIGH(TableData));
 }
 
 ///////////////////////////////////////////////////////////////////////
