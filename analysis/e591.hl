@@ -222,6 +222,7 @@ byte FLASH[0x10000] = {
   [0x87A9] = 0x30,
   
   /* ?????????????????????? */
+  //[0x8AFB + 0x00 * 0x11 .. 0x8AFB + 0x00 * 0x11 + 0x10]??????
   [0x8AFB..0x8BFA] = 0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBD,
                      0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBD,
                      0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBD,
@@ -325,8 +326,8 @@ byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
   [0xF400..0xF4FF] = 0,
   [0xF500..0xF5FF] = 0,                       // EGO calibration
   [0xF600] = 0,
-  [0xF602] = FLASH[0x8761], // if watchdog triggered or xram checksum failed (power-on?)
-  [0xF603] = 0x01, // if watchdog triggered or xram checksum failed (power-on?)
+  [0xF602] = FLASH[0x8761],                   // Set to this value if and only if watchdog triggered or xram checksum failed (power-on?)
+  [0xF603] = 0x01,                            // Set to this value if and only if watchdog triggered or xram checksum failed (power-on?)
   [0xF605..0xF657] = 0,
 
   [0xF658] = 0,                               // checksum low byte (for 0xFx00..0xF657)
@@ -960,53 +961,69 @@ inline byte tripple_rotate_right(byte Data, byte Mask) {
   return Data & Mask;
 }
 
+/*
+  Lookup value in the table in FLASH.
+  Input:
+   - Input - value to look up.
+   - FlashPtr - pointer to the first table value.
+
+  Table size = 0x10 bytes.
+
+  Output byte is packed:
+   - high nibble = Idx of last value less or equal than Input
+   - low nibble = offset of Input in interval Table[Idx]..Table[Idx + 1]
+  That is: MSB..LSB: xxxx yyyy,
+           xxxx = Idx of last value less or equal than Input;
+           yyyy = offset of Input in interval FLASH[FlashPtr + Idx]..FLASH[FlashPtr + Idx + 1]
+
+  Saturation is performed if Input is out of bounds of the Table.
+*/
 byte _6280(byte Input, word FlashPtr) {
   R0 = Input;
   byte Idx = 0; // max valid value = 0x0f
 
+  for (Idx = 0; (Idx < 0x10) && (Input >= CurrentFlashVal); ++Idx)
+    ;
+
+  if (Idx == 0x10)
+    return 0xFF;  // saturate to the last value in the table
+
+  byte CurrentFlashVal = FLASH[FlashPtr + Idx];
+
+  // CurrentFlashVal is the first value larger than Input.
+  // Input is expected to be between previous value and current value.
+
+  if (!Idx)
+    return 0x00; // saturate to the first value in the table
+
+  --Idx;
+  // Max Idx value at the time = 0x0e.
+
+  byte LesserVal = FLASH[FlashPtr + Idx];
+  byte LargerVal = CurrentFlashVal;
+  // Input is between LesserVal and LargerVal.
+
+  if (LesserVal == LargerVal)
+    return SWAP_NIBBLES(Idx); // high nibble is the index itself
+
+  byte IntervalWidth = LargerVal - LesserVal;
+
+  byte Quot;
+
+  CLEAR_BIT_IN(RAM[0x27], 2); // we don't need to divide twice
+_62AF: // looks like point of changes for modification FW setup
   do {
-    byte FlashVal = FLASH[FlashPtr + Idx];
+    Quot = LOW((0x10 * InputOffset) / IntervalWidth);
 
-    if (Input >= FlashVal)
-      continue;
-
-    if (!Idx)
-      return 0;
-
-    --Idx;
-    FlashVal = FLASH[FlashPtr + Idx];
-    byte FlashVal2 = FLASH[FlashPtr + Idx + 1];
-
-    if (FlashVal == FlashVal2)
-      return SWAP_NIBBLES(Idx);
-    
-    byte FlashValDiff = FlashVal2 - FlashVal;
-    word Prod = 0x10 * (Input - FlashVal)
-
-    CLEAR_BIT_IN(RAM[0x27], 2); // we don't need to divide twice
-
-    byte Quot;
-
-    do {
-      Quot = LOW(Prod / FlashValDiff);
-
-      if (CHECK_BIT_AT(RAM[0x27], 2))
-        CLEAR_BIT_IN(RAM[0x27], 2);
-      else
-        break;
-    } while (1);
-    
-    SET_BIT_IN(RAM[0x27], 2);
-
-    return SWAP_NIBBLES(Idx) + Quot;
-/*
-    Max value of Idx at this point = 0x0e. SWAP_NIBBLES(Idx) = Idx << 4.
-    Max value of Prod = 0x0FF0.
-    Max value of Quot = 0xFF.
-*/
-  } while (++Idx < 0x10);
+    if (CHECK_BIT_AT(RAM[0x27], 2))
+      CLEAR_BIT_IN(RAM[0x27], 2);
+    else
+      break;
+  } while (1);
   
-  return 0xFF; // -1 in byte?
+  SET_BIT_IN(RAM[0x27], 2);
+
+  return SWAP_NIBBLES(Idx) + Quot;
 }
 
 
