@@ -988,40 +988,69 @@ inline byte tripple_rotate_right(byte Data, byte Mask) {
 
   Output byte is packed:
    - high nibble = Idx of last value less or equal than Input
-   - low nibble = offset of Input in interval Table[Idx]..Table[Idx + 1]
+   - low nibble = offset of Input in interval Table[Idx]..Table[Idx + 1] with 1/16 stepping
   That is: MSB..LSB: xxxx yyyy,
            xxxx = Idx of last value less or equal than Input;
            yyyy = offset of Input in interval FLASH[FlashPtr + Idx]..FLASH[FlashPtr + Idx + 1]
 
   Saturation is performed if Input is out of bounds of the Table.
 */
-byte _6280(byte Input, word FlashPtr) {
-  R0 = Input;
+
+#define PACKED __attribute__((__packed__))
+struct PACKED TableEntryS {
+  byte TableIdx : 4;
+  byte FractionToNext : 4;
+};
+
+union TableEntryU {
+  TableEntryS TE;
+  byte ByteVal;
+};
+
+typedef union TableEntryU TableEntryT;
+
+_6280:
+TableEntryT lookup_17byte_table_with_saturation(byte Input, word FlashPtr) {
+  TableEntryT Result;
   byte Idx = 0; // max valid value = 0x0f
 
-  for (Idx = 0; (Idx <= 0x10) && (Input >= CurrentFlashVal); ++Idx)
+  for (Idx = 0; (Idx <= 0x10) && (Input >= FLASH[FlashPtr + Idx); ++Idx)
     ;
 
-  if (Idx == 0x10)
-    return 0xFF;  // saturate to the last value in the table
+  if (Idx == 0x10) {
+    Result.TE.TableIdx = 0x0F;
+    Result.TE.FractionToNext = 0x0F;
+    assert(0xFF == Result.ByteVal);
+    return Result; // 0xFF;  // saturate to the last value in the table
+  }
 
-  byte CurrentFlashVal = FLASH[FlashPtr + Idx];
 
   // CurrentFlashVal is the first value larger than Input.
   // Input is expected to be between previous value and current value.
 
-  if (!Idx)
-    return 0x00; // saturate to the first value in the table
+  if (!Idx) {
+    Result.TE.TableIdx = 0x00;
+    Result.TE.FractionToNext = 0x00;
+    assert(0x00 == Result.ByteVal);
+    return Result; // 0x00; // saturate to the first value in the table
+  }
 
-  --Idx;
+  byte LargerVal = FLASH[FlashPtr + Idx];
+
+  --Idx; 
   // Max Idx value at the time = 0x0e.
 
   byte LesserVal = FLASH[FlashPtr + Idx];
-  byte LargerVal = CurrentFlashVal;
+
   // Input is between LesserVal and LargerVal.
 
-  if (LesserVal == LargerVal)
-    return SWAP_NIBBLES(Idx); // high nibble is the index itself
+  Result.TE.TableIdx = Idx;
+  Result.TE.FractionToNext = 0x00;
+  
+  if (LesserVal == LargerVal) {
+    assert(SWAP_NIBBLES(Idx) == Result.ByteVal);
+    return Result; // SWAP_NIBBLES(Idx); // high nibble is the index itself
+  }
 
   byte IntervalWidth = LargerVal - LesserVal;
 
@@ -1040,11 +1069,58 @@ _62AF: // looks like point of changes for modification FW setup
   
   SET_BIT_IN(RAM[0x27], 2);
 
-  return SWAP_NIBBLES(Idx) + Quot;
+  Result.TE.FractionToNext = Quot;
+  assert(SWAP_NIBBLES(Idx) + Quot == Result.TE.FractionToNext);
+
+  return Result;
 }
 
+{
+  _61B7:
+  if (CHECK_BIT_AT(RAM[0x72], 5)) {
+    _61BC:
+    A = RAM[0x4C];
+    B = 0x11;
+    word BA = A * B;
+    DPTR = 0x8AFB + A;
+    A = RAM[0x5D];
+    
+    A = lookup_17byte_table_with_saturation(A, DPTR);
+    
+    XRAM[0xF779] = A;
+    
+    R0 = A;
+    R1 = 0;
+    
+    A = R2 = XRAM[0xF602];
+    
+    signed word R3_R2 = R2;
+    
+    R1_R0 = R1_R0 + R3_R2;
+    A = R1;
+    
+    if (A >= 0) {
+      if (!A) {
+        A = R0;
+      } else {
+        A = 0xFF;
+      }
+    } else {
+      A = 0;
+    }
+    
+    _61F4:
+    RAM[0x63] = A;
 
+    _61F6:
+    return;
+  }
 
+  _61F7:
+    ...
+    call _63D5
+}
 
+_63D5:
 
 
