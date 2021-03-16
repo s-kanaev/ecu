@@ -1117,8 +1117,47 @@ _62AF: // looks like point of changes for modification FW setup
   }
 
   _61F7:
-    ...
-    call _63D5
+  R0 = RAM[0x63];
+  R1 = 0;
+  R2 = A = XRAM[0xF602];
+  
+  signed word R3_R2 = R2;
+  
+  R1_R0 = R1_R0 - R3_R2;
+  A = R1;
+  
+  if (CHECK_BIT_AT(A, 7)) {
+    _6209:
+    A = 0;
+  } else {
+    _620C:
+    if (!A) {
+      _6212:
+      A = R0;
+    } else {
+      _620E:
+      A = 0xFF;
+    }
+  }
+/*
+  At this point Acc contains saturated difference:
+   RAM[0x63] - XRAM[0xF602] which saturates to:
+   - 0x00 if result is negative
+   - 0xFF if overflow happened (i.e. RAM[0x63] >= 0x80 and XRAM[0xF602] is negative)
+
+  If saturation conditions are not met the difference value is preserved.
+*/
+
+  DPTR = 0xF779;
+  XRAM[0xF779] = A;
+  
+  R2 = A;
+  R3 = RAM[0x4A];
+  DPTR = 0x8AFB;
+  
+  call _63D5
+  RAM[0x5D] = A;
+  return;
 }
 
 _63D5:
