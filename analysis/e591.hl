@@ -6,7 +6,22 @@ TYPES:
 
 typedef uint8_t byte;
 typedef uint16_t word;
+typedef int8_t sbyte;
+typedef int16_t sword;
 typedef int pin;
+
+#define PACKED __attribute__((__packed__))
+struct PACKED TableEntryS {
+  byte TableIdx : 4;
+  byte InterpolationFraction : 4; // Used for interpolation / profiling.
+};
+
+union TableEntryU {
+  TableEntryS TE;
+  byte ByteVal;
+};
+
+typedef union TableEntryU TableEntryT;
 
 //////////////////////////////// FUNCTIONS:
 /* Send DATA byte over SPI interface described by
@@ -28,6 +43,9 @@ byte read_on_i2c(pin SDA, pin SCL);
 void enable_access_to_xram();
 void disable_access_to_xram();
 
+#define BYTE(x) (byte)(x)
+#define WORD(x) (word)(x)
+
 #define WAIT_MACHINE_CYCLES_BY_2(x) /* waits for x*2 machine cycles, x = 0 is 0x100 */
 /* SET_BIT(3) = 0x08*/
 #define SET_BIT(bit) ((1) << (bit))
@@ -45,15 +63,15 @@ do {                          \
 /* CHECK_BIT_AT(0x10, 4) is true */
 #define CHECK_BIT_AT(val, bit) ((val) & SET_BIT(bit))
 
-#define SWAP_NIBBLES(b) (((((byte)((b))) & 0x0F) << 4) | ((((byte)((b))) & 0xF0) >> 4))
+#define SWAP_NIBBLES(b) ((((BYTE((b))) & 0x0F) << 4) | (((BYTE((b))) & 0xF0) >> 4))
 
 // get low byte
-#define LOW(w) ((byte)((word)(w) & 0x00FF))
+#define LOW(w) BYTE(WORD(w) & 0x00FF)
 // get high byte
-#define HIGH(w) ((byte)(((word)(w) & 0xFF00) >> 8))
+#define HIGH(w) BYTE((WORD(w) & 0xFF00) >> 8)
 
-#define SET_HIGH(b) (((word)((byte)(b))) << 8)
-#define SET_LOW(b) ((byte)(b))
+#define SET_HIGH(b) (WORD(BYTE(b)) << 8) (((word)(BYTE(b))) << 8)
+#define SET_LOW(b) (BYTE(b))
 #define COMPOSE_WORD(h, l) (SET_HIGH((h)) | SET_LOW((l)))
 
 #define IS_NEGATIVE(x) ((x) & (1 << (8 * sizeof(x) - 1))) /* x < 0 */
@@ -82,12 +100,13 @@ PSW.1 (F1) - general purpose flag, boolean parameter employed in trampoline func
 
 //////////////////////////////// MEMORY SECTIONS
 
+
 ////////////// RAM MAP
 byte RAM[0x100] = {
   [0x00..0x07] = 0, // R0..R7 @ register bank 0
-  [0x08..0x0f] = 0, // R0..R7 @ register bank 1
+  [0x08..0x0F] = 0, // R0..R7 @ register bank 1
   [0x10..0x17] = 0, // R0..R7 @ register bank 2
-  [0x18..0x1f] = 0, // R0..R7 @ register bank 3
+  [0x18..0x1F] = 0, // R0..R7 @ register bank 3
 
   // the rest (up to 0x7B, incl.) is initialized with nil
   [0x20] = 0x00, // bit 6 (bit address 0x06) = copy of PSW.F1 // watchdog triggered?
@@ -775,6 +794,205 @@ void init_ram_63(byte TableDataHigh) {
     RAM[0x63] = XramData;
 }
 
+/*
+  Lookup value in the table in FLASH.
+  Input:
+   - Input - value to look up.
+   - FlashPtr - pointer to the first table value.
+
+  Table size = 0x11 bytes.
+
+  Output byte is packed:
+   - high nibble = Idx of last value less or equal than Input
+   - low nibble = offset of Input in interval Table[Idx]..Table[Idx + 1] with 1/16 stepping
+                  Used for interpolation / profiling.
+  That is: MSB..LSB: xxxx yyyy,
+           xxxx = Idx of last value less or equal than Input;
+           yyyy = offset of Input in interval FLASH[FlashPtr + Idx]..FLASH[FlashPtr + Idx + 1]
+                  Used for interpolation / profiling.
+
+  Saturation is performed if Input is out of bounds of the Table.
+*/
+TableEntryT lookup_17byte_table_with_saturation(byte Input, word FlashPtr) {
+  TableEntryT Result;
+  byte Idx = 0; // max valid value = 0x0f
+  const byte TableLineLength = 0x11;
+
+  for (Idx = 0; (Idx < TableLineLength) && (Input >= FLASH[FlashPtr + Idx); ++Idx)
+    ;
+
+  if (TableLineLength - 1 = Idx) {
+    Result.TE.TableIdx = TableLineLength - 2; // can't be the last item as it is barrier value (sort of overflow?)
+    Result.TE.InterpolationFraction = 0x0F;
+    assert(0xFF == Result.ByteVal);
+    return Result; // 0xFF;  // saturate to the last value in the table
+  }
+
+
+  // CurrentFlashVal is the first value larger than Input.
+  // Input is expected to be between previous value and current value.
+
+  if (!Idx) {
+    Result.TE.TableIdx = 0x00;
+    Result.TE.InterpolationFraction = 0x00;
+    assert(0x00 == Result.ByteVal);
+    return Result; // 0x00; // saturate to the first value in the table
+  }
+
+  byte LargerVal = FLASH[FlashPtr + Idx];
+
+  --Idx; 
+  // Max Idx value at the time = 0x0e.
+
+  byte LesserVal = FLASH[FlashPtr + Idx];
+
+  // Input is between LesserVal and LargerVal.
+
+  Result.TE.TableIdx = Idx;
+  Result.TE.InterpolationFraction = 0x00;
+
+  if (LesserVal == LargerVal) {
+    assert(SWAP_NIBBLES(Idx) == Result.ByteVal);
+    return Result; // SWAP_NIBBLES(Idx); // high nibble is the index itself
+  }
+
+  byte IntervalWidth = LargerVal - LesserVal;
+
+  byte Quot;
+
+  CLEAR_BIT_IN(RAM[0x27], 2); // we don't need to divide twice
+_62AF: // looks like point of changes for modification FW setup
+  do {
+    Quot = LOW((0x10 * (Input - LesserVal)) / IntervalWidth);
+
+    if (CHECK_BIT_AT(RAM[0x27], 2))
+      CLEAR_BIT_IN(RAM[0x27], 2);
+    else
+      break;
+  } while (1);
+
+  SET_BIT_IN(RAM[0x27], 2);
+
+  Result.TE.InterpolationFraction = Quot;
+  assert(SWAP_NIBBLES(Idx) + Quot == Result.TE.InterpolationFraction);
+
+  return Result;
+}
+
+word profile_table_value(TableEntryT Difference, TableEntryT Template, word FlashPtr, byte TableLineLength, bool Negate) {
+  word BasePtr = FlashPtr + Template.TE.TableIdx * TableLineLength + Difference.TE.TableIdx;
+
+  if (!Difference.TE.InterpolationFraction && !Template.TE.InterpolationFraction)
+    return COMPOSE_WORD(FLASH[BasePtr], 0x00);
+
+  byte DiffProfFr = Difference.TE.InterpolationFraction;
+  byte TplProfFr = Template.TE.InterpolationFraction;
+  byte Negation = Negate ? 0x80 : 0x00;
+  word Result = ((        DiffProfFr  * TplProfFr)          * (Negation + FLASH[BasePtr + TableLineLength + 1]))
+              + (((0x10 - DiffProfFr) * TplProfFr)          * (Negation + FLASH[BasePtr + TableLineLength]))
+              + ((        DiffProfFr  * (0x10 - TplProfFr)) * (Negation + FLASH[BasePtr + 1]))
+              + (((0x10 - DiffProfFr) * (0x10 - TplProfFr)) * (Negation + FLASH[BasePtr]));
+
+  return COMPOSE_WORD(HIGH(RESULT) - Negation, LOW(Result));
+}
+
+void update_ram_63_impl() {
+  const byte TableBase = 0x8AFB;
+  const byte TableLineLength = 0x11;
+
+  byte TableLineIdx = RAM[0x4C];
+  word TableLinePtr = TableBase + TableLineIdx * TableLineLength;
+  byte LookupValue = RAM[0x5D];
+
+  TableEntryT Entry = lookup_17byte_table_with_saturation(LookupValue, TableLinePtr);
+  
+  XRAM[0xF779] = Entry.ByteVal;
+
+  word Val = Entry.ByteVal;
+  word Val2 = (sword)((sbyte)(XRAM[0xF602]));
+  word Sum = Val + Val2;
+  byte Result;
+
+/*
+  R1_R0 = 00:xx
+  R3_R2 = 00:yy
+  SUM = 00:zz or 01:zz - carry, CY = 1
+  
+  R1_R0 = 00:xx
+  R3_R2 = FF:yy
+  SUM = FF:zz or 00:zz, CY = 1
+*/
+
+  if (Sum < 0)
+    Result = 0;
+  else if (Sum > 0xFF)
+    Result = 0xFF
+  else
+    Result = LOW(Sum);
+
+  RAM[0x63] = Result;
+}
+
+void init_ram_5d() {
+  const byte TableBase = 0x8AFB;
+  const byte TableLineLength = 0x11;
+
+  word RamData = (sbyte)(RAM[0x63]);
+  word XramData = (sword)((sbyte)(XRAM[0xF602]));
+
+  sword Diff = RamData - XramData;
+  
+  byte DiffByte;
+
+/*
+  R1_R0 = 00:xx
+  R3_R2 = 00:yy
+  DIFF = 00:zz, CY = 0 or FF:zz - carry, CY = 1
+        yy <= xx or yy > xx
+  R1_R0 = 00:xx
+  R3_R2 = FF:yy
+  DIFF = 01:zz, CY = 1 or FF:zz, CY = 1
+        yy <= xx or yy > xx
+
+  CHECK_BIT_AT(DIFF, 15) == 1: yy > xx
+  CHECK_BIT_AT(DIFF, 15) == 0 && !HIGH(DIFF): yy <= xx
+  CHECK_BIT_AT(DIFF, 15) == 0 && HIGH(DIFF): yy <= xx
+*/
+
+  if (Diff < 0)
+    DiffByte = 0x00;
+  else if (Diff > 0xFF)
+    DiffByte = 0xFF;
+  else
+    DiffByte = LOW(Diff);
+
+/*
+  At this point Acc contains saturated difference:
+   RAM[0x63] - XRAM[0xF602] which saturates to:
+   - 0x00 if result is negative
+   - 0xFF if overflow happened (i.e. RAM[0x63] >= 0x80 and XRAM[0xF602] is negative)
+
+  If saturation conditions are not met the difference value is preserved.
+*/
+
+  XRAM[0xF779] = Result;
+  word Profiled;
+  {
+    TableEntryT Diff, Tpl;
+    Diff.ByteVal = DiffByte;
+    Tpl.ByteVal = RAM[0x4A];
+    Profiled = profile_table_value(Diff, Tpl, TableBase, TableLineLength, false);
+  }
+
+  RAM[0x5D] = HIGH(Profiled);
+}
+
+void update_ram_63() {
+  if (CHECK_BIT_AT(RAM[0x72], 5))
+    update_ram_63_impl();
+  else
+    init_ram_5d();
+}
 
 /*
 INTERRUPTS:
@@ -966,6 +1184,10 @@ void reset_interrupt() noreturn {
 
   word TableData = TableLookup(0xA2FD, 0, false);
   init_ram_63(HIGH(TableData));
+  
+  update_ram_63();
+
+_2748:
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -977,189 +1199,4 @@ inline byte tripple_rotate_right(byte Data, byte Mask) {
   Data = (Data << 1) | (Data >> 7);          // rotate left
   return Data & Mask;
 }
-
-/*
-  Lookup value in the table in FLASH.
-  Input:
-   - Input - value to look up.
-   - FlashPtr - pointer to the first table value.
-
-  Table size = 0x11 bytes.
-
-  Output byte is packed:
-   - high nibble = Idx of last value less or equal than Input
-   - low nibble = offset of Input in interval Table[Idx]..Table[Idx + 1] with 1/16 stepping
-  That is: MSB..LSB: xxxx yyyy,
-           xxxx = Idx of last value less or equal than Input;
-           yyyy = offset of Input in interval FLASH[FlashPtr + Idx]..FLASH[FlashPtr + Idx + 1]
-
-  Saturation is performed if Input is out of bounds of the Table.
-*/
-
-#define PACKED __attribute__((__packed__))
-struct PACKED TableEntryS {
-  byte TableIdx : 4;
-  byte FractionToNext : 4;
-};
-
-union TableEntryU {
-  TableEntryS TE;
-  byte ByteVal;
-};
-
-typedef union TableEntryU TableEntryT;
-
-_6280:
-TableEntryT lookup_17byte_table_with_saturation(byte Input, word FlashPtr) {
-  TableEntryT Result;
-  byte Idx = 0; // max valid value = 0x0f
-
-  for (Idx = 0; (Idx <= 0x10) && (Input >= FLASH[FlashPtr + Idx); ++Idx)
-    ;
-
-  if (Idx == 0x10) {
-    Result.TE.TableIdx = 0x0F;
-    Result.TE.FractionToNext = 0x0F;
-    assert(0xFF == Result.ByteVal);
-    return Result; // 0xFF;  // saturate to the last value in the table
-  }
-
-
-  // CurrentFlashVal is the first value larger than Input.
-  // Input is expected to be between previous value and current value.
-
-  if (!Idx) {
-    Result.TE.TableIdx = 0x00;
-    Result.TE.FractionToNext = 0x00;
-    assert(0x00 == Result.ByteVal);
-    return Result; // 0x00; // saturate to the first value in the table
-  }
-
-  byte LargerVal = FLASH[FlashPtr + Idx];
-
-  --Idx; 
-  // Max Idx value at the time = 0x0e.
-
-  byte LesserVal = FLASH[FlashPtr + Idx];
-
-  // Input is between LesserVal and LargerVal.
-
-  Result.TE.TableIdx = Idx;
-  Result.TE.FractionToNext = 0x00;
-  
-  if (LesserVal == LargerVal) {
-    assert(SWAP_NIBBLES(Idx) == Result.ByteVal);
-    return Result; // SWAP_NIBBLES(Idx); // high nibble is the index itself
-  }
-
-  byte IntervalWidth = LargerVal - LesserVal;
-
-  byte Quot;
-
-  CLEAR_BIT_IN(RAM[0x27], 2); // we don't need to divide twice
-_62AF: // looks like point of changes for modification FW setup
-  do {
-    Quot = LOW((0x10 * InputOffset) / IntervalWidth);
-
-    if (CHECK_BIT_AT(RAM[0x27], 2))
-      CLEAR_BIT_IN(RAM[0x27], 2);
-    else
-      break;
-  } while (1);
-  
-  SET_BIT_IN(RAM[0x27], 2);
-
-  Result.TE.FractionToNext = Quot;
-  assert(SWAP_NIBBLES(Idx) + Quot == Result.TE.FractionToNext);
-
-  return Result;
-}
-
-{
-  _61B7:
-  if (CHECK_BIT_AT(RAM[0x72], 5)) {
-    _61BC:
-    A = RAM[0x4C];
-    B = 0x11;
-    word BA = A * B;
-    DPTR = 0x8AFB + A;
-    A = RAM[0x5D];
-    
-    A = lookup_17byte_table_with_saturation(A, DPTR);
-    
-    XRAM[0xF779] = A;
-    
-    R0 = A;
-    R1 = 0;
-    
-    A = R2 = XRAM[0xF602];
-    
-    signed word R3_R2 = R2;
-    
-    R1_R0 = R1_R0 + R3_R2;
-    A = R1;
-    
-    if (A >= 0) {
-      if (!A) {
-        A = R0;
-      } else {
-        A = 0xFF;
-      }
-    } else {
-      A = 0;
-    }
-    
-    _61F4:
-    RAM[0x63] = A;
-
-    _61F6:
-    return;
-  }
-
-  _61F7:
-  R0 = RAM[0x63];
-  R1 = 0;
-  R2 = A = XRAM[0xF602];
-  
-  signed word R3_R2 = R2;
-  
-  R1_R0 = R1_R0 - R3_R2;
-  A = R1;
-  
-  if (CHECK_BIT_AT(A, 7)) {
-    _6209:
-    A = 0;
-  } else {
-    _620C:
-    if (!A) {
-      _6212:
-      A = R0;
-    } else {
-      _620E:
-      A = 0xFF;
-    }
-  }
-/*
-  At this point Acc contains saturated difference:
-   RAM[0x63] - XRAM[0xF602] which saturates to:
-   - 0x00 if result is negative
-   - 0xFF if overflow happened (i.e. RAM[0x63] >= 0x80 and XRAM[0xF602] is negative)
-
-  If saturation conditions are not met the difference value is preserved.
-*/
-
-  DPTR = 0xF779;
-  XRAM[0xF779] = A;
-  
-  R2 = A;
-  R3 = RAM[0x4A];
-  DPTR = 0x8AFB;
-  
-  call _63D5
-  RAM[0x5D] = A;
-  return;
-}
-
-_63D5:
-
 
