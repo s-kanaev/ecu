@@ -57,7 +57,7 @@ do {                        \
 
 #define CLEAR_BIT_IN(v, bit)  \
 do {                          \
-  v &= ~SET_BIT(bit);         \
+  v &= ~(SET_BIT(bit));       \
 } while (0)
 
 /* CHECK_BIT_AT(0x10, 4) is true */
@@ -119,7 +119,10 @@ byte RAM[0x100] = {
                   // bit 2 (bit address 0x3A)
                   // bit 3 (bit address 0x3B) = copy of PSW.F0
 
-  [0x28..0x2C] = 0x00,
+  [0x28..0x29] = 0x00,
+  [0x2A] = 0x00,  // some status word
+                  // bit 3 ???
+  [0x2B..0x2C] = 0x00,
   [0x2D] = 0x00,  // bit 7 = FLASH[873F] bit 4
   [0x2E] = 0x00,  // bit 0 = FLASH[873F] bit 5
                   // bit 1 = FLASH[873F] bit 2
@@ -171,9 +174,11 @@ byte FLASH[0x10000] = {
   [0x2510] = 0x17, 0x16, 0x16, 0x16, 0x15, 0x15, 0x15, 0x14, 0x14, 0x14, 0x14, 0x13, 0x13, 0x13, 0x13, 0x13,
   [0x2520] = 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
 
-  [0x8069] = 0x00, // fallback data for XRAM[0xFF74]
-  [0x806A] = 0x00, // fallback data for XRAM[0xFF75]
-  [0x8093] = 0x00, // fallback data for XRAM[0xF770]
+  [0x8069] = 0x00,  // fallback data for XRAM[0xFF74]
+  [0x806A] = 0x00,  // fallback data for XRAM[0xFF75]
+  [0x807C] = 0x24,  // ???, copied to XRAM[0xF6B6] and XRAM[0xF6B8]
+  [0x808C] = 0x80,  // ???, copied to RAM[0x67]
+  [0x8093] = 0x00,  // fallback data for XRAM[0xF770]
 
   [0x873F] = 0x3F,  // kitting bits: 0011 1111
                     // bit 0 - is there constant power for ECU; default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
@@ -231,6 +236,9 @@ byte FLASH[0x10000] = {
                     // bit 5 - is intake controlled; default = 0; 1 => FLASH[0xFFFE] = 0xDF, 0 => FLASH[0xFFFE] = 0xFF
                     // bit 6 - is there VVT; default = 0; 1 => FLASH[0xFFFE] = 0xBF, 0 => FLASH[0xFFFE] = 0xFF
                     // bit 7 - reserved?
+
+  [0x8753] = 0x1B,  // ???, copied to RAM[0x59]
+  [0x8755] = 0x5A,  // ???, copied to RAM[0x57] and RAM[0x58]
 
   [0x8761] = 0x00,  // ???
 
@@ -481,7 +489,7 @@ void init_HIP0045(void) {
 }
 
 void init_HIP9010(void) {
-  ADCON0_6 = 1; // ADCON0.6 = ADCON0.CLK = 1 - clock output enable through P1.6 (CLKOUT = OSCIN @ HIP9010)
+  SET_BIT_IN(ADCON0, 6); // ADCON0.6 = ADCON0.CLK = 1 - clock output enable through P1.6 (CLKOUT = OSCIN @ HIP9010)
   SYSCON &= 0x7F; // clear CLKP bit - CLKOUT freq = f_osc/6
   
   WAIT_MACHINE_CYCLES_BY_2(0x33);
@@ -818,8 +826,9 @@ TableEntryT lookup_17byte_table_with_saturation(byte Input, word FlashPtr) {
   byte Idx = 0; // max valid value = 0x0f
   const byte TableLineLength = 0x11;
 
-  for (Idx = 0; (Idx < TableLineLength) && (Input >= FLASH[FlashPtr + Idx); ++Idx)
+  for (Idx = 0; (Idx < TableLineLength) && (Input >= FLASH[FlashPtr + Idx]); ++Idx) {
     ;
+  }
 
   if (TableLineLength - 1 = Idx) {
     Result.TE.TableIdx = TableLineLength - 2; // can't be the last item as it is barrier value (sort of overflow?)
@@ -861,7 +870,8 @@ TableEntryT lookup_17byte_table_with_saturation(byte Input, word FlashPtr) {
   byte Quot;
 
   CLEAR_BIT_IN(RAM[0x27], 2); // we don't need to divide twice
-_62AF: // looks like point of changes for modification FW setup
+
+  _62AF: // looks like point of changes for modification FW setup
   do {
     Quot = LOW((0x10 * (Input - LesserVal)) / IntervalWidth);
 
@@ -1095,7 +1105,7 @@ void reset_interrupt() noreturn {
   TL2 = TH2 = 0x00; // launch timer2? ; timer2 register
   
   CMSEL = 0x20; // CMSEL = 0x20 = 0010 0000
-                // Assign CML5/CMH5 registers to the compare timer and compare mode 0 selected.
+                // Assign CML5/CMH5 (EGR valve at Port4) registers to the compare timer and compare mode 0 selected.
                 // Other CMLx/CMHx (x = 0..4, 6, 7) registers are assigned to compare timer 2 and compare mode 1 selected.
                 // CMEN = 0 for the time being
   //assign_registers_to_compare_timer_with_mode0(5); // CMH5/CML5 registers are assigned to compare timer and compare mode 0 selected
@@ -1146,13 +1156,14 @@ void reset_interrupt() noreturn {
   CRCL = CCL1 + 0x28; CRCH = CCH1 + 0x00;
   
   CCEN |= SET_BIT(1) | SET_BIT(3); // Timer2: Compare enabled for CC register 0 (CRC = CRCH:CRCL) and CC register 1 (CC1 = CCH1:CCL1)
-                                               // FYI:
-                                               //  - Timer2 is in compare mode 1;
-                                               //  - freq = f_osc/192;
-                                               //  - reload disabled;
-                                               //  - input - timer with selected frequency; 
-                                               //  - external interrupt 3 on positive edge on INT3 (P1.0);
-                                               //  - external interrupt 2 on positive edge on INT2 (P1.4);
+                                   // FYI:
+                                   //  - Timer2 is in compare mode 1;
+                                   //  - freq = f_osc/192;
+                                   //  - reload disabled;
+                                   //  - input - timer with selected frequency; 
+                                   //  - external interrupt 3 on positive edge on INT3 (P1.0);
+                                   //  - external interrupt 2 on positive edge on INT2 (P1.4);
+
   close_bypass_air_valve();
   
   SET_BIT_IN(IEN1, 2);     // External interrupt 3 / capture/compare interrupt 0 enable
@@ -1188,6 +1199,69 @@ void reset_interrupt() noreturn {
   update_ram_63();
 
 _2748:
+  if (XRAM[0xF603])
+    SET_BIT_IN(RAM[0x2A], 3);
+
+  XRAM[0xF7BF] = 3;
+  XRAM[0xF68D] = 0;
+  XRAM[0xF6B9] = 0xFF
+  RAM[0x59] = FLASH[0x8753];
+  XRAM[0xF770] = 0;
+  XRAM[0xF67F] = 0;
+  XRAM[0xF680] = 0;
+  XRAM[0xF6D2] = 0xFF;
+  XRAM[0xF6D3] = 0xFF;
+  RAM[0x57] = RAM[0x58] = FLASH[0x8755];
+  XRAM[0xF6FB] = 0xFF;
+  XRAM[0xF6FC] = 0xFF;
+  XRAM[0xF6B5] = XRAM[0xF6B7] = 0x00;
+  XRAM[0xF6B6] = XRAM[0xF6B8] = FLASH[0x807C];
+  RAM[0x66] = 0;
+  RAM[0x67] = FLASH[0x808C];
+  XRAM[0xF707] = XRAM[0xF708] = XRAM[0xF709] = XRAM[0xF70A] = XRAM[0xF70B] = XRAM[0xF70C] = XRAM[0xF70D] = XRAM[0xF70E] = 0x80;
+  RAM[0x0D] = 0;
+  RAM[0x0E] = 0;
+  RAM[0x6F] = 0x0C;
+  RAM[0x70] = 0;
+
+  if (!CHECK_BIT_AT(RAM[0x73], 2))
+    DPTR[0xF7A3] = 0;
+
+  if (!CHECK_BIT_AT(RAM[0x73], 1)) {
+    CLEAR_BIT_IN(RAM[0x2E], 5);
+    XRAM[0xF7A5] = 0;
+  }
+
+  CMEN |= 0x20; // enable CM5 - EGR valve at P4.5
+  SET_BIT_IN(RAM[0x2A], 0);
+  SET_BIT_IN(RAM[0x2A], 1);
+  SET_BIT_IN(RAM[0x29], 3);
+  SET_BIT_IN(RAM[0x2B], 7);
+  CLEAR_BIT_IN(RAM[0x2B], 2);
+
+_27FE: // call to init_flags_and_values @ _3A54
+  CLEAR_BIT_IN(RAM[0x2A], 6);
+  CLEAR_BIT_IN(RAM[0x2A], 7);
+  CLEAR_BIT_IN(RAM[0x2A], 2);
+  RAM[0x64] = 0;
+
+  if (!CHECK_BIT_AT(RAM[0x73], 2))
+    XRAM[0xF7A3] = 0;
+
+  if (!CHECK_BIT_AT(RAM[0x73], 1)) {
+    CLEAR_BIT_IN(RAM[0x2E], 5);
+    XRAM[0xF7A5] = 0;
+  }
+
+  XRAM[0xF6F9] = 0;
+  XRAM[0xF6FA] = FLASH[0x8755];
+
+_2801:
+  for (byte Idx = 0; Idx < 0x20; ++Idx)
+    XRAM[0xF94D + Idx] = XRAM[0xF600];
+
+_2810:
+  // ... TODO ...
 }
 
 ///////////////////////////////////////////////////////////////////////
