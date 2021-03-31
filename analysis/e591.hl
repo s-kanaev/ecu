@@ -113,7 +113,11 @@ byte RAM[0x100] = {
                  // bit 7 (bit address 0x07) = if xram check sum was not valid
 
   [0x21] = 0x00, // bit 0 (bit address 0x08) = 1 if failed to read first 0x42 bytes from eeprom
-  [0x22..0x26] = 0x00,
+  [0x22] = 0x00,
+  [0x23] = 0x00, // error codes?
+                 // bit 2 - coolant temperature less than low limit
+                 // bit 3 - coolant temperature haigher than high limit
+  [0x24..0x26] = 0x00,
 
   [0x27] = 0x00,  // ???
                   // bit 2 (bit address 0x3A)
@@ -742,20 +746,14 @@ void open_bypass_air_valve(void) {
 }
 
 // FlashPtr - location of table in FLASH
-// Input - packed offset and factor
-//         factor - least significant three bits, will be SHL 5, max value = 0x1F
-//         offset - most significant five bits, will be SHR 3, eq xxx0 0000)
+// Offset - ???
+// Factor - ???
 // Negate - should table data be XOR'ed with 0x80 (negated?)
 // Returns - result:
 //           T[N] in high byte and zero in low byte if factor eq nil,
-//           factor*(T[N+1] - T[N])
-//  6352:
-word TableLookup(word FlashPtr, byte Input, bool Negate) {
-  byte Offset = (Input & 0xF8) >> 3; //R3 = tripple_rotate_right(R2, 0x1F); // maximum value = 1F
-  byte Factor = (Input & 0x07) << 5; // A = tripple_rotate_right(R2, 0xE0); // Factor: xxx0 0000
-// 635D:
-  Input = Factor; // R2 = A
-
+//           factor*(T[N+1] - T[N]) if factor isn't nil
+//           N = Offset
+word GetValueFromTableImpl(word FlashPtr, byte Offset, byte Factor, bool Negate) {
   if (!Factor)
     return COMPOSE_WORD(FLASH[FlashPtr + Offset], 0);
 
@@ -765,26 +763,40 @@ word TableLookup(word FlashPtr, byte Input, bool Negate) {
     TableData ^= 0x80;
 
   word Prod1 = TableData * Factor; // A - low byte of result, B - high byte of result
-  R0 = LOW(Prod);     // (byte)(Prod & 0xFF);
-  R1 = HIGH(Prod);    //(byte)((Prod & 0xFF00) >> 8);
-
-  B = -Factor; // negate and increment
 
   TableData = FLASH[FlashPtr + Offset];
 
   if (Negate)
     TableData ^= 0x80;
-  
+
   word Prod2 = TableData * (-Factor);
-  
+
   word Result = Prod1 + Prod2;
-  
+
   if (Negate) {
     Result ^= 0x8000;
     CY = CHECK_BIT_AT(Result, 0x0F);
   }
 
   return Result;
+}
+
+// FlashPtr - location of table in FLASH
+// Input - packed offset and factor
+//         factor - least significant three bits, will be SHL 5, max value = 0x1F
+//         offset - most significant five bits, will be SHR 3, eq xxx0 0000)
+// Negate - should table data be XOR'ed with 0x80 (negated?)
+// Returns - result:
+//           T[N] in high byte and zero in low byte if factor eq nil,
+//           factor*(T[N+1] - T[N]) if factor isn't nil
+//  6352:
+word GetValueFromTable(word FlashPtr, byte Input, bool Negate) {
+  byte Offset = (Input & 0xF8) >> 3; // R3 = tripple_rotate_right(R2, 0x1F); // maximum value = 1F
+  byte Factor = (Input & 0x07) << 5; // A = tripple_rotate_right(R2, 0xE0); // Factor: xxx0 0000
+// 635D: // table_lookup_impl
+  Input = Factor; // R2 = A
+
+  return GetValueFromTableImpl(FlashPtr, Offset, Factor, Negate);
 }
 
 void init_ram_63(byte TableDataHigh) {
@@ -1193,7 +1205,7 @@ void reset_interrupt() noreturn {
     }
   }
 
-  word TableData = TableLookup(0xA2FD, 0, false);
+  word TableData = GetValueFromTable(0xA2FD, 0, false);
   init_ram_63(HIGH(TableData));
   
   update_ram_63();
