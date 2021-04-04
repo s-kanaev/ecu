@@ -8471,7 +8471,11 @@ code_280B:                              ; CODE XREF: power_on__ignition_key_turn
 !!!!!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!!!!!
 
 
-                lcall   code_5374
+                lcall   A_D_Convert_part1 ; A/D Convert and prepare for calculus:
+                                        ;  - Coolant temperature
+                                        ;  - Intake Air Temperature
+                                        ;  - CO Potentiometer
+                                        ;  - Ignition Voltage
                 mov     DPTR, #87B7h
                 clr     A
                 movc    A, @A+DPTR
@@ -8994,7 +8998,7 @@ code_2B19:                              ; CODE XREF: power_on__ignition_key_turn
 code_2B3C:                              ; CODE XREF: power_on__ignition_key_turned_:code_2B19↑j
                                         ; power_on__ignition_key_turned_+798↑j ...
                 mov     B, #7           ; B-Register
-                lcall   convert_analog_to_digital ; A/D convert value at requested pin
+                lcall   convert_analog_to_digital_10bit ; A/D convert value at requested pin
                                         ;
                                         ; Input
                                         ;  - B, only low nibble to be set: 0x00 .. 0x0F
@@ -9012,7 +9016,7 @@ code_2B3C:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #0F69Eh
                 lcall   code_64A4
                 mov     B, #0Eh         ; B-Register
-                lcall   convert_analog_to_digital ; A/D convert value at requested pin
+                lcall   convert_analog_to_digital_10bit ; A/D convert value at requested pin
                                         ;
                                         ; Input
                                         ;  - B, only low nibble to be set: 0x00 .. 0x0F
@@ -9030,13 +9034,29 @@ code_2B3C:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #0F6A0h
                 lcall   code_64A4
                 mov     B, #8           ; B-Register
-                lcall   code_5526
+                lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
+                                        ;
+                                        ; Input
+                                        ;  - B, only low nibble to be set: 0x00 .. 0x0F
+                                        ;       pin selector
+                                        ;
+                                        ; Output
+                                        ;  - A = R0 - converted value
+                                        ;
                 mov     DPTR, #0F689h
                 movx    @DPTR, A
                 mov     DPTR, #0F6A4h
                 lcall   code_6498
                 mov     B, #9           ; B-Register
-                lcall   code_5526
+                lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
+                                        ;
+                                        ; Input
+                                        ;  - B, only low nibble to be set: 0x00 .. 0x0F
+                                        ;       pin selector
+                                        ;
+                                        ; Output
+                                        ;  - A = R0 - converted value
+                                        ;
                 mov     DPTR, #0F688h
                 movx    @DPTR, A
                 mov     R0, A
@@ -9047,7 +9067,15 @@ code_2B3C:                              ; CODE XREF: power_on__ignition_key_turn
                 movc    A, @A+DPTR
                 mov     R1, A
                 mov     B, #9           ; B-Register
-                lcall   code_5526
+                lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
+                                        ;
+                                        ; Input
+                                        ;  - B, only low nibble to be set: 0x00 .. 0x0F
+                                        ;       pin selector
+                                        ;
+                                        ; Output
+                                        ;  - A = R0 - converted value
+                                        ;
                 clr     C
                 subb    A, #0
                 jnc     code_2B9D
@@ -9069,7 +9097,7 @@ code_2BAC:                              ; CODE XREF: power_on__ignition_key_turn
                 cpl     C
                 mov     RAM_28.4, C
                 mov     B, #0Ch         ; B-Register
-                lcall   convert_analog_to_digital ; A/D convert value at requested pin
+                lcall   convert_analog_to_digital_10bit ; A/D convert value at requested pin
                                         ;
                                         ; Input
                                         ;  - B, only low nibble to be set: 0x00 .. 0x0F
@@ -9189,6 +9217,7 @@ code_2C4A:                              ; CODE XREF: power_on__ignition_key_turn
                 lcall   get_adc_value_from_table_and_adjust_for_calculus ; Find ADC value in table and adjust for calculus
                                         ;
                                         ; INPUT
+                                        ;   DPTR - table address in FLASH
                                         ;   R1:R0 = A/D Converted data
                                         ; 10-bit value,
                                         ; R1[7..0] - highest 8 bits
@@ -9241,6 +9270,7 @@ code_2C86:                              ; CODE XREF: power_on__ignition_key_turn
                 lcall   get_adc_value_from_table_and_adjust_for_calculus ; Find ADC value in table and adjust for calculus
                                         ;
                                         ; INPUT
+                                        ;   DPTR - table address in FLASH
                                         ;   R1:R0 = A/D Converted data
                                         ; 10-bit value,
                                         ; R1[7..0] - highest 8 bits
@@ -9358,6 +9388,7 @@ code_2D09:                              ; CODE XREF: power_on__ignition_key_turn
                 lcall   get_adc_value_from_table_and_adjust_for_calculus ; Find ADC value in table and adjust for calculus
                                         ;
                                         ; INPUT
+                                        ;   DPTR - table address in FLASH
                                         ;   R1:R0 = A/D Converted data
                                         ; 10-bit value,
                                         ; R1[7..0] - highest 8 bits
@@ -9465,7 +9496,15 @@ code_2D7F:                              ; CODE XREF: power_on__ignition_key_turn
                 clr     C
                 subb    A, #50h ; 'P'
                 mov     B, #0C0h        ; B-Register
-                lcall   code_5FE2
+                lcall   multiply_signed ; Multiply signed bytes.
+                                        ; Result - signed word.
+                                        ;
+                                        ; INPUT
+                                        ;  - A - multiplicand #1
+                                        ;  - B - multiplicand #2
+                                        ;
+                                        ; OUTPUT
+                                        ;  - B:A - signed word B*A
                 sjmp    code_2D91
 ; ---------------------------------------------------------------------------
 
@@ -9833,7 +9872,15 @@ code_2F3D:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #0F7BEh
                 movx    @DPTR, A
                 mov     B, #1           ; B-Register
-                lcall   code_5526
+                lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
+                                        ;
+                                        ; Input
+                                        ;  - B, only low nibble to be set: 0x00 .. 0x0F
+                                        ;       pin selector
+                                        ;
+                                        ; Output
+                                        ;  - A = R0 - converted value
+                                        ;
                 clr     C
                 subb    A, #0
                 jnc     code_2F4D
@@ -9934,7 +9981,15 @@ code_2FB8:                              ; CODE XREF: power_on__ignition_key_turn
 code_2FD0:                              ; CODE XREF: power_on__ignition_key_turned_+C17↑j
                                         ; power_on__ignition_key_turned_:code_2FB8↑j
                 mov     B, #2           ; B-Register
-                lcall   code_5526
+                lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
+                                        ;
+                                        ; Input
+                                        ;  - B, only low nibble to be set: 0x00 .. 0x0F
+                                        ;       pin selector
+                                        ;
+                                        ; Output
+                                        ;  - A = R0 - converted value
+                                        ;
                 clr     C
                 subb    A, #0
                 jnc     code_2FDC
@@ -10064,7 +10119,7 @@ code_3084:                              ; CODE XREF: power_on__ignition_key_turn
                 orl     C, RAM_24.1
                 jc      code_30EF
                 mov     B, #0Ch         ; B-Register
-                lcall   convert_analog_to_digital ; A/D convert value at requested pin
+                lcall   convert_analog_to_digital_10bit ; A/D convert value at requested pin
                                         ;
                                         ; Input
                                         ;  - B, only low nibble to be set: 0x00 .. 0x0F
@@ -11300,7 +11355,11 @@ code_36ED:                              ; CODE XREF: power_on__ignition_key_turn
                 clr     RAM_28.3
                 lcall   code_695C
                 lcall   code_696B
-                lcall   code_5374
+                lcall   A_D_Convert_part1 ; A/D Convert and prepare for calculus:
+                                        ;  - Coolant temperature
+                                        ;  - Intake Air Temperature
+                                        ;  - CO Potentiometer
+                                        ;  - Ignition Voltage
                 clr     A
                 mov     DPTR, #0F679h
                 movx    @DPTR, A
@@ -11483,7 +11542,15 @@ code_37EC:                              ; CODE XREF: power_on__ignition_key_turn
                 movc    A, @A+DPTR
                 mov     R1, A
                 mov     B, #0Bh         ; B-Register
-                lcall   code_5526
+                lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
+                                        ;
+                                        ; Input
+                                        ;  - B, only low nibble to be set: 0x00 .. 0x0F
+                                        ;       pin selector
+                                        ;
+                                        ; Output
+                                        ;  - A = R0 - converted value
+                                        ;
                 clr     C
                 subb    A, R1
                 jc      code_3811
@@ -11517,7 +11584,15 @@ code_3816:                              ; CODE XREF: power_on__ignition_key_turn
                 movc    A, @A+DPTR
                 mov     R1, A
                 mov     B, #9           ; B-Register
-                lcall   code_5526
+                lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
+                                        ;
+                                        ; Input
+                                        ;  - B, only low nibble to be set: 0x00 .. 0x0F
+                                        ;       pin selector
+                                        ;
+                                        ; Output
+                                        ;  - A = R0 - converted value
+                                        ;
                 clr     C
                 subb    A, #0
                 jnc     code_383C
@@ -13597,7 +13672,15 @@ code_4422:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     B, A            ; B-Register
                 mov     DPTR, #0F681h
                 movx    A, @DPTR
-                lcall   code_5FE2
+                lcall   multiply_signed ; Multiply signed bytes.
+                                        ; Result - signed word.
+                                        ;
+                                        ; INPUT
+                                        ;  - A - multiplicand #1
+                                        ;  - B - multiplicand #2
+                                        ;
+                                        ; OUTPUT
+                                        ;  - B:A - signed word B*A
                 mov     DPTR, #0F682h
                 movx    A, @DPTR
                 add     A, B            ; B-Register
@@ -16711,13 +16794,18 @@ code_5371:                              ; CODE XREF: power_on__ignition_key_turn
 
 ; =============== S U B R O U T I N E =======================================
 
+; A/D Convert and prepare for calculus:
+;  - Coolant temperature
+;  - Intake Air Temperature
+;  - CO Potentiometer
+;  - Ignition Voltage
 
-code_5374:                              ; CODE XREF: power_on__ignition_key_turned_+47E↑p
+A_D_Convert_part1:                      ; CODE XREF: power_on__ignition_key_turned_+47E↑p
                                         ; power_on__ignition_key_turned_+1363↑p
                 clr     RAM_26.6        ; RAM[0x26] &= ~(1 << 6)
 COOLANT TEMP
-                mov     B, #7           ; B = 7
-                lcall   convert_analog_to_digital ; A/D convert value at requested pin
+                mov     B, #7           ; B = 7, P7.7, wants to A/D convert Coolant Temperature
+                lcall   convert_analog_to_digital_10bit ; A/D convert value at requested pin
                                         ;
                                         ; Input
                                         ;  - B, only low nibble to be set: 0x00 .. 0x0F
@@ -16732,28 +16820,28 @@ COOLANT TEMP
                 movx    @DPTR, A        ; XRAM[0xF686] = ADC(P7.7) = ADC(Coolant temperature)
                 mov     DPTR, #805Dh
                 clr     A
-                movc    A, @A+DPTR      ; A = FLASH[0x805D] = 0
-                jnz     code_539F       ; if (FLASH[0x805D]) jump ...
+                movc    A, @A+DPTR      ; A = FLASH[0x805D] = 0, fallback value ?
+                jnz     coolant_temp_in_valid_range ; if (FLASH[0x805D]) jump ...
                 mov     DPTR, #8057h
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B = FLASH[0x8057] = min A/D converted voltage of coolant temperature for diagnosis
+                mov     B, A            ; B = FLASH[0x8057] = 0x64, min A/D converted voltage of coolant temperature for diagnosis
                 mov     A, R1           ; A = ADC(P7.7) = ADC(Coolant temperature)
                 cjne    A, B, code_5393 ; B-Register
 
-code_5393:                              ; CODE XREF: code_5374+1C↑j
+code_5393:                              ; CODE XREF: A_D_Convert_part1+1C↑j
                 jc      coolant_temp_less_than_low_limit ; if (ADC(Coolant temperature) < FLASH[0x8057]) jump ...
 Coolant temperature above lower limit (which is that?)
                 mov     DPTR, #8058h
                 clr     A
-                movc    A, @A+DPTR      ; A = FLASH[0x8058] = max A/D converted voltage of coolant temperature for diagnosis
+                movc    A, @A+DPTR      ; A = FLASH[0x8058] = 0xF0, max A/D converted voltage of coolant temperature for diagnosis
                 cjne    A, RAM_1, code_539D
 
-code_539D:                              ; CODE XREF: code_5374+26↑j
+code_539D:                              ; CODE XREF: A_D_Convert_part1+26↑j
                 jc      coolant_temp_larger_than_high_limit ; if (FLASH[0x8058] < ADC(Coolant temperature)) jump ...
 Coolant temperature is in valid range
 
-code_539F:                              ; CODE XREF: code_5374+12↑j
+coolant_temp_in_valid_range:            ; CODE XREF: A_D_Convert_part1+12↑j
                 clr     RAM_23.2        ; RAM[0x23] &= ~(1 << 2)
                 clr     RAM_23.3        ; RAM[0x23] &= ~(1 << 3)
                 mov     DPTR, #831Fh    ; DPTR = 0x831F
@@ -16766,6 +16854,7 @@ R0[5..0] - unused
                 lcall   get_adc_value_from_table_and_adjust_for_calculus ; Find ADC value in table and adjust for calculus
                                         ;
                                         ; INPUT
+                                        ;   DPTR - table address in FLASH
                                         ;   R1:R0 = A/D Converted data
                                         ; 10-bit value,
                                         ; R1[7..0] - highest 8 bits
@@ -16779,17 +16868,17 @@ R0[5..0] - unused
                 sjmp    code_53C4
 ; ---------------------------------------------------------------------------
 
-coolant_temp_less_than_low_limit:       ; CODE XREF: code_5374:code_5393↑j
+coolant_temp_less_than_low_limit:       ; CODE XREF: A_D_Convert_part1:code_5393↑j
                 setb    RAM_23.2        ; RAM[0x23] |= (1 << 2)
                 clr     RAM_23.3        ; RAM[0x23] &= ~(1 << 3)
                 sjmp    coolant_temp_not_in_limits
 ; ---------------------------------------------------------------------------
 
-coolant_temp_larger_than_high_limit:    ; CODE XREF: code_5374:code_539D↑j
+coolant_temp_larger_than_high_limit:    ; CODE XREF: A_D_Convert_part1:code_539D↑j
                 clr     RAM_23.2        ; RAM[0x23] &= ~(1 << 2)
                 setb    RAM_23.3        ; RAM[0x23] |= (1 << 3)
 
-coolant_temp_not_in_limits:             ; CODE XREF: code_5374+3D↑j
+coolant_temp_not_in_limits:             ; CODE XREF: A_D_Convert_part1+3D↑j
                 mov     B, #0           ; B-Register
                 mov     DPTR, #8A4Bh    ; DPTR = 0x8A4B
                 mov     A, B            ; B = A = 0
@@ -16797,7 +16886,7 @@ coolant_temp_not_in_limits:             ; CODE XREF: code_5374+3D↑j
                 mov     RAM_3A, A       ; RAM[0x3A] = FLASH[0x8A4B], fallback coolant temperature
                 mov     R0, #0          ; R0 = 0
 
-code_53C4:                              ; CODE XREF: code_5374+37↑j
+code_53C4:                              ; CODE XREF: A_D_Convert_part1+37↑j
                 mov     R1, RAM_3A      ; R1 = RAM[0x3A], coolant temperature
                 lcall   adjust_temperature ; INPUT
                                         ;   R1:R0 - adjusted table value for A/D Converted value
@@ -16815,7 +16904,7 @@ code_53C4:                              ; CODE XREF: code_5374+37↑j
 COOLANT TEMP FINISHED
 INTAKE AIR TEMP
                 mov     B, #0Eh         ; Wants to A/D convert P8.6 - Intake air temperature
-                lcall   convert_analog_to_digital ; A/D convert value at requested pin
+                lcall   convert_analog_to_digital_10bit ; A/D convert value at requested pin
                                         ;
                                         ; Input
                                         ;  - B, only low nibble to be set: 0x00 .. 0x0F
@@ -16844,23 +16933,24 @@ INTAKE AIR TEMP
                 mov     A, R1           ; A = R1, HIGH(ADC(IntakeAirTemp))
                 cjne    A, B, code_53F0 ; B-Register
 
-code_53F0:                              ; CODE XREF: code_5374+79↑j
+code_53F0:                              ; CODE XREF: A_D_Convert_part1+79↑j
                 jc      intake_air_temp_below_low_limit ; if (HIGH(ADC(IntakeAirTemp)) < FLASH[0x805E]) jump ...
                 mov     DPTR, #805Fh
                 clr     A
                 movc    A, @A+DPTR      ; A = FLASH[0x805F], Intake air temperature high limit
                 cjne    A, RAM_1, code_53FA
 
-code_53FA:                              ; CODE XREF: code_5374+83↑j
+code_53FA:                              ; CODE XREF: A_D_Convert_part1+83↑j
                 jc      intake_air_temp_above_high_limit ; if (FLASH[0x805F] < HIGH(ADC(IntakeAirTemp))) jump ...
 
-intake_air_temp_in_limits:              ; CODE XREF: code_5374+6F↑j
+intake_air_temp_in_limits:              ; CODE XREF: A_D_Convert_part1+6F↑j
                 clr     RAM_24.4
                 clr     RAM_24.5
                 mov     DPTR, #8341h
                 lcall   get_adc_value_from_table_and_adjust_for_calculus ; Find ADC value in table and adjust for calculus
                                         ;
                                         ; INPUT
+                                        ;   DPTR - table address in FLASH
                                         ;   R1:R0 = A/D Converted data
                                         ; 10-bit value,
                                         ; R1[7..0] - highest 8 bits
@@ -16874,31 +16964,25 @@ intake_air_temp_in_limits:              ; CODE XREF: code_5374+6F↑j
                 sjmp    code_541D
 ; ---------------------------------------------------------------------------
 
-intake_air_temp_below_low_limit:        ; CODE XREF: code_5374:code_53F0↑j
+intake_air_temp_below_low_limit:        ; CODE XREF: A_D_Convert_part1:code_53F0↑j
                 setb    RAM_24.4        ; set error flags
                 clr     RAM_24.5
                 sjmp    use_default_intake_air_temp
 ; ---------------------------------------------------------------------------
 
-intake_air_temp_above_high_limit:       ; CODE XREF: code_5374:code_53FA↑j
+intake_air_temp_above_high_limit:       ; CODE XREF: A_D_Convert_part1:code_53FA↑j
                 clr     RAM_24.4        ; set error flags
                 setb    RAM_24.5
 
-use_default_intake_air_temp:            ; CODE XREF: code_5374+67↑j
-                                        ; code_5374+9A↑j
+use_default_intake_air_temp:            ; CODE XREF: A_D_Convert_part1+67↑j
+                                        ; A_D_Convert_part1+9A↑j
                 mov     DPTR, #8061h
                 clr     A
                 movc    A, @A+DPTR
                 mov     RAM_3B, A       ; RAM[0x3B] = FLASH[0x8061], default intake air temperature
                 mov     R0, #0          ; R0 = 0
 
-
-!!!!!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!!!!!
-
-
-
-
-code_541D:                              ; CODE XREF: code_5374+94↑j
+code_541D:                              ; CODE XREF: A_D_Convert_part1+94↑j
                 mov     R1, RAM_3B      ; R1 = adjusted intake air temp
                 lcall   adjust_temperature ; INPUT
                                         ;   R1:R0 - adjusted table value for A/D Converted value
@@ -16916,211 +17000,275 @@ code_541D:                              ; CODE XREF: code_5374+94↑j
 INTAKE AIR TEMP FINISHED
                 mov     A, P9           ; A = P9
                 anl     A, #20h
-                jnz     code_542E
-                mov     A, #0
+                jnz     LO_set_diagnostic ; if ((P9 & 0x20)) jump ...
+                                        ;
+                                        ; test LO @ MC33199 (ISO9141)
+                mov     A, #0           ; A = 0, mode ?
                 sjmp    code_5430
 ; ---------------------------------------------------------------------------
 
-code_542E:                              ; CODE XREF: code_5374+B4↑j
-                mov     A, #3
+LO_set_diagnostic:                      ; CODE XREF: A_D_Convert_part1+B4↑j
+                mov     A, #3           ; A = 3, mode?
 
-code_5430:                              ; CODE XREF: code_5374+B8↑j
+code_5430:                              ; CODE XREF: A_D_Convert_part1+B8↑j
                 mov     DPTR, #0F7BEh
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF7BE] = A (current operating mode?)
                 mov     DPTR, #873Fh
                 clr     A
-                movc    A, @A+DPTR
-                jb      ACC.7, code_544A ; Accumulator
+                movc    A, @A+DPTR      ; A = FLASH[0x873F]
+                jb      ACC.7, has_CO_potentiometer ; if (FLASH[0x873F] & (1 << 7)) jump ...
+                                        ; // check if there is CO potentiometer
                 mov     DPTR, #8741h
                 clr     A
-                movc    A, @A+DPTR
-                jb      ACC.0, code_54A1 ; Accumulator
-                clr     RAM_23.4
+                movc    A, @A+DPTR      ; A = FLASH[0x8741]
+                jb      ACC.0, has_IROM ; if (FLASH[0x8741] & (1 << 0)) jump ...
+                                        ; // check if there is IROM
+                clr     RAM_23.4        ; set status bits
                 clr     RAM_23.5
-                sjmp    code_548D
+                sjmp    CO_pot_not_in_limits
 ; ---------------------------------------------------------------------------
+CO POTENTIOMETER START
 
-code_544A:                              ; CODE XREF: code_5374+C5↑j
-                mov     B, #8           ; B-Register
-                lcall   code_5526
+has_CO_potentiometer:                   ; CODE XREF: A_D_Convert_part1+C5↑j
+                mov     B, #8           ; B = 8, P8.0, wants to see CO potentiometer
+                lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
+                                        ;
+                                        ; Input
+                                        ;  - B, only low nibble to be set: 0x00 .. 0x0F
+                                        ;       pin selector
+                                        ;
+                                        ; Output
+                                        ;  - A = R0 - converted value
+                                        ;
                 mov     DPTR, #0F689h
                 movx    @DPTR, A
-                mov     R1, A
+                mov     R1, A           ; R1 = XRAM[0xF689] = ADC(CO Potentiometer)
                 mov     DPTR, #8067h
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = FLASH[0x8067], CO pot low limit
                 mov     A, R1
                 cjne    A, B, code_5460 ; B-Register
 
-code_5460:                              ; CODE XREF: code_5374+E9↑j
-                jnc     code_5468
-                setb    RAM_23.4
+code_5460:                              ; CODE XREF: A_D_Convert_part1+E9↑j
+                jnc     CO_pot_above_low_limit ; if (ADC(CO Potentiometer) >= FLASH[0x8067]) jump ...
+                setb    RAM_23.4        ; set error flags
                 clr     RAM_23.5
-                sjmp    code_548D
+                sjmp    CO_pot_not_in_limits
 ; ---------------------------------------------------------------------------
 
-code_5468:                              ; CODE XREF: code_5374:code_5460↑j
+CO_pot_above_low_limit:                 ; CODE XREF: A_D_Convert_part1:code_5460↑j
                 mov     DPTR, #8068h
                 clr     A
-                movc    A, @A+DPTR
+                movc    A, @A+DPTR      ; A = FLASH[0x8068], CO pot high limit
                 cjne    A, RAM_1, code_5470
 
-code_5470:                              ; CODE XREF: code_5374+F9↑j
-                jnc     code_5478
-                clr     RAM_23.4
+code_5470:                              ; CODE XREF: A_D_Convert_part1+F9↑j
+                jnc     CO_pot_in_limits ; if (FLASH[0x8068] >= ADC(CO Potentiometer)) jump ...
+                clr     RAM_23.4        ; set error flags
                 setb    RAM_23.5
-                sjmp    code_548D
+                sjmp    CO_pot_not_in_limits
 ; ---------------------------------------------------------------------------
 
-code_5478:                              ; CODE XREF: code_5374:code_5470↑j
-                clr     RAM_23.4
+CO_pot_in_limits:                       ; CODE XREF: A_D_Convert_part1:code_5470↑j
+                clr     RAM_23.4        ; clear error flags
                 clr     RAM_23.5
                 mov     A, R1
-                rlc     A
-                jnc     code_5482
-                mov     A, #0FFh
+                rlc     A               ; A = RLC(ADC(CO pot))
+                                        ;
+                                        ; y = RLC(x)
+                                        ; y[n+1] = x[n], n = 0..6
+                                        ; y[0] = CY
+                                        ; CY = x[7]
+                                        ;
+                                        ; roughly: A = 2*ADC(CO pot)
+                jnc     code_5482       ; if (!(ADC(CO pot) & 0x80)) jump ...
+                                        ; if (ADC(CO pot) < 0x80) jump ...
+                mov     A, #0FFh        ; A = 0xFF, saturate
 
-code_5482:                              ; CODE XREF: code_5374+10A↑j
-                clr     C
-                subb    A, #50h ; 'P'
-                mov     B, #0C0h        ; B-Register
-                lcall   code_5FE2
+code_5482:                              ; CODE XREF: A_D_Convert_part1+10A↑j
+                clr     C               ; CY = 0
+                subb    A, #50h ; 'P'   ; A = ADC(CO pot) - 0x50
+                mov     B, #0C0h        ; B = 0xC0
+                lcall   multiply_signed ; Multiply signed bytes.
+                                        ; Result - signed word.
+                                        ;
+                                        ; INPUT
+                                        ;  - A - multiplicand #1
+                                        ;  - B - multiplicand #2
+                                        ;
+                                        ; OUTPUT
+                                        ;  - B:A - signed word B*A
                 sjmp    code_5494
 ; ---------------------------------------------------------------------------
 
-code_548D:                              ; CODE XREF: code_5374+D4↑j
-                                        ; code_5374+F2↑j ...
+CO_pot_not_in_limits:                   ; CODE XREF: A_D_Convert_part1+D4↑j
+                                        ; A_D_Convert_part1+F2↑j ...
                 mov     DPTR, #8069h
                 clr     A
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
 
-code_5494:                              ; CODE XREF: code_5374+117↑j
-                mov     A, RAM_73
-                jb      ACC.3, code_549F ; Accumulator
-                mov     A, B            ; B-Register
+code_5494:                              ; CODE XREF: A_D_Convert_part1+117↑j
+                mov     A, RAM_73       ; A = RAM[0x73], some status byte
+                jb      ACC.3, code_549F ; if (RAM[0x73] & (1 << 3)) jump ...
+                mov     A, B            ; A = B
                 mov     DPTR, #0F681h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF681] = B (high byte of multiplication)
 
-code_549F:                              ; CODE XREF: code_5374+122↑j
-                sjmp    code_54B2
+code_549F:                              ; CODE XREF: A_D_Convert_part1+122↑j
+                sjmp    xram_F681_initialized
 ; ---------------------------------------------------------------------------
 
-code_54A1:                              ; CODE XREF: code_5374+CD↑j
-                clr     RAM_23.4
+has_IROM:                               ; CODE XREF: A_D_Convert_part1+CD↑j
+                clr     RAM_23.4        ; clear error flags
                 clr     RAM_23.5
                 mov     A, RAM_73
-                jb      ACC.3, code_54B2 ; Accumulator
+                jb      ACC.3, xram_F681_initialized ; if (RAM[0x73] & (1 << 3)) jump ...
                 mov     DPTR, #0FF74h
-                movx    A, @DPTR
+                movx    A, @DPTR        ; A = XRAM[0xFF74]
                 mov     DPTR, #0F681h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF681] = XRAM[0xFF74]
 
-code_54B2:                              ; CODE XREF: code_5374:code_549F↑j
-                                        ; code_5374+133↑j
+xram_F681_initialized:                  ; CODE XREF: A_D_Convert_part1:code_549F↑j
+                                        ; A_D_Convert_part1+133↑j
                 mov     DPTR, #8741h
                 clr     A
-                movc    A, @A+DPTR
-                jb      ACC.0, code_54CA ; Accumulator
+                movc    A, @A+DPTR      ; A = FLASH[0x8741], kitting bits
+                jb      ACC.0, code_54CA ; if (has IROM) jump ...
                 mov     A, RAM_73
-                jb      ACC.4, code_54D7 ; Accumulator
+                jb      ACC.4, xram_F682_initialized ; Accumulator
                 mov     DPTR, #806Ah
                 clr     A
-                movc    A, @A+DPTR
+                movc    A, @A+DPTR      ; A = FLASH[0x806A]
                 mov     DPTR, #0F682h
-                movx    @DPTR, A
-                sjmp    code_54D7
+                movx    @DPTR, A        ; XRAM[0xF682] = FLASH[0x806A]
+                sjmp    xram_F682_initialized
 ; ---------------------------------------------------------------------------
 
-code_54CA:                              ; CODE XREF: code_5374+143↑j
+code_54CA:                              ; CODE XREF: A_D_Convert_part1+143↑j
                 mov     A, RAM_73
-                jb      ACC.4, code_54D7 ; Accumulator
+                jb      ACC.4, xram_F682_initialized ; Accumulator
                 mov     DPTR, #0FF75h
                 movx    A, @DPTR
                 mov     DPTR, #0F682h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF682] = XRAM[0xFF75]
+CO POTENTIOMETER FINISH
+IGNITION VOLTAGE START
 
-code_54D7:                              ; CODE XREF: code_5374+148↑j
-                                        ; code_5374+154↑j ...
-                mov     B, #9           ; B-Register
-                lcall   code_5526
+xram_F682_initialized:                  ; CODE XREF: A_D_Convert_part1+148↑j
+                                        ; A_D_Convert_part1+154↑j ...
+                mov     B, #9           ; P8.1, wants to see if ignition is turned on
+                lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
+                                        ;
+                                        ; Input
+                                        ;  - B, only low nibble to be set: 0x00 .. 0x0F
+                                        ;       pin selector
+                                        ;
+                                        ; Output
+                                        ;  - A = R0 - converted value
+                                        ;
                 mov     DPTR, #0F688h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF866] = ADC(Ignition Voltage)
                 clr     C
                 subb    A, #0
-                jnc     code_54E7
-                clr     A
+                jnc     code_54E7       ; if (ADC(Ignition Voltage) >= 0) jump ...
+                clr     A               ; A = 0
 
-code_54E7:                              ; CODE XREF: code_5374+170↑j
-                mov     B, #75h ; 'u'   ; B-Register
-                mul     AB
+code_54E7:                              ; CODE XREF: A_D_Convert_part1+170↑j
+                mov     B, #75h         ; B-Register
+                mul     AB              ; B:A = ADC(Ignition Voltage) * 0x75
                 rlc     A
                 mov     A, B            ; B-Register
-                rlc     A
-                jnc     code_54F3
-                mov     A, #0FFh
+                rlc     A               ; A = (B << 2) | (A & (1 << 7))
+                                        ; CY = !!(B & (1 << 7))
+                jnc     code_54F3       ; if (!(B & (1 << 7))) jump ...
+                mov     A, #0FFh        ; saturate
 
-code_54F3:                              ; CODE XREF: code_5374+17B↑j
-                mov     R1, A
+code_54F3:                              ; CODE XREF: A_D_Convert_part1+17B↑j
+                mov     R1, A           ; R1 = A, filtered Ignition Voltage
                 mov     DPTR, #8062h
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = FLASH[0x8062]
                 mov     A, R1
                 cjne    A, B, code_54FF ; B-Register
 
-code_54FF:                              ; CODE XREF: code_5374+188↑j
-                mov     RAM_22.4, C
+code_54FF:                              ; CODE XREF: A_D_Convert_part1+188↑j
+                mov     RAM_22.4, C     ; if (R1 < FLASH[0x8062])
+                                        ;   RAM[0x22] |= (1 << 4)
+                                        ; else
+                                        ;   RAM[0x22] &= ~(1 << 4)
                 mov     DPTR, #8063h
                 clr     A
-                movc    A, @A+DPTR
+                movc    A, @A+DPTR      ; A = FLASH[0x8063]
                 cjne    A, RAM_1, code_5509
 
-code_5509:                              ; CODE XREF: code_5374+192↑j
-                mov     RAM_22.5, C
+code_5509:                              ; CODE XREF: A_D_Convert_part1+192↑j
+                mov     RAM_22.5, C     ; if (R1 < FLASH[0x8063])
+                                        ;   RAM[0x22] |= (1 << 5)
+                                        ; else
+                                        ;   RAM[0x22] &= ~(1 << 5)
                 mov     A, R1
-                mov     RAM_3C, A
+                mov     RAM_3C, A       ; RAM[0x3C] = R1
                 mov     A, RAM_3C
                 clr     C
                 subb    A, #36h ; '6'
-                jnc     code_5516
-                clr     A
+                jnc     code_5516       ; if (RAM[0x3C] >= 0x36) jump ...
+                clr     A               ; A = 0, saturate if RAM[0x3C] < 0x36
 
-code_5516:                              ; CODE XREF: code_5374+19F↑j
+code_5516:                              ; CODE XREF: A_D_Convert_part1+19F↑j
                 mov     B, #40h ; '@'   ; B-Register
-                mul     AB
-                mov     A, B            ; B-Register
+                mul     AB              ; B:A = A * 0x40
+                mov     A, B            ; A = HIGH(A * 0x40)
                 cjne    A, #1Fh, code_551F
 
-code_551F:                              ; CODE XREF: code_5374+1A8↑j
-                jc      code_5523
-                mov     A, #1Fh
+code_551F:                              ; CODE XREF: A_D_Convert_part1+1A8↑j
+                jc      code_5523       ; if (A < 0x1F) jump ...
+                mov     A, #1Fh         ; saturate
+                                        ; A = minimum value, which is 0x1F
 
-code_5523:                              ; CODE XREF: code_5374:code_551F↑j
-                mov     RAM_3F, A
+code_5523:                              ; CODE XREF: A_D_Convert_part1:code_551F↑j
+                mov     RAM_3F, A       ; RAM[0x3F] = A
                 ret
-; End of function code_5374
+; End of function A_D_Convert_part1
 
 
 ; =============== S U B R O U T I N E =======================================
 
+; A/D convert value at requested pin
+;
+; Input
+;  - B, only low nibble to be set: 0x00 .. 0x0F
+;       pin selector
+;
+; Output
+;  - A = R0 - converted value
+;
 
-code_5526:                              ; CODE XREF: power_on__ignition_key_turned_+7DB↑p
+convert_analog_to_digital_8bit:         ; CODE XREF: power_on__ignition_key_turned_+7DB↑p
                                         ; power_on__ignition_key_turned_+7EB↑p ...
                 mov     ADCON1, B       ; A/D Converter Control Register 1
                 orl     ADCON1, #40h    ; A/D Converter Control Register 1
                 mov     ADDATL, #0      ; A/D Converter Data Register, Low Byte
 
-code_552F:                              ; CODE XREF: code_5526:code_552F↓j
+code_552F:                              ; CODE XREF: convert_analog_to_digital_8bit:code_552F↓j
                 jb      ADCON0.4, code_552F ; A/D Converter Control Register 0
                 mov     R0, ADDATH      ; A/D Converter Data Register, High Byte
                 mov     A, ADCON1       ; A/D Converter Control Register 1
                 anl     A, #0Fh
-                cjne    A, B, code_5526 ; B-Register
+                cjne    A, B, convert_analog_to_digital_8bit ; A/D convert value at requested pin
+                                        ;
+                                        ; Input
+                                        ;  - B, only low nibble to be set: 0x00 .. 0x0F
+                                        ;       pin selector
+                                        ;
+                                        ; Output
+                                        ;  - A = R0 - converted value
+                                        ;
                 mov     A, R0
                 ret
-; End of function code_5526
+; End of function convert_analog_to_digital_8bit
 
 
 ; =============== S U B R O U T I N E =======================================
@@ -17136,7 +17284,7 @@ code_552F:                              ; CODE XREF: code_5526:code_552F↓j
 ;    R1 - high (bits 7..0)
 ;    R0 - low (bits 7..6), bits 5..0 - not used
 
-convert_analog_to_digital:              ; CODE XREF: power_on__ignition_key_turned_+7AD↑p
+convert_analog_to_digital_10bit:        ; CODE XREF: power_on__ignition_key_turned_+7AD↑p
                                         ; power_on__ignition_key_turned_+7C4↑p ...
                 mov     ADCON1, B       ; ADCON1 = B
                 orl     ADCON1, #40h    ; ADCON1 |= 0x40, ADCL0 = 1
@@ -17146,16 +17294,16 @@ convert_analog_to_digital:              ; CODE XREF: power_on__ignition_key_turn
                                         ; f_SC (sampler freq) prescaler ratio = divide by 2 => f_ADC / 2 = f_osc / 16
                 mov     ADDATL, #0      ; ADDATL = 0, trigger A/D convertion start
 
-code_5546:                              ; CODE XREF: convert_analog_to_digital:code_5546↓j
+code_5546:                              ; CODE XREF: convert_analog_to_digital_10bit:code_5546↓j
                 jb      ADCON0.4, code_5546 ; while (ADCON[0] & (1 << 4)) { ; }
                                         ; while (AD_conv_inprogress()) { ; }
                 mov     R1, ADDATH      ; R1 = ADDATH
                 mov     R0, ADDATL      ; R0 = ADDATL
                 mov     A, ADCON1       ; A = ADCON1
                 anl     A, #0Fh         ; A = ADCON1 & 0x0F
-                cjne    A, B, convert_analog_to_digital ; if (A != B) jump ...
+                cjne    A, B, convert_analog_to_digital_10bit ; if (A != B) jump ...
                 ret
-; End of function convert_analog_to_digital
+; End of function convert_analog_to_digital_10bit
 
 
 ; =============== S U B R O U T I N E =======================================
@@ -19308,34 +19456,44 @@ code_5FE1:                              ; CODE XREF: code_5FD6+5↑j
 
 ; =============== S U B R O U T I N E =======================================
 
+; Multiply signed bytes.
+; Result - signed word.
+;
+; INPUT
+;  - A - multiplicand #1
+;  - B - multiplicand #2
+;
+; OUTPUT
+;  - B:A - signed word B*A
 
-code_5FE2:                              ; CODE XREF: power_on__ignition_key_turned_+9F3↑p
+multiply_signed:                        ; CODE XREF: power_on__ignition_key_turned_+9F3↑p
                                         ; power_on__ignition_key_turned_+209C↑p ...
-                jb      ACC.7, code_5FE7 ; Accumulator
-                mul     AB
+                jb      ACC.7, code_5FE7 ; if (A & 0x80) jump ...
+                                        ; if (A < 0) jump ...
+                mul     AB              ; B:A = B * A
                 ret
 ; ---------------------------------------------------------------------------
 
-code_5FE7:                              ; CODE XREF: code_5FE2↑j
+code_5FE7:                              ; CODE XREF: multiply_signed↑j
                 cpl     A
-                inc     A
-                mul     AB
+                inc     A               ; A = -A
+                mul     AB              ; B:A = B * (-A)
                 cpl     A
-                inc     A
-                jz      code_5FF4
+                inc     A               ; A = -A
+                jz      code_5FF4       ; if (!A) jump ...
                 xch     A, B            ; B-Register
                 cpl     A
-                xch     A, B            ; B-Register
+                xch     A, B            ; B = ~B
                 ret
 ; ---------------------------------------------------------------------------
 
-code_5FF4:                              ; CODE XREF: code_5FE2+A↑j
+code_5FF4:                              ; CODE XREF: multiply_signed+A↑j
                 xch     A, B            ; B-Register
                 cpl     A
                 inc     A
-                xch     A, B            ; B-Register
+                xch     A, B            ; B = -B
                 ret
-; End of function code_5FE2
+; End of function multiply_signed
 
 
 ; =============== S U B R O U T I N E =======================================
@@ -21085,6 +21243,7 @@ code_64A4:                              ; CODE XREF: power_on__ignition_key_turn
 ; Find ADC value in table and adjust for calculus
 ;
 ; INPUT
+;   DPTR - table address in FLASH
 ;   R1:R0 = A/D Converted data
 ; 10-bit value,
 ; R1[7..0] - highest 8 bits
