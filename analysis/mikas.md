@@ -621,7 +621,7 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 | SAF-C509L | Logic/Analog | In/Out | Designation |
 | --------- | ------------ | ------ | ----------- |
 | `P8.0`    | Analog       | In     | Потенциометр регулировки CO на нитевом ДМРВ. |
-| `P8.1`    | Logic        | Out (?)| `INHIBIT` @ TLE4267. |
+| `P8.1`    | Logic (?)    | In     | Вывод 15 замка зажигания = включение зажигания, `INHIBIT` @ TLE4267. |
 | `P8.2`    |              |        | ФВН (диагн.), клемма 51 (?). |
 | `P8.3`    | Analog       | In     | ДМРВ. |
 | `P8.4`    | Analog       | -      | ДПДЗ. |
@@ -638,7 +638,7 @@ DA2-1 преобразует имеющиеся `2 .. 3 V` в логически
 | `P9.2`    |              |        | `PWM` @ TPIC0107B, ФВН 1 и ФВН 2. | `CC12` - compare output/capture input for CC12 register |
 | `P9.3`    |              |        | `DIR` @ TPIC0107B, ФВН 1 и ФВН 2. | `CC13` - compare output/capture input for CC13 register |
 | `P9.4`    |              |        | `STATUS2` @ TPIC0107B, ФВН 1 и ФВН 2. | `CC14` - compare output/capture input for CC14 register |
-| `P9.5`    | Logic        | Out    | `LO` @ MC33199 (ISO9141). | `CC15` - compare output/capture input for CC15 register |
+| `P9.5`    | Logic        | In     | `LO` @ MC33199 (ISO9141). | `CC15` - compare output/capture input for CC15 register |
 | `P9.6`    | Logic        | Out    | `SCK` @ HIP9010/HIP9011 (SPI). | `CC16` - compare output/capture input for CC16 register |
 | `P9.7`    | Logic        | Out    | `!CS` @ HIP9010/HIP9011. | `CC17` - compare output/capture input for CC17 register |
 
