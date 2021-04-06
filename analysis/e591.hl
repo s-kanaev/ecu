@@ -70,7 +70,7 @@ do {                          \
 // get high byte
 #define HIGH(w) BYTE((WORD(w) & 0xFF00) >> 8)
 
-#define SET_HIGH(b) (WORD(BYTE(b)) << 8) (((word)(BYTE(b))) << 8)
+#define SET_HIGH(b) (WORD(BYTE(b)) << 8)
 #define SET_LOW(b) (BYTE(b))
 #define COMPOSE_WORD(h, l) (SET_HIGH((h)) | SET_LOW((l)))
 
@@ -173,20 +173,25 @@ byte RAM[0x100] = {
 byte FLASH[0x10000] = {
   /* knock_sensor_balance_control_gain_ratio_table configuration words (bytes), lengts = 0x40 bytes  */
   [0x24EF] = 0x3F,
-  [0x24F0] = 0x3F, 0x3F, 0x3F, 0x39, 0x34, 0x31, 0x2F, 0x2D, 0x2A, 0x28, 0x27, 0x25, 0x24, 0x23, 0x22, 0x21,
-  [0x2500] = 0x20, 0x1F, 0x1E, 0x1D, 0x1D, 0x1D, 0x1C, 0x1C, 0x1B, 0x1B, 0x1A, 0x19, 0x19, 0x18, 0x18, 0x18,
-  [0x2510] = 0x17, 0x16, 0x16, 0x16, 0x15, 0x15, 0x15, 0x14, 0x14, 0x14, 0x14, 0x13, 0x13, 0x13, 0x13, 0x13,
-  [0x2520] = 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+  [0x24F0] = {0x3F, 0x3F, 0x3F, 0x39, 0x34, 0x31, 0x2F, 0x2D, 0x2A, 0x28, 0x27, 0x25, 0x24, 0x23, 0x22, 0x21},
+  [0x2500] = {0x20, 0x1F, 0x1E, 0x1D, 0x1D, 0x1D, 0x1C, 0x1C, 0x1B, 0x1B, 0x1A, 0x19, 0x19, 0x18, 0x18, 0x18},
+  [0x2510] = {0x17, 0x16, 0x16, 0x16, 0x15, 0x15, 0x15, 0x14, 0x14, 0x14, 0x14, 0x13, 0x13, 0x13, 0x13, 0x13},
+  [0x2520] = {0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11},
 
   [0x8057] = 0x64,  // minimum A/D Converted Coolant Temperature
-  [0x8056] = 0xF0,  // maximum A/D Converted Coolant Temperature
+  [0x8058] = 0xF0,  // maximum A/D Converted Coolant Temperature
   [0x805D] = 0x00,  // fallback A/D Converted Coolant Temperature ?
+  [0x805E] = 0x64,  // minimum A/D Converted Intake Air Temperature
+  [0x805F] = 0xF0,  // maximum A/D Converted Intake Air Temperature
 
+  [0x8060] = 0x05,  // ???, somehow used for intake air temperature
   [0x8069] = 0x00,  // fallback data for XRAM[0xFF74]
   [0x806A] = 0x00,  // fallback data for XRAM[0xFF75]
   [0x807C] = 0x24,  // ???, copied to XRAM[0xF6B6] and XRAM[0xF6B8]
   [0x808C] = 0x80,  // ???, copied to RAM[0x67]
   [0x8093] = 0x00,  // fallback data for XRAM[0xF770]
+
+  [0x831F..0x832F] = {0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x25, 0x44, 0x63, 0x83, 0xA2, 0xC1, 0xE0, 0xE0, 0xE0},
 
   [0x873F] = 0x3F,  // kitting bits: 0011 1111
                     // bit 0 - is there constant power for ECU; default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
@@ -255,6 +260,8 @@ byte FLASH[0x10000] = {
 
   /* offset for knock sensor balance control gain ratio table @ 0x24EF */
   [0x87A9] = 0x30,
+  
+  [0x8A4B] = 0x28,  // Fallback table value of coolant temperature
   
   /* ?????????????????????? */
   //                  0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f     10
@@ -1290,8 +1297,8 @@ inline byte tripple_rotate_right(byte Data, byte Mask) {
   return Data & Mask;
 }
 
-#define COOLANT_TEMP_PIN ((pin)7)
-#define INTAKE_AIR_TEMP_PIN ((pin)...)
+#define COOLANT_TEMP_PIN ((pin)0x07)
+#define INTAKE_AIR_TEMP_PIN ((pin)0x0E)
 #define CO_POT_PIN ((pin)...)
 #define IGNITION_VOLTAGE_PIN ((pin)...)
 
@@ -1305,6 +1312,12 @@ word ADC_10bit(pin Pin);
 byte ADC_8bit(pin Pin);
 
 word GetAdcValueFromTable(word FlashPtr, word ADCValue) {
+  // max value in ADCValue = F0:FF
+  // max offset = HIGH(ADCValue) >> 4 = F0 >> 4 = F
+  // max Factor = (HIGH(ADCValue) << 4) | (LOW(ADCValue) >> 4) = (F0 << 4) | (C0 >> 4) = 0C
+  // max Factor = (HIGH(ADCValue) << 4) | (LOW(ADCValue) >> 4) = (EF << 4) | (C0 >> 4) = FC
+  // With non nil factor, offset is incremented.
+  // Hence, table size is 0x11
   byte Offset = HIGH(ADCValue) >> 4;
   byte Factor = (HIGH(ADCValue) << 4) | (LOW(ADCValue) >> 4);
   return GetValueFromTableImpl(FlashPtr, Offset, Factor, false);
@@ -1318,6 +1331,31 @@ word GetAdcValueFromTableAndAdjustForCalculus(word FlashPtr, word ADCValue) {
     return COMPOSE_WORD(0, 0);
 
   return COMPOSE_WORD(HIGH(Result) - 0x14, LOW(Result));
+}
+
+byte AdjustTemperature(word TemperatureTableValue) {
+  static const word MAX_SUM = 0xFFFF;
+  static const word TO_ADD = WORD(0x50);
+  static const word DIVIDER = WORD(0xA0);
+
+  byte Result = 0xFF;
+  
+  if (TemperatureTableValue <= MAX_SUM - TO_ADD) {
+    TemperatureTableValue += TO_ADD;
+
+    word Quot;
+
+    do {
+      CLEAR_BIT_IN(RAM[0x27], 2);
+
+      Quot = TemperatureTableValue / DIVIDER;
+    } while (CHECK_BIT_AT(RAM[0x27], 2));
+
+    if (!HIGH(Quot))
+      Result = HIGH(Quot);
+  }
+
+  return Result;
 }
 
 _5374:
@@ -1346,20 +1384,65 @@ _5374:
       }
     }
 
+    word AdjustedCoolantTemp;
+
     if (!CoolantTempNotInLimits || FLASH[0x805D]) {
       CLEAR_BIT_IN(RAM[0x23], 2);
       CLEAR_BIT_IN(RAM[0x23], 3);
 
-      // table length ?
-      word AdjustedCoolantTemp = GetAdcValueFromTableAndAdjustForCalculus(0x831F, CoolantTemp);
-
-      RAM[0x3A] = HIGH(AdjustedCoolantTemp);
+      AdjustedCoolantTemp = GetAdcValueFromTableAndAdjustForCalculus(0x831F, CoolantTemp);
     } else if (CoolantTempNotInLimits) /* CoolantTempNotInLimits && !FLASH[0x805D] */ {
-_53B7:
-      // TODO
+      AdjustedCoolantTemp = COMPOSE_WORD(FLASH[0x8A4B], 0);
     }
 
-_53C4:
-    // TODO
+    RAM[0x3A] = HIGH(AdjustedCoolantTemp);
+    RAM[0x3D] = AdjustTemperature(AdjustedCoolantTemp);
+  }
+
+  // INTAKE AIR TEMPERATURE
+  {
+    word IntakeAirTemp = ADC_10bit(INTAKE_AIR_TEMP_PIN);
+    XRAM[0xF687] = HIGH(IntakeAirTemp);
+
+    bool IntakeAirTempOutOfLimits = false;
+    bool HasIntakeAirTempSensor = CHECK_BIT_AT(FLASH[0x873F], 3);
+    word AdjustedIntakeAirTemp;
+
+    if (HasIntakeAirTempSensor) {
+      // Has intake air temperature sensor
+      if (!FLASH[0x8060]) {
+        if (HIGH(IntakeAirTemp) < FLASH[0x805E]) {
+          // intake air temp below minimum
+          SET_BIT_IN(RAM[0x24], 4);
+          CLEAR_BIT_IN(RAM[0x24], 5);
+
+          IntakeAirTempOutOfLimits = true;
+        } else if (FLASH[0x805F] < HIGH(IntakeAirTemp)) {
+          // intake air temp above minimum
+          CLEAR_BIT_IN(RAM[0x24], 4);
+          SET_BIT_IN(RAM[0x24], 5);
+
+          IntakeAirTempOutOfLimits = true;
+        }
+      }
+
+      if (FLASH[0x8060] || !IntakeAirTempOutOfLimits) {
+        CLEAR_BIT_IN(RAM[0x24], 4);
+        CLEAR_BIT_IN(RAM[0x24], 5);
+
+        // TODO Table length ?
+        AdjustedIntakeAirTemp = GetAdcValueFromTableAndAdjustForCalculus(0x8341, IntakeAirTemp);
+      }
+    }
+
+    if (!HasIntakeAirTempSensor || IntakeAirTempOutOfLimits)
+      AdjustedIntakeAirTemp = COMPOSE_WORD(FLASH[0x8061], 0);
+
+    RAM[0x3B] = HIGH(AdjustedIntakeAirTemp);
+    RAM[0x3E] = AdjustTemperature(AdjustedIntakeAirTemp);
+  }
+
+  // MODE SELECTION
+  {
   }
 }
