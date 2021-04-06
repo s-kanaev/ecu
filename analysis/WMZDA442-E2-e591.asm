@@ -1,4 +1,5 @@
-﻿; Input SHA256 : 7F5E7B859D5A58D22C873EBBFE2C063401490FBABE63097AA7E4B81ADB8BDABA
+﻿
+; Input SHA256 : 7F5E7B859D5A58D22C873EBBFE2C063401490FBABE63097AA7E4B81ADB8BDABA
 ; Input MD5    : 3F181C3C4B148D967845BB4113666A0D
 ; Input CRC32  : 5CF810FF
 
@@ -16919,9 +16920,9 @@ INTAKE AIR TEMP
                 movx    @DPTR, A        ; XRAM[0xF687] = ADC(IntakeAirTemp)
                 mov     DPTR, #873Fh
                 clr     A
-                movc    A, @A+DPTR      ; A = FLASH[0x873F]
+                movc    A, @A+DPTR      ; A = FLASH[0x873F], kitting bits
                 jnb     ACC.3, use_default_intake_air_temp ; if (!(FLASH[0x873F] & (1 << 3))) jump ...
-                                        ; // use default intake air temp?
+                                        ; // if there is no intake air temperature sensor
                 mov     DPTR, #8060h
                 clr     A
                 movc    A, @A+DPTR      ; A = FLASH[0x8060]
@@ -16998,6 +16999,7 @@ code_541D:                              ; CODE XREF: A_D_Convert_part1+94↑j
                                         ;
                 mov     RAM_3E, A       ; RAM[0x3E] = adjusted intake air temp
 INTAKE AIR TEMP FINISHED
+MODE SELECTION START
                 mov     A, P9           ; A = P9
                 anl     A, #20h
                 jnz     LO_set_diagnostic ; if ((P9 & 0x20)) jump ...
@@ -17013,6 +17015,7 @@ LO_set_diagnostic:                      ; CODE XREF: A_D_Convert_part1+B4↑j
 code_5430:                              ; CODE XREF: A_D_Convert_part1+B8↑j
                 mov     DPTR, #0F7BEh
                 movx    @DPTR, A        ; XRAM[0xF7BE] = A (current operating mode?)
+MODE SELECTION FINISHED
                 mov     DPTR, #873Fh
                 clr     A
                 movc    A, @A+DPTR      ; A = FLASH[0x873F]
