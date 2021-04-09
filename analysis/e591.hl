@@ -29,16 +29,25 @@ typedef union TableEntryU TableEntryT;
    Sends data over MOSI pin.
    Returns byte fetched on MISO pin.
    0 for MISO - no input. */
-byte send_by_spi(byte DATA, pin MOSI, pin MISO, pin CLK);
+byte SendOverSPI(byte DATA, pin MOSI, pin MISO, pin CLK);
 
 /* Send DATA byte over I2C bus described by
    SDA (I/O), SCL (output).
    Returns if byte was ACK'ed */
-bool send_by_i2c(byte DATA, pin SDA, pin SCL);
+bool SendOverI2C(byte DATA, pin SDA, pin SCL);
 /* Read single byte over I2C bus described by
    SDA (I/O), SCL (output).
    Returns byte read */
-byte read_on_i2c(pin SDA, pin SCL);
+byte ReadOnI2C(pin SDA, pin SCL);
+
+/* A/D Convert voltage at the specified pin.
+   Result is 10-bit integer value which is set at the highest 10 bits of a word.
+ */
+word ADC_10bit(pin Pin);
+/* A/D Convert voltage at the specified pin.
+   Result is 8-bit integer value.
+ */
+byte ADC_8bit(pin Pin);
 
 void enable_access_to_xram();
 void disable_access_to_xram();
@@ -91,6 +100,11 @@ do {                          \
 // r = 1 - read, r = 0 - write
 #define I2C_READ_ADDRESS(addr, r) (((addr) & 0xFE) | ((r) & 0x01)) 
 
+#define COOLANT_TEMP_PIN ((pin)0x07)
+#define INTAKE_AIR_TEMP_PIN ((pin)0x0E)
+#define CO_POT_PIN ((pin)0x08)
+#define IGNITION_VOLTAGE_PIN ((pin)0x09)
+
 //////////////////////////////// General purpose flags:
 /*
 PSW.5 (F0) - was previously working?
@@ -113,11 +127,21 @@ byte RAM[0x100] = {
                  // bit 7 (bit address 0x07) = if xram check sum was not valid
 
   [0x21] = 0x00, // bit 0 (bit address 0x08) = 1 if failed to read first 0x42 bytes from eeprom
-  [0x22] = 0x00,
+  [0x22] = 0x00, // error codes ?
+                 // bit 4 - ignition switch voltage less than low limit
+                 // bit 5 - ignition switch voltage higher than high limit
   [0x23] = 0x00, // error codes?
                  // bit 2 - coolant temperature less than low limit
-                 // bit 3 - coolant temperature haigher than high limit
-  [0x24..0x26] = 0x00,
+                 // bit 3 - coolant temperature higher than high limit
+                 // bit 4 - CO potentiometer less than low limit
+                 // bit 5 - CO potentiometer temperature higher than high limit
+  [0x24] = 0x00, // error codes?
+                 // bit 4 - intake air temperature less than low limit
+                 // bit 5 - intake air temperature higher than high limit
+  [0x25] = 0x00,
+
+  [0x26] = 0,     // status byte:
+                  // bit 6 - ??
 
   [0x27] = 0x00,  // ???
                   // bit 2 (bit address 0x3A)
@@ -130,13 +154,22 @@ byte RAM[0x100] = {
   [0x2D] = 0x00,  // bit 7 = FLASH[873F] bit 4
   [0x2E] = 0x00,  // bit 0 = FLASH[873F] bit 5
                   // bit 1 = FLASH[873F] bit 2
-  [0x2F..0x3C] = 0,
+
+  [0x2F] = 0
+
+  [0x3A] = 0,     // Adjusted coolant temperature
+
+  [0x3B] = 0,     // Adjusted intake air temperature
+  [0x3C] = 0,     // Adjusted ignition switch voltage
   
-  [0x3D] = 0,     // packed offset and factor for FLASH[0xA2FD]
+  [0x3D] = 0,     // Adjusted coolant temperature
+                  // packed offset and factor for FLASH[0xA2FD]
                   // factor - least significant three bits, will be SHL 5 = xxx0 0000
                   // offset - most significant five bits, will be SHR 3, max value = 0x1F
 
-  [0x3E..0x4B] = 0,
+  [0x3E] = 0,     // Adjusted intake air temperature
+  [0x3F] = 0,     // Adjusted ignition switch voltage
+  [0x40..0x4B] = 0,
   [0x4C] = 0,     // offset div 0x11 for tabel at FLASH[0x8AFB]
   [0x4D..0x5C] = 0,
   [0x5D] = 0,     // ???
@@ -147,7 +180,8 @@ byte RAM[0x100] = {
   [0x61] = 0x21,  // ???
   [0x62] = 0x00,  // ???
 
-  [0x63] = 0x00,  // ???
+  [0x63] = 0x00,  // Some derivative from Coolant Temperature
+
   [0x64..0x71] = 0,
   [0x72] = 0,     // some status word ?
                   // bit 7
@@ -185,13 +219,20 @@ byte FLASH[0x10000] = {
   [0x805F] = 0xF0,  // maximum A/D Converted Intake Air Temperature
 
   [0x8060] = 0x05,  // ???, somehow used for intake air temperature
-  [0x8069] = 0x00,  // fallback data for XRAM[0xFF74]
+  [0x8061] = 0x50,  // fallback adjusted intake air temperature
+  [0x8062] = 0x3C,  // minimum adjusted value of ignition switch voltage
+  [0x8063] = 0xA0,  // maximum adjusted value of ignition switch voltage
+  [0x8067] = 0x00,  // minimum ADC value of CO potentiometer
+  [0x8068] = 0x64,  // maximum ADC value of CO potentiometer
+  [0x8069] = 0x00,  // fallback data for XRAM[0xFF74], Adjusted CO Potentiometer
   [0x806A] = 0x00,  // fallback data for XRAM[0xFF75]
   [0x807C] = 0x24,  // ???, copied to XRAM[0xF6B6] and XRAM[0xF6B8]
   [0x808C] = 0x80,  // ???, copied to RAM[0x67]
   [0x8093] = 0x00,  // fallback data for XRAM[0xF770]
 
+  // Table for Coolant Temperature
   [0x831F..0x832F] = {0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x25, 0x44, 0x63, 0x83, 0xA2, 0xC1, 0xE0, 0xE0, 0xE0},
+  [0x8341..0x8351] = {0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x25, 0x44, 0x63, 0x83, 0xA2, 0xC1, 0xE0, 0xE0, 0xE0},
 
   [0x873F] = 0x3F,  // kitting bits: 0011 1111
                     // bit 0 - is there constant power for ECU; default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
@@ -391,7 +432,17 @@ byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
 
   [0xF658] = 0,                               // checksum low byte (for 0xFx00..0xF657)
   [0xF659] = 0                                // checksum high byte (for 0xFx00..0xF657)
+  
+  [0xF681] = 0,                               // Adjusted CO potentiometer
+  [0xF686] = 0,                               // ADC Coolant temperature
+  [0xF687] = 0,                               // ADC Intake air temperature
+  [0xF688] = 0,                               // ADC Ignition switch voltage
+  [0xF689] = 0,                               // ADC CO Potentiometer
+  
   [0xF675..0xF7D4] = 0x00,                    // 0x160 bytes
+  [0xF7BE] = 0x00,                            // Current operationg mode:
+                                              // 0 - normal
+                                              // 3 - diagnostic (has smth on L-line)
   [0xF7D5..0xF8CC] = FLASH[0xABF1..0xACE8]    // 0xF8 bytes
 
   [0xF97E] = 0x00,
@@ -432,7 +483,7 @@ inline bool status_xram_checksum_invalid() {
 }
 
 
-inline bool kitting_has_ego() {
+inline bool kitting_has_ego_sensor() {
   return CHECK_BIT_AT(FLASH[0x873F], 1);
 }
 
@@ -440,6 +491,17 @@ inline bool kitting_has_absorber() {
   return CHECK_BIT_AT(FLASH[0x8743], 4);
 }
 
+inline bool kitting_has_intake_air_temperature_sensor() {
+  return CHECK_BIT_AT(FLASH[0x873F], 3);
+}
+
+inline bool kitting_has_co_potentiometer_sensor() {
+  return CHECK_BIT_AT(FLASH[0x873F], 7);
+}
+
+inline bool kitting_has_irom() {
+  return CHECK_BIT_AT(FLASH[0x8741, 0]);
+}
 
 void reset_init(void) {
   disable_interrupts();
@@ -486,7 +548,7 @@ void init_HIP0045(void) {
 
   RAM[0x7F] = RAM[0x7E];
 
-  send_by_spi(RAM[0x7E], P5_5, P5_7, P5_6);
+  SendOverSPI(RAM[0x7E], P5_5, P5_7, P5_6);
 /*
   HIP0045 configured with byte 0x44 sent in following order: 
   D7I..D1I = 0010 0010
@@ -524,7 +586,7 @@ void init_HIP9010(void) {
   data = 101100 = 44 (dec) = 8.02 kHz
 */
   turn_on_hip9010; 
-  send_by_spi(FLASH[0x87A7] & KNOCK_SENSOR_FILTER_FREQUENCY_CONFIG_WORD_MASK, P1_5, NULL, P9_6);
+  SendOverSPI(FLASH[0x87A7] & KNOCK_SENSOR_FILTER_FREQUENCY_CONFIG_WORD_MASK, P1_5, NULL, P9_6);
   turn_off_hip9010;
   
   WAIT_MACHINE_CYCLES_BY_2(0x0E);
@@ -537,7 +599,7 @@ void init_HIP9010(void) {
   data = 000001 = 1 = 1.26 kHz
 */
   turn_on_hip9010;
-  send_by_spi(KNOCK_SENSOR_REFERENCE_FILTER_FREQUENCY_CONFIG_WORD | KNOCK_SENSOR_REFERENCE_FILTER_FREQUENCY_CONFIG_WORD_PREFIX, P1_5, NULL, P9_6);
+  SendOverSPI(KNOCK_SENSOR_REFERENCE_FILTER_FREQUENCY_CONFIG_WORD | KNOCK_SENSOR_REFERENCE_FILTER_FREQUENCY_CONFIG_WORD_PREFIX, P1_5, NULL, P9_6);
   turn_off_hip9010;
   
   WAIT_MACHINE_CYCLES_BY_2(0x0E);
@@ -550,7 +612,7 @@ void init_HIP9010(void) {
   data = 010011 = 13(dec) = 0.649
 */
   turn_on_hip9010;
-  send_by_spi(FLASH[0x24EF + (FLASH[0x87A9] & 0x3F)] | KNOCK_SENSOR_BALANCE_CONTROL_CONFIG_WORD_PREFIX, P1_5, NULL, P9_6);
+  SendOverSPI(FLASH[0x24EF + (FLASH[0x87A9] & 0x3F)] | KNOCK_SENSOR_BALANCE_CONTROL_CONFIG_WORD_PREFIX, P1_5, NULL, P9_6);
   turn_off_hip9010;
 
   WAIT_MACHINE_CYCLES_BY_2(0x0E);
@@ -563,7 +625,7 @@ void init_HIP9010(void) {
   data = 0 = 40 usec
 */
   turn_on_hip9010;
-  send_by_spi(FLASH[0xAE01 & 0x1F] | KNOCK_SENSOR_INTEGRATOR_TIME_CONSTANT_CONFIG_WORD_PREFIX, P1_5, NULL, P9_6);
+  SendOverSPI(FLASH[0xAE01 & 0x1F] | KNOCK_SENSOR_INTEGRATOR_TIME_CONSTANT_CONFIG_WORD_PREFIX, P1_5, NULL, P9_6);
   turn_off_hip9010;
   
   WAIT_MACHINE_CYCLES_BY_2(0x0E);
@@ -579,7 +641,7 @@ void init_HIP9010(void) {
   attenuation applied to knock filter
 */
   turn_on_hip9010;
-  send_by_spi(KNOCK_SENSOR_TEST_CONFIG_WORD | KNOCK_SENSOR_TEST_CONFIG_WORD_PREFIX, P1_5, NULL, P9_6);
+  SendOverSPI(KNOCK_SENSOR_TEST_CONFIG_WORD | KNOCK_SENSOR_TEST_CONFIG_WORD_PREFIX, P1_5, NULL, P9_6);
   turn_off_hip9010;
   
   WAIT_MACHINE_CYCLES_BY_2(0x0E);
@@ -608,7 +670,7 @@ word check_sum_xram_fx00_to_f657(void) {
   word Result = 0x0001;
   word Ptr = 0xF400; // current case: both EGO and absorber are present
   
-  if (!kitting_has_ego()) // There is no EGO
+  if (!kitting_has_ego_sensor()) // There is no EGO
     Ptr = 0xF600;
   else if (!kitting_has_absorber()) // There is no absorber
     Ptr = 0xF500;
@@ -672,20 +734,20 @@ void read_eeprom_to_xram(void) {
   byte Offset = 0;
   
   // send slave address + page block selector (0)
-  if (!send_by_i2c(0, P3_3, P1_7)) {
+  if (!SendOverI2C(0, P3_3, P1_7)) {
     mark_eeprom_failure();
     nullify_xram(0xFF30, 0x10);
   }
   
   // send word address (byte offset in page block)
-  if (!send_by_i2c(Offset, P3_3, P1_7)) {
+  if (!SendOverI2C(Offset, P3_3, P1_7)) {
     mark_eeprom_failure();
     nullify_xram(0xFF30, 0x10);
   }
   
   byte Size = 0x42;
   for (int Idx = 0; Idx < Size; ++Idx)
-    XRAM[XramPtr++] = read_on_i2c(P3_3, P1_7);
+    XRAM[XramPtr++] = ReadOnI2C(P3_3, P1_7);
   
   if (sum_xram(XramPtr - Size, Size >> 1)) {
     mark_eeprom_failure();
@@ -696,19 +758,19 @@ void read_eeprom_to_xram(void) {
   //////////////////////////////////////////////////////
 
   // send slave address + page block selector (0)
-  if (!send_by_i2c(0, P3_3, P1_7)) {
+  if (!SendOverI2C(0, P3_3, P1_7)) {
     mark_eeprom_failure();
     nullify_xram(0xFF30, 0x10);
   }
 
   // send word address (byte offset in page block)
-  if (!send_by_i2c(Offset, P3_3, P1_7)) {
+  if (!SendOverI2C(Offset, P3_3, P1_7)) {
     mark_eeprom_failure();
   }
 
   Size = 0x32;
   for (int Idx = 0; Idx < Size; ++Idx)
-    XRAM[XramPtr++] = read_on_i2c(P3_3, P1_7);
+    XRAM[XramPtr++] = ReadOnI2C(P3_3, P1_7);
 
   if (sum_xram(XramPtr - Size, Size >> 1)) {
     mark_eeprom_failure();
@@ -719,19 +781,19 @@ void read_eeprom_to_xram(void) {
   //////////////////////////////////////////////////////
 
   // send slave address + page block selector (0)
-  if (!send_by_i2c(0, P3_3, P1_7)) {
+  if (!SendOverI2C(0, P3_3, P1_7)) {
     mark_eeprom_failure();
     nullify_xram(0xFF30, 0x10);
   }
 
   // send word address (byte offset in page block)
-  if (!send_by_i2c(Offset, P3_3, P1_7)) {
+  if (!SendOverI2C(Offset, P3_3, P1_7)) {
     mark_eeprom_failure();
   }
 
   Size = 0x0C;
   for (int Idx = 0; Idx < Size; ++Idx)
-    XRAM[XramPtr++] = read_on_i2c(P3_3, P1_7);
+    XRAM[XramPtr++] = ReadOnI2C(P3_3, P1_7);
 
   if (sum_xram(XramPtr - Size, Size >> 1)) {
     mark_eeprom_failure();
@@ -1026,6 +1088,268 @@ void UpdateRam63() {
     InitRam5d();
 }
 
+
+word GetAdcValueFromTable(word FlashPtr, word ADCValue) {
+  // max value in ADCValue = F0:FF
+  // max offset = HIGH(ADCValue) >> 4 = F0 >> 4 = F
+  // max Factor = (HIGH(ADCValue) << 4) | (LOW(ADCValue) >> 4) = (F0 << 4) | (C0 >> 4) = 0C
+  // max Factor = (HIGH(ADCValue) << 4) | (LOW(ADCValue) >> 4) = (EF << 4) | (C0 >> 4) = FC
+  // With non nil factor, offset is incremented.
+  // Hence, table size is 0x11
+  byte Offset = HIGH(ADCValue) >> 4;
+  byte Factor = (HIGH(ADCValue) << 4) | (LOW(ADCValue) >> 4);
+  return GetValueFromTableImpl(FlashPtr, Offset, Factor, false);
+}
+
+word GetAdcValueFromTableAndAdjustForCalculus(word FlashPtr, word ADCValue) {
+  word Result = GetAdcValueFromTable(FlashPtr, ADCValue);
+
+  if (HIGH(Result) < 0x14)
+    return COMPOSE_WORD(0, 0);
+
+  return COMPOSE_WORD(HIGH(Result) - 0x14, LOW(Result));
+}
+
+byte AdjustTemperature(word TemperatureTableValue) {
+  static const word MAX_SUM = 0xFFFF;
+  static const word TO_ADD = WORD(0x50);
+  static const word DIVIDER = WORD(0xA0);
+
+  byte Result = 0xFF;
+  
+  if (TemperatureTableValue <= MAX_SUM - TO_ADD) {
+    TemperatureTableValue += TO_ADD;
+
+    word Quot;
+
+    do {
+      CLEAR_BIT_IN(RAM[0x27], 2);
+
+      Quot = TemperatureTableValue / DIVIDER;
+    } while (CHECK_BIT_AT(RAM[0x27], 2));
+
+    if (!HIGH(Quot))
+      Result = HIGH(Quot);
+  }
+
+  return Result;
+}
+
+word MultiplySigned(byte _M1, byte _M2) {
+  sbyte M1 = _M1;
+  sbyte M2 = _M2;
+  if (!CHECK_BIT_AT(M1, 7))
+    return WORD(M1) * M2;
+
+  M1 = -M1; // M1 = (~M1) + 1;
+  word Result = WORD(M1) * M2;
+
+  M1 = LOW(Result);
+  M2 = HIGH(Result);
+
+  M1 = -M1; // M1 = (~M1) + 1;
+
+  if (M1)
+    M2 = ~M2;
+  else
+    M2 = -M2; // M2 = (~M2) + 1;
+
+  return COMPOSE_WORD(M1, M2);
+}
+
+void Inputs_Part1() {
+  CLEAR_BIT_IN(RAM[0x26], 6);
+
+  // COOLANT TEMPERATURE
+  {
+    word CoolantTemp = ADC_10bit(COOLANT_TEMP_PIN);
+    XRAM[0xF686] = HIGH(CoolantTemp);
+    bool CoolantTempNotInLimits = false;
+
+    if (!FLASH[0x805D]) {
+      if (HIGH(CoolantTemp) < FLASH[0x8057]) {
+        // coolant_temp_less_than_low_limit
+        SET_BIT_IN(RAM[0x23], 2);
+        CLEAR_BIT_IN(RAM[0x23], 3);
+
+        CoolantTempNotInLimits = true;
+      } else if (HIGH(CoolantTemp) > FLASH[0x8058]) {
+        // coolant_temp_larger_than_high_limit
+        CLEAR_BIT_IN(RAM[0x23], 2);
+        SET_BIT_IN(RAM[0x23], 3);
+
+        CoolantTempNotInLimits = true;
+      }
+    }
+
+    word AdjustedCoolantTemp;
+
+    if (!CoolantTempNotInLimits || FLASH[0x805D]) {
+      CLEAR_BIT_IN(RAM[0x23], 2);
+      CLEAR_BIT_IN(RAM[0x23], 3);
+
+      AdjustedCoolantTemp = GetAdcValueFromTableAndAdjustForCalculus(0x831F, CoolantTemp);
+    } else if (CoolantTempNotInLimits) /* CoolantTempNotInLimits && !FLASH[0x805D] */ {
+      AdjustedCoolantTemp = COMPOSE_WORD(FLASH[0x8A4B], 0);
+    }
+
+    RAM[0x3A] = HIGH(AdjustedCoolantTemp);
+    RAM[0x3D] = AdjustTemperature(AdjustedCoolantTemp);
+  }
+
+  // INTAKE AIR TEMPERATURE
+  {
+    word IntakeAirTemp = ADC_10bit(INTAKE_AIR_TEMP_PIN);
+    XRAM[0xF687] = HIGH(IntakeAirTemp);
+
+    bool IntakeAirTempOutOfLimits = false;
+    bool HasIntakeAirTempSensor = kitting_has_intake_air_temperature_sensor();
+    word AdjustedIntakeAirTemp;
+
+    if (HasIntakeAirTempSensor) {
+      // Has intake air temperature sensor
+      if (!FLASH[0x8060]) {
+        if (HIGH(IntakeAirTemp) < FLASH[0x805E]) {
+          // intake air temp below minimum
+          SET_BIT_IN(RAM[0x24], 4);
+          CLEAR_BIT_IN(RAM[0x24], 5);
+
+          IntakeAirTempOutOfLimits = true;
+        } else if (FLASH[0x805F] < HIGH(IntakeAirTemp)) {
+          // intake air temp above minimum
+          CLEAR_BIT_IN(RAM[0x24], 4);
+          SET_BIT_IN(RAM[0x24], 5);
+
+          IntakeAirTempOutOfLimits = true;
+        }
+      }
+
+      if (FLASH[0x8060] || !IntakeAirTempOutOfLimits) {
+        CLEAR_BIT_IN(RAM[0x24], 4);
+        CLEAR_BIT_IN(RAM[0x24], 5);
+
+        // TODO Table length ?
+        AdjustedIntakeAirTemp = GetAdcValueFromTableAndAdjustForCalculus(0x8341, IntakeAirTemp);
+      }
+    }
+
+    if (!HasIntakeAirTempSensor || IntakeAirTempOutOfLimits)
+      AdjustedIntakeAirTemp = COMPOSE_WORD(FLASH[0x8061], 0);
+
+    RAM[0x3B] = HIGH(AdjustedIntakeAirTemp);
+    RAM[0x3E] = AdjustTemperature(AdjustedIntakeAirTemp);
+  }
+
+  // MODE SELECTION
+  {
+    if (CHECK_BIT_AT(P9, 5))  // test LO @ MC33199 (ISO9141)
+      XRAM[0xF7BE] = 3;
+    else
+      XRAM[0xF7BE] = 0;
+  }
+
+  // CO POTENTIOMETER
+  {
+    bool COPotNotInLimits = false;
+    bool CantInitCOPot = false;
+    byte COPot;
+
+    word AdjustedCOPot;
+
+    if (kitting_has_co_potentiometer_sensor()) {
+      // There is a CO Potentiometer sensor
+      _544A:
+      COPot = ADC_8bit(CO_POT_PIN);
+      XRAM[0xF689] = COPot;
+
+      if (COPot < FLASH[0x8067]) {
+        SET_BIT_IN(RAM[0x23], 4);
+        CLEAR_BIT_IN(RAM[0x23], 5);
+
+        COPotNotInLimits = true;
+      } else if (COPot > FLASH[0x8068]) {
+        CLEAR_BIT_IN(RAM[0x23], 4);
+        SET_BIT_IN(RAM[0x23], 5);
+
+        COPotNotInLimits = true;
+      }
+
+      _5478:
+      CLEAR_BIT_IN(RAM[0x23], 4);
+      CLEAR_BIT_IN(RAM[0x23], 5);
+
+      if (COPot & 0x80)
+        COPot = 0xFF;
+      else
+        COPot *= 2;
+
+      COPot -= 0x50;
+
+      AdjustedCOPot = MultiplySigned(COPot,  0xC0);
+    } else if (kitting_has_irom()) {
+      // No CO Potentiometer but has an IROM
+      CLEAR_BIT_IN(RAM[0x23], 4);
+      CLEAR_BIT_IN(RAM[0x23], 5);
+
+      CantInitCOPot = true;
+    } else {
+      // Neither CO Potentiometer nor IROM is available
+      CLEAR_BIT_IN(RAM[0x23], 4);
+      CLEAR_BIT_IN(RAM[0x23], 5);
+
+      COPotNotInLimits = true;
+    }
+
+    if (COPotNotInLimits)
+      AdjustedCOPot = COMPOSE_WORD(FLASH[0x8069], FLASH[0x8069]);
+
+    if (!CHECK_BIT_AT(RAM[0x73], 3)) {
+      if (!CantInitCOPot)
+        XRAM[0xF681] = HIGH(AdjustedCOPot);
+      else
+        XRAM[0xF681] = XRAM[0xFF74];
+    }
+  }
+
+  // IGNITION SWITCH VOLTAGE
+  {
+    byte IgnVoltage = ADC_8bit(IGNITION_VOLTAGE_PIN);
+    XRAM[0xF688] = IgnVoltage;
+
+    word MultipliedIgnVoltage = IgnVoltage * 0x75;
+    byte AdjustedIgnVoltage;
+
+    if (CHECK_BIT_AT(MultipliedIgnVoltage, 0x0F)) // not possible as minimum IgnVoltage for it is 0x0119 which doesn't fit a byte
+      AdjustedIgnVoltage = 0xFF;
+    else
+      AdjustedIgnVoltage = HIGH(MultipliedIgnVoltage * 2);
+
+    if (AdjustedIgnVoltage < FLASH[0x8062])
+      SET_BIT_IN(RAM[0x22], 4);
+    else
+      CLEAR_BIT_IN(RAM[0x22], 4);
+
+    if (FLASH[0x8063] < AdjustedIgnVoltage)
+      SET_BIT_IN(RAM[0x22], 5);
+    else
+      CLEAR_BIT_IN(RAM[0x22], 5);
+
+    RAM[0x3C] = AdjustedIgnVoltage;
+
+    if (AdjustedIgnVoltage < 0x36)
+      AdjustedIgnVoltage = 0;
+    else
+      AdjustedIgnVoltage -= 0x36;
+
+    AdjustedIgnVoltage = HIGH(WORD(AdjustedIgnVoltage) * 0x40);
+
+    if (AdjustedIgnVoltage > 0x1F)
+      AdjustedIgnVoltage = 0x1F;
+
+    RAM[0x3F] = AdjustedIgnVoltage;
+  }
+}
+
 /*
 INTERRUPTS:
  - reset
@@ -1197,7 +1521,7 @@ void reset_interrupt() noreturn {
     XRAM[0xF602] = FLASH[0x8761]; // 0
     XRAM[0xF603] = 0x01;
     
-    if (kitting_has_ego()) {
+    if (kitting_has_ego_sensor()) {
       word XramPtr = 0xF500;
       word FlashPtr = 0x991C;
       
@@ -1282,8 +1606,8 @@ _2801:
   for (byte Idx = 0; Idx < 0x20; ++Idx)
     XRAM[0xF94D + Idx] = XRAM[0xF600];
 
-_2810:
-  call _5374;
+  Inputs_Part1();
+_2813:
   // ... TODO ...
 }
 
@@ -1297,152 +1621,3 @@ inline byte tripple_rotate_right(byte Data, byte Mask) {
   return Data & Mask;
 }
 
-#define COOLANT_TEMP_PIN ((pin)0x07)
-#define INTAKE_AIR_TEMP_PIN ((pin)0x0E)
-#define CO_POT_PIN ((pin)...)
-#define IGNITION_VOLTAGE_PIN ((pin)...)
-
-/* A/D Convert voltage at the specified pin.
-   Result is 10-bit integer value which is set at the highest 10 bits of a word.
- */
-word ADC_10bit(pin Pin);
-/* A/D Convert voltage at the specified pin.
-   Result is 8-bit integer value.
- */
-byte ADC_8bit(pin Pin);
-
-word GetAdcValueFromTable(word FlashPtr, word ADCValue) {
-  // max value in ADCValue = F0:FF
-  // max offset = HIGH(ADCValue) >> 4 = F0 >> 4 = F
-  // max Factor = (HIGH(ADCValue) << 4) | (LOW(ADCValue) >> 4) = (F0 << 4) | (C0 >> 4) = 0C
-  // max Factor = (HIGH(ADCValue) << 4) | (LOW(ADCValue) >> 4) = (EF << 4) | (C0 >> 4) = FC
-  // With non nil factor, offset is incremented.
-  // Hence, table size is 0x11
-  byte Offset = HIGH(ADCValue) >> 4;
-  byte Factor = (HIGH(ADCValue) << 4) | (LOW(ADCValue) >> 4);
-  return GetValueFromTableImpl(FlashPtr, Offset, Factor, false);
-}
-
-// _64AC:
-word GetAdcValueFromTableAndAdjustForCalculus(word FlashPtr, word ADCValue) {
-  word Result = GetAdcValueFromTable(FlashPtr, ADCValue);
-
-  if (HIGH(Result) < 0x14)
-    return COMPOSE_WORD(0, 0);
-
-  return COMPOSE_WORD(HIGH(Result) - 0x14, LOW(Result));
-}
-
-byte AdjustTemperature(word TemperatureTableValue) {
-  static const word MAX_SUM = 0xFFFF;
-  static const word TO_ADD = WORD(0x50);
-  static const word DIVIDER = WORD(0xA0);
-
-  byte Result = 0xFF;
-  
-  if (TemperatureTableValue <= MAX_SUM - TO_ADD) {
-    TemperatureTableValue += TO_ADD;
-
-    word Quot;
-
-    do {
-      CLEAR_BIT_IN(RAM[0x27], 2);
-
-      Quot = TemperatureTableValue / DIVIDER;
-    } while (CHECK_BIT_AT(RAM[0x27], 2));
-
-    if (!HIGH(Quot))
-      Result = HIGH(Quot);
-  }
-
-  return Result;
-}
-
-_5374:
-{
-  RAM[0x26] &= ~(1 << 6);
-
-  // COOLANT TEMPERATURE
-  {
-    word CoolantTemp = ADC_10bit(COOLANT_TEMP_PIN);
-    XRAM[0xF686] = HIGH(CoolantTemp);
-    bool CoolantTempNotInLimits = false;
-
-    if (!FLASH[0x805D]) {
-      if (HIGH(CoolantTemp) < FLASH[0x8057]) {
-        // coolant_temp_less_than_low_limit
-        SET_BIT_IN(RAM[0x23], 2);
-        CLEAR_BIT_IN(RAM[0x23], 3);
-
-        CoolantTempNotInLimits = true;
-      } else if (HIGH(CoolantTemp) > FLASH[0x8058]) {
-        // coolant_temp_larger_than_high_limit
-        CLEAR_BIT_IN(RAM[0x23], 2);
-        SET_BIT_IN(RAM[0x23], 3);
-
-        CoolantTempNotInLimits = true;
-      }
-    }
-
-    word AdjustedCoolantTemp;
-
-    if (!CoolantTempNotInLimits || FLASH[0x805D]) {
-      CLEAR_BIT_IN(RAM[0x23], 2);
-      CLEAR_BIT_IN(RAM[0x23], 3);
-
-      AdjustedCoolantTemp = GetAdcValueFromTableAndAdjustForCalculus(0x831F, CoolantTemp);
-    } else if (CoolantTempNotInLimits) /* CoolantTempNotInLimits && !FLASH[0x805D] */ {
-      AdjustedCoolantTemp = COMPOSE_WORD(FLASH[0x8A4B], 0);
-    }
-
-    RAM[0x3A] = HIGH(AdjustedCoolantTemp);
-    RAM[0x3D] = AdjustTemperature(AdjustedCoolantTemp);
-  }
-
-  // INTAKE AIR TEMPERATURE
-  {
-    word IntakeAirTemp = ADC_10bit(INTAKE_AIR_TEMP_PIN);
-    XRAM[0xF687] = HIGH(IntakeAirTemp);
-
-    bool IntakeAirTempOutOfLimits = false;
-    bool HasIntakeAirTempSensor = CHECK_BIT_AT(FLASH[0x873F], 3);
-    word AdjustedIntakeAirTemp;
-
-    if (HasIntakeAirTempSensor) {
-      // Has intake air temperature sensor
-      if (!FLASH[0x8060]) {
-        if (HIGH(IntakeAirTemp) < FLASH[0x805E]) {
-          // intake air temp below minimum
-          SET_BIT_IN(RAM[0x24], 4);
-          CLEAR_BIT_IN(RAM[0x24], 5);
-
-          IntakeAirTempOutOfLimits = true;
-        } else if (FLASH[0x805F] < HIGH(IntakeAirTemp)) {
-          // intake air temp above minimum
-          CLEAR_BIT_IN(RAM[0x24], 4);
-          SET_BIT_IN(RAM[0x24], 5);
-
-          IntakeAirTempOutOfLimits = true;
-        }
-      }
-
-      if (FLASH[0x8060] || !IntakeAirTempOutOfLimits) {
-        CLEAR_BIT_IN(RAM[0x24], 4);
-        CLEAR_BIT_IN(RAM[0x24], 5);
-
-        // TODO Table length ?
-        AdjustedIntakeAirTemp = GetAdcValueFromTableAndAdjustForCalculus(0x8341, IntakeAirTemp);
-      }
-    }
-
-    if (!HasIntakeAirTempSensor || IntakeAirTempOutOfLimits)
-      AdjustedIntakeAirTemp = COMPOSE_WORD(FLASH[0x8061], 0);
-
-    RAM[0x3B] = HIGH(AdjustedIntakeAirTemp);
-    RAM[0x3E] = AdjustTemperature(AdjustedIntakeAirTemp);
-  }
-
-  // MODE SELECTION
-  {
-  }
-}
