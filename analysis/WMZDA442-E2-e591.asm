@@ -1,5 +1,4 @@
-﻿
-; Input SHA256 : 7F5E7B859D5A58D22C873EBBFE2C063401490FBABE63097AA7E4B81ADB8BDABA
+﻿; Input SHA256 : 7F5E7B859D5A58D22C873EBBFE2C063401490FBABE63097AA7E4B81ADB8BDABA
 ; Input MD5    : 3F181C3C4B148D967845BB4113666A0D
 ; Input CRC32  : 5CF810FF
 
@@ -8462,6 +8461,13 @@ code_280B:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;   XRAM[0xF94D + Idx] = XRAM[0xF600]
                 inc     DPTR
                 djnz    B, code_280B    ; B-Register
+                lcall   inputs_part1    ; Select operating mode.
+                                        ;
+                                        ; A/D Convert and prepare for calculus:
+                                        ;  - Coolant temperature
+                                        ;  - Intake Air Temperature
+                                        ;  - CO Potentiometer
+                                        ;  - Ignition Voltage
 
 
 
@@ -8472,11 +8478,6 @@ code_280B:                              ; CODE XREF: power_on__ignition_key_turn
 !!!!!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!!!!!
 
 
-                lcall   A_D_Convert_part1 ; A/D Convert and prepare for calculus:
-                                        ;  - Coolant temperature
-                                        ;  - Intake Air Temperature
-                                        ;  - CO Potentiometer
-                                        ;  - Ignition Voltage
                 mov     DPTR, #87B7h
                 clr     A
                 movc    A, @A+DPTR
@@ -11356,7 +11357,9 @@ code_36ED:                              ; CODE XREF: power_on__ignition_key_turn
                 clr     RAM_28.3
                 lcall   code_695C
                 lcall   code_696B
-                lcall   A_D_Convert_part1 ; A/D Convert and prepare for calculus:
+                lcall   inputs_part1    ; Select operating mode.
+                                        ;
+                                        ; A/D Convert and prepare for calculus:
                                         ;  - Coolant temperature
                                         ;  - Intake Air Temperature
                                         ;  - CO Potentiometer
@@ -16795,13 +16798,15 @@ code_5371:                              ; CODE XREF: power_on__ignition_key_turn
 
 ; =============== S U B R O U T I N E =======================================
 
+; Select operating mode.
+;
 ; A/D Convert and prepare for calculus:
 ;  - Coolant temperature
 ;  - Intake Air Temperature
 ;  - CO Potentiometer
 ;  - Ignition Voltage
 
-A_D_Convert_part1:                      ; CODE XREF: power_on__ignition_key_turned_+47E↑p
+inputs_part1:                           ; CODE XREF: power_on__ignition_key_turned_+47E↑p
                                         ; power_on__ignition_key_turned_+1363↑p
                 clr     RAM_26.6        ; RAM[0x26] &= ~(1 << 6)
 COOLANT TEMP
@@ -16830,7 +16835,7 @@ COOLANT TEMP
                 mov     A, R1           ; A = ADC(P7.7) = ADC(Coolant temperature)
                 cjne    A, B, code_5393 ; B-Register
 
-code_5393:                              ; CODE XREF: A_D_Convert_part1+1C↑j
+code_5393:                              ; CODE XREF: inputs_part1+1C↑j
                 jc      coolant_temp_less_than_low_limit ; if (ADC(Coolant temperature) < FLASH[0x8057]) jump ...
 Coolant temperature above lower limit (which is that?)
                 mov     DPTR, #8058h
@@ -16838,11 +16843,11 @@ Coolant temperature above lower limit (which is that?)
                 movc    A, @A+DPTR      ; A = FLASH[0x8058] = 0xF0, max A/D converted voltage of coolant temperature for diagnosis
                 cjne    A, RAM_1, code_539D
 
-code_539D:                              ; CODE XREF: A_D_Convert_part1+26↑j
+code_539D:                              ; CODE XREF: inputs_part1+26↑j
                 jc      coolant_temp_larger_than_high_limit ; if (FLASH[0x8058] < ADC(Coolant temperature)) jump ...
 Coolant temperature is in valid range
 
-coolant_temp_in_valid_range:            ; CODE XREF: A_D_Convert_part1+12↑j
+coolant_temp_in_valid_range:            ; CODE XREF: inputs_part1+12↑j
                 clr     RAM_23.2        ; RAM[0x23] &= ~(1 << 2)
                 clr     RAM_23.3        ; RAM[0x23] &= ~(1 << 3)
                 mov     DPTR, #831Fh    ; DPTR = 0x831F
@@ -16869,17 +16874,17 @@ R0[5..0] - unused
                 sjmp    code_53C4
 ; ---------------------------------------------------------------------------
 
-coolant_temp_less_than_low_limit:       ; CODE XREF: A_D_Convert_part1:code_5393↑j
+coolant_temp_less_than_low_limit:       ; CODE XREF: inputs_part1:code_5393↑j
                 setb    RAM_23.2        ; RAM[0x23] |= (1 << 2)
                 clr     RAM_23.3        ; RAM[0x23] &= ~(1 << 3)
                 sjmp    coolant_temp_not_in_limits
 ; ---------------------------------------------------------------------------
 
-coolant_temp_larger_than_high_limit:    ; CODE XREF: A_D_Convert_part1:code_539D↑j
+coolant_temp_larger_than_high_limit:    ; CODE XREF: inputs_part1:code_539D↑j
                 clr     RAM_23.2        ; RAM[0x23] &= ~(1 << 2)
                 setb    RAM_23.3        ; RAM[0x23] |= (1 << 3)
 
-coolant_temp_not_in_limits:             ; CODE XREF: A_D_Convert_part1+3D↑j
+coolant_temp_not_in_limits:             ; CODE XREF: inputs_part1+3D↑j
                 mov     B, #0           ; B-Register
                 mov     DPTR, #8A4Bh    ; DPTR = 0x8A4B
                 mov     A, B            ; B = A = 0
@@ -16887,7 +16892,7 @@ coolant_temp_not_in_limits:             ; CODE XREF: A_D_Convert_part1+3D↑j
                 mov     RAM_3A, A       ; RAM[0x3A] = FLASH[0x8A4B], fallback coolant temperature
                 mov     R0, #0          ; R0 = 0
 
-code_53C4:                              ; CODE XREF: A_D_Convert_part1+37↑j
+code_53C4:                              ; CODE XREF: inputs_part1+37↑j
                 mov     R1, RAM_3A      ; R1 = RAM[0x3A], coolant temperature
                 lcall   adjust_temperature ; INPUT
                                         ;   R1:R0 - adjusted table value for A/D Converted value
@@ -16934,17 +16939,17 @@ INTAKE AIR TEMP
                 mov     A, R1           ; A = R1, HIGH(ADC(IntakeAirTemp))
                 cjne    A, B, code_53F0 ; B-Register
 
-code_53F0:                              ; CODE XREF: A_D_Convert_part1+79↑j
+code_53F0:                              ; CODE XREF: inputs_part1+79↑j
                 jc      intake_air_temp_below_low_limit ; if (HIGH(ADC(IntakeAirTemp)) < FLASH[0x805E]) jump ...
                 mov     DPTR, #805Fh
                 clr     A
                 movc    A, @A+DPTR      ; A = FLASH[0x805F], Intake air temperature high limit
                 cjne    A, RAM_1, code_53FA
 
-code_53FA:                              ; CODE XREF: A_D_Convert_part1+83↑j
+code_53FA:                              ; CODE XREF: inputs_part1+83↑j
                 jc      intake_air_temp_above_high_limit ; if (FLASH[0x805F] < HIGH(ADC(IntakeAirTemp))) jump ...
 
-intake_air_temp_in_limits:              ; CODE XREF: A_D_Convert_part1+6F↑j
+intake_air_temp_in_limits:              ; CODE XREF: inputs_part1+6F↑j
                 clr     RAM_24.4
                 clr     RAM_24.5
                 mov     DPTR, #8341h
@@ -16965,25 +16970,25 @@ intake_air_temp_in_limits:              ; CODE XREF: A_D_Convert_part1+6F↑j
                 sjmp    code_541D
 ; ---------------------------------------------------------------------------
 
-intake_air_temp_below_low_limit:        ; CODE XREF: A_D_Convert_part1:code_53F0↑j
+intake_air_temp_below_low_limit:        ; CODE XREF: inputs_part1:code_53F0↑j
                 setb    RAM_24.4        ; set error flags
                 clr     RAM_24.5
                 sjmp    use_default_intake_air_temp
 ; ---------------------------------------------------------------------------
 
-intake_air_temp_above_high_limit:       ; CODE XREF: A_D_Convert_part1:code_53FA↑j
+intake_air_temp_above_high_limit:       ; CODE XREF: inputs_part1:code_53FA↑j
                 clr     RAM_24.4        ; set error flags
                 setb    RAM_24.5
 
-use_default_intake_air_temp:            ; CODE XREF: A_D_Convert_part1+67↑j
-                                        ; A_D_Convert_part1+9A↑j
+use_default_intake_air_temp:            ; CODE XREF: inputs_part1+67↑j
+                                        ; inputs_part1+9A↑j
                 mov     DPTR, #8061h
                 clr     A
                 movc    A, @A+DPTR
                 mov     RAM_3B, A       ; RAM[0x3B] = FLASH[0x8061], default intake air temperature
                 mov     R0, #0          ; R0 = 0
 
-code_541D:                              ; CODE XREF: A_D_Convert_part1+94↑j
+code_541D:                              ; CODE XREF: inputs_part1+94↑j
                 mov     R1, RAM_3B      ; R1 = adjusted intake air temp
                 lcall   adjust_temperature ; INPUT
                                         ;   R1:R0 - adjusted table value for A/D Converted value
@@ -17009,10 +17014,10 @@ MODE SELECTION START
                 sjmp    code_5430
 ; ---------------------------------------------------------------------------
 
-LO_set_diagnostic:                      ; CODE XREF: A_D_Convert_part1+B4↑j
+LO_set_diagnostic:                      ; CODE XREF: inputs_part1+B4↑j
                 mov     A, #3           ; A = 3, mode?
 
-code_5430:                              ; CODE XREF: A_D_Convert_part1+B8↑j
+code_5430:                              ; CODE XREF: inputs_part1+B8↑j
                 mov     DPTR, #0F7BEh
                 movx    @DPTR, A        ; XRAM[0xF7BE] = A (current operating mode?)
 MODE SELECTION FINISHED
@@ -17032,7 +17037,7 @@ MODE SELECTION FINISHED
 ; ---------------------------------------------------------------------------
 CO POTENTIOMETER START
 
-has_CO_potentiometer:                   ; CODE XREF: A_D_Convert_part1+C5↑j
+has_CO_potentiometer:                   ; CODE XREF: inputs_part1+C5↑j
                 mov     B, #8           ; B = 8, P8.0, wants to see CO potentiometer
                 lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
                                         ;
@@ -17053,27 +17058,27 @@ has_CO_potentiometer:                   ; CODE XREF: A_D_Convert_part1+C5↑j
                 mov     A, R1
                 cjne    A, B, code_5460 ; B-Register
 
-code_5460:                              ; CODE XREF: A_D_Convert_part1+E9↑j
+code_5460:                              ; CODE XREF: inputs_part1+E9↑j
                 jnc     CO_pot_above_low_limit ; if (ADC(CO Potentiometer) >= FLASH[0x8067]) jump ...
                 setb    RAM_23.4        ; set error flags
                 clr     RAM_23.5
                 sjmp    CO_pot_not_in_limits
 ; ---------------------------------------------------------------------------
 
-CO_pot_above_low_limit:                 ; CODE XREF: A_D_Convert_part1:code_5460↑j
+CO_pot_above_low_limit:                 ; CODE XREF: inputs_part1:code_5460↑j
                 mov     DPTR, #8068h
                 clr     A
                 movc    A, @A+DPTR      ; A = FLASH[0x8068], CO pot high limit
                 cjne    A, RAM_1, code_5470
 
-code_5470:                              ; CODE XREF: A_D_Convert_part1+F9↑j
+code_5470:                              ; CODE XREF: inputs_part1+F9↑j
                 jnc     CO_pot_in_limits ; if (FLASH[0x8068] >= ADC(CO Potentiometer)) jump ...
                 clr     RAM_23.4        ; set error flags
                 setb    RAM_23.5
                 sjmp    CO_pot_not_in_limits
 ; ---------------------------------------------------------------------------
 
-CO_pot_in_limits:                       ; CODE XREF: A_D_Convert_part1:code_5470↑j
+CO_pot_in_limits:                       ; CODE XREF: inputs_part1:code_5470↑j
                 clr     RAM_23.4        ; clear error flags
                 clr     RAM_23.5
                 mov     A, R1
@@ -17089,7 +17094,7 @@ CO_pot_in_limits:                       ; CODE XREF: A_D_Convert_part1:code_5470
                                         ; if (ADC(CO pot) < 0x80) jump ...
                 mov     A, #0FFh        ; A = 0xFF, saturate
 
-code_5482:                              ; CODE XREF: A_D_Convert_part1+10A↑j
+code_5482:                              ; CODE XREF: inputs_part1+10A↑j
                 clr     C               ; CY = 0
                 subb    A, #50h ; 'P'   ; A = ADC(CO pot) - 0x50
                 mov     B, #0C0h        ; B = 0xC0
@@ -17105,25 +17110,25 @@ code_5482:                              ; CODE XREF: A_D_Convert_part1+10A↑j
                 sjmp    code_5494
 ; ---------------------------------------------------------------------------
 
-CO_pot_not_in_limits:                   ; CODE XREF: A_D_Convert_part1+D4↑j
-                                        ; A_D_Convert_part1+F2↑j ...
+CO_pot_not_in_limits:                   ; CODE XREF: inputs_part1+D4↑j
+                                        ; inputs_part1+F2↑j ...
                 mov     DPTR, #8069h
                 clr     A
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
 
-code_5494:                              ; CODE XREF: A_D_Convert_part1+117↑j
+code_5494:                              ; CODE XREF: inputs_part1+117↑j
                 mov     A, RAM_73       ; A = RAM[0x73], some status byte
                 jb      ACC.3, code_549F ; if (RAM[0x73] & (1 << 3)) jump ...
                 mov     A, B            ; A = B
                 mov     DPTR, #0F681h
                 movx    @DPTR, A        ; XRAM[0xF681] = B (high byte of multiplication)
 
-code_549F:                              ; CODE XREF: A_D_Convert_part1+122↑j
+code_549F:                              ; CODE XREF: inputs_part1+122↑j
                 sjmp    xram_F681_initialized
 ; ---------------------------------------------------------------------------
 
-has_IROM:                               ; CODE XREF: A_D_Convert_part1+CD↑j
+has_IROM:                               ; CODE XREF: inputs_part1+CD↑j
                 clr     RAM_23.4        ; clear error flags
                 clr     RAM_23.5
                 mov     A, RAM_73
@@ -17133,8 +17138,8 @@ has_IROM:                               ; CODE XREF: A_D_Convert_part1+CD↑j
                 mov     DPTR, #0F681h
                 movx    @DPTR, A        ; XRAM[0xF681] = XRAM[0xFF74]
 
-xram_F681_initialized:                  ; CODE XREF: A_D_Convert_part1:code_549F↑j
-                                        ; A_D_Convert_part1+133↑j
+xram_F681_initialized:                  ; CODE XREF: inputs_part1:code_549F↑j
+                                        ; inputs_part1+133↑j
                 mov     DPTR, #8741h
                 clr     A
                 movc    A, @A+DPTR      ; A = FLASH[0x8741], kitting bits
@@ -17149,7 +17154,7 @@ xram_F681_initialized:                  ; CODE XREF: A_D_Convert_part1:code_549F
                 sjmp    xram_F682_initialized
 ; ---------------------------------------------------------------------------
 
-code_54CA:                              ; CODE XREF: A_D_Convert_part1+143↑j
+code_54CA:                              ; CODE XREF: inputs_part1+143↑j
                 mov     A, RAM_73
                 jb      ACC.4, xram_F682_initialized ; Accumulator
                 mov     DPTR, #0FF75h
@@ -17159,8 +17164,8 @@ code_54CA:                              ; CODE XREF: A_D_Convert_part1+143↑j
 CO POTENTIOMETER FINISH
 IGNITION VOLTAGE START
 
-xram_F682_initialized:                  ; CODE XREF: A_D_Convert_part1+148↑j
-                                        ; A_D_Convert_part1+154↑j ...
+xram_F682_initialized:                  ; CODE XREF: inputs_part1+148↑j
+                                        ; inputs_part1+154↑j ...
                 mov     B, #9           ; P8.1, wants to see if ignition is turned on
                 lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
                                         ;
@@ -17178,17 +17183,17 @@ xram_F682_initialized:                  ; CODE XREF: A_D_Convert_part1+148↑j
                 jnc     code_54E7       ; if (ADC(Ignition Voltage) >= 0) jump ...
                 clr     A               ; A = 0
 
-code_54E7:                              ; CODE XREF: A_D_Convert_part1+170↑j
+code_54E7:                              ; CODE XREF: inputs_part1+170↑j
                 mov     B, #75h         ; B-Register
                 mul     AB              ; B:A = ADC(Ignition Voltage) * 0x75
                 rlc     A
                 mov     A, B            ; B-Register
-                rlc     A               ; A = (B << 2) | (A & (1 << 7))
+                rlc     A               ; A = (B << 1) | (A & (1 << 7))
                                         ; CY = !!(B & (1 << 7))
                 jnc     code_54F3       ; if (!(B & (1 << 7))) jump ...
                 mov     A, #0FFh        ; saturate
 
-code_54F3:                              ; CODE XREF: A_D_Convert_part1+17B↑j
+code_54F3:                              ; CODE XREF: inputs_part1+17B↑j
                 mov     R1, A           ; R1 = A, filtered Ignition Voltage
                 mov     DPTR, #8062h
                 clr     A
@@ -17197,7 +17202,7 @@ code_54F3:                              ; CODE XREF: A_D_Convert_part1+17B↑j
                 mov     A, R1
                 cjne    A, B, code_54FF ; B-Register
 
-code_54FF:                              ; CODE XREF: A_D_Convert_part1+188↑j
+code_54FF:                              ; CODE XREF: inputs_part1+188↑j
                 mov     RAM_22.4, C     ; if (R1 < FLASH[0x8062])
                                         ;   RAM[0x22] |= (1 << 4)
                                         ; else
@@ -17207,8 +17212,8 @@ code_54FF:                              ; CODE XREF: A_D_Convert_part1+188↑j
                 movc    A, @A+DPTR      ; A = FLASH[0x8063]
                 cjne    A, RAM_1, code_5509
 
-code_5509:                              ; CODE XREF: A_D_Convert_part1+192↑j
-                mov     RAM_22.5, C     ; if (R1 < FLASH[0x8063])
+code_5509:                              ; CODE XREF: inputs_part1+192↑j
+                mov     RAM_22.5, C     ; if (FLASH[0x8063] < R1)
                                         ;   RAM[0x22] |= (1 << 5)
                                         ; else
                                         ;   RAM[0x22] &= ~(1 << 5)
@@ -17220,21 +17225,21 @@ code_5509:                              ; CODE XREF: A_D_Convert_part1+192↑j
                 jnc     code_5516       ; if (RAM[0x3C] >= 0x36) jump ...
                 clr     A               ; A = 0, saturate if RAM[0x3C] < 0x36
 
-code_5516:                              ; CODE XREF: A_D_Convert_part1+19F↑j
+code_5516:                              ; CODE XREF: inputs_part1+19F↑j
                 mov     B, #40h ; '@'   ; B-Register
                 mul     AB              ; B:A = A * 0x40
                 mov     A, B            ; A = HIGH(A * 0x40)
                 cjne    A, #1Fh, code_551F
 
-code_551F:                              ; CODE XREF: A_D_Convert_part1+1A8↑j
+code_551F:                              ; CODE XREF: inputs_part1+1A8↑j
                 jc      code_5523       ; if (A < 0x1F) jump ...
                 mov     A, #1Fh         ; saturate
-                                        ; A = minimum value, which is 0x1F
+                                        ; A = maximum value, which is 0x1F
 
-code_5523:                              ; CODE XREF: A_D_Convert_part1:code_551F↑j
+code_5523:                              ; CODE XREF: inputs_part1:code_551F↑j
                 mov     RAM_3F, A       ; RAM[0x3F] = A
                 ret
-; End of function A_D_Convert_part1
+; End of function inputs_part1
 
 
 ; =============== S U B R O U T I N E =======================================
