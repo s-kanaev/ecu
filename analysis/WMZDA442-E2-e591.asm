@@ -8473,49 +8473,45 @@ code_280B:                              ; CODE XREF: power_on__ignition_key_turn
 
 !!!!!!!!!! CONTINUE HIGH-LEVEL FROM HERE !!!!!!!!!!!
 
-
-
-!!!!!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!!!!!
-
-
+INIT XRAM[0xF8CD]..XRAM[0xF8CD+0x7F] (0x80 bytes)
                 mov     DPTR, #87B7h
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
-                mov     A, RAM_3A
+                mov     B, A            ; B = FLASH[0x87B7]
+                mov     A, RAM_3A       ; A = RAM[0x3A], adjusted coolant temperature
                 mov     DPTR, #0F683h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF683] = RAM[0x3A], Adjusted coolant temperature
                 cjne    A, B, code_2823 ; B-Register
 
 code_2823:                              ; CODE XREF: power_on__ignition_key_turned_+48E↑j
-                jc      code_2850
+                jc      nullify_xram_f8cd ; if (RAM[0x3A] < FLASH[0x87B7]) jump ...
                 mov     DPTR, #873Fh
                 clr     A
                 movc    A, @A+DPTR
-                jnb     ACC.2, code_2850 ; Accumulator
+                jnb     ACC.2, nullify_xram_f8cd ; if (!(kitting has knock sensor)) jump ...
                 mov     R0, #8
-                mov     DPTR, #0F8CDh
+                mov     DPTR, #0F8CDh   ; DPTR[0] = 0xF8CD
 
 code_2832:                              ; CODE XREF: power_on__ignition_key_turned_+4BA↓j
                 mov     B, #10h         ; B-Register
                 mov     DPSEL, #2       ; Data Pointer Select Register
-                mov     DPTR, #0ADF1h
+                mov     DPTR, #0ADF1h   ; DPTR[2] = 0xADF1
                 mov     DPSEL, #0       ; Data Pointer Select Register
 
 code_283E:                              ; CODE XREF: power_on__ignition_key_turned_+4B7↓j
-                mov     DPSEL, #2       ; Data Pointer Select Register
+                mov     DPSEL, #2       ; Select DPTR[2]
                 clr     A
-                movc    A, @A+DPTR
+                movc    A, @A+DPTR      ; A = FLASH[DPTR[2]++]
                 inc     DPTR
                 mov     DPSEL, #0       ; Data Pointer Select Register
                 movx    @DPTR, A
-                inc     DPTR
-                djnz    B, code_283E    ; B-Register
-                djnz    R0, code_2832
+                inc     DPTR            ; XRAM[DPTR[0]++] = FLASH[DPTR[2]++]
+                djnz    B, code_283E    ; repeat B times (0x10)
+                djnz    R0, code_2832   ; repeat R1 (0x08) times
                 sjmp    code_285C
 ; ---------------------------------------------------------------------------
 
-code_2850:                              ; CODE XREF: power_on__ignition_key_turned_:code_2823↑j
+nullify_xram_f8cd:                      ; CODE XREF: power_on__ignition_key_turned_:code_2823↑j
                                         ; power_on__ignition_key_turned_+498↑j
                 clr     A
                 mov     B, #80h         ; B-Register
@@ -8523,82 +8519,99 @@ code_2850:                              ; CODE XREF: power_on__ignition_key_turn
 
 code_2857:                              ; CODE XREF: power_on__ignition_key_turned_+4C7↓j
                 movx    @DPTR, A
-                inc     DPTR
-                djnz    B, code_2857    ; B-Register
+                inc     DPTR            ; XRAM[DPTR++] = 0
+                djnz    B, code_2857    ; repeat B (0x80) times
+FINISHED INIT OF XRAM[0xF8CD]
 
 code_285C:                              ; CODE XREF: power_on__ignition_key_turned_+4BC↑j
                 mov     DPTR, #873Fh
                 clr     A
                 movc    A, @A+DPTR
-                jnb     ACC.1, code_28CD ; Accumulator
+                jnb     ACC.1, no_EGO_sensor_or_absorber ; if (!(kitting has EGO sensor)) jump ...
                 mov     DPTR, #8743h
                 clr     A
                 movc    A, @A+DPTR
-                jnb     ACC.4, code_28CD ; Accumulator
-                setb    RAM_2B.0
+                jnb     ACC.4, no_EGO_sensor_or_absorber ; if (!(kitting has absorber)) jump ...
+                setb    RAM_2B.0        ; RAM[0x2B] &= ~(1 << 0)
                 mov     DPTR, #8788h
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
-                mov     A, RAM_3A
+                mov     B, A            ; B = FLASH[0x8788]
+                mov     A, RAM_3A       ; A = RAM[0x3A], adjusted coolant temperature
                 clr     C
-                subb    A, B            ; B-Register
-                jc      code_28B5
-                mov     C, RAM_20.6
-                orl     C, RAM_20.7
-                jnc     code_28AA
+                subb    A, B            ; A = RAM[0x3A] - FLASH[0x8788]
+                jc      adjusted_coolant_temp_less_than_flash_8788 ; if (RAM[0x3A] < FLASH[0x8788]) jump ...
+                mov     C, RAM_20.6     ; C = watchdog triggered
+                orl     C, RAM_20.7     ; C = watchdog triggered || xram checksum not valid
+                jnc     neither_watchdog_nor_xram_failure_detected ; if (!(watchdog triggered || xram checksum invalid)) jump ...
+                                        ;
+                                        ; if (!(watchdog triggered) && !(xram checksum invalid)) jump ...
                 mov     DPSEL, #0       ; Data Pointer Select Register
-                mov     DPTR, #0F500h
+                mov     DPTR, #0F500h   ; DPTR[0] = 0xF500
                 mov     DPSEL, #2       ; Data Pointer Select Register
-                mov     DPTR, #9A1Ch
+                mov     DPTR, #9A1Ch    ; DPTR[2] = 0x9A1C
 
 code_288E:                              ; CODE XREF: power_on__ignition_key_turned_+513↓j
                 clr     A
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
-                inc     DPTR
+                inc     DPTR            ; B = FLASH[DPTR[2]++]
                 mov     DPSEL, #0       ; Data Pointer Select Register
                 movx    A, @DPTR
                 add     A, B            ; B-Register
                 dec     DPH             ; Data Pointer, High Byte
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[COMPOSE_WORD(HIGH(DPTR[0]) - 1, LOW(DPTR[0]))] = FLASH[DPTR[2]++] + XRAM[DPTR[0]]
                 inc     DPH             ; Data Pointer, High Byte
-                inc     DPL             ; Data Pointer, Low Byte
+                inc     DPL             ; ++DPTR[0]
                 mov     A, DPL          ; Data Pointer, Low Byte
                 mov     DPSEL, #2       ; Data Pointer Select Register
-                jnz     code_288E
+                jnz     code_288E       ; while (LOW[DPTR[0]]) ...
                 mov     DPSEL, #0       ; Data Pointer Select Register
 
-code_28AA:                              ; CODE XREF: power_on__ignition_key_turned_+4EE↑j
+neither_watchdog_nor_xram_failure_detected:
+                                        ; CODE XREF: power_on__ignition_key_turned_+4EE↑j
                 mov     DPTR, #878Ah
                 clr     A
                 movc    A, @A+DPTR
                 mov     DPTR, #0F7A4h
-                movx    @DPTR, A
-                sjmp    code_28CD
+                movx    @DPTR, A        ; XRAM[0xF7A4] = FLASH[0x878A]
+                sjmp    no_EGO_sensor_or_absorber
 ; ---------------------------------------------------------------------------
 
-code_28B5:                              ; CODE XREF: power_on__ignition_key_turned_+4E8↑j
+adjusted_coolant_temp_less_than_flash_8788:
+                                        ; CODE XREF: power_on__ignition_key_turned_+4E8↑j
                 mov     DPTR, #0F500h
 
 code_28B8:                              ; CODE XREF: power_on__ignition_key_turned_+530↓j
-                movx    A, @DPTR
+                movx    A, @DPTR        ; A = XRAM[DPTR]
                 dec     DPH             ; Data Pointer, High Byte
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[COMPOSE_WORD(HIGH(DPTR)-1, LOW(DPTR))] = XRAM[DPTR]
                 inc     DPH             ; Data Pointer, High Byte
-                inc     DPL             ; Data Pointer, Low Byte
+                inc     DPL             ; ++DPTR
                 mov     A, DPL          ; Data Pointer, Low Byte
-                jnz     code_28B8
+                jnz     code_28B8       ; while (LOW(DPTR)) ...
                 mov     DPTR, #8789h
                 clr     A
                 movc    A, @A+DPTR
                 mov     DPTR, #0F7A4h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF7A4] = FLASH[0x8789]
 
-code_28CD:                              ; CODE XREF: power_on__ignition_key_turned_+4CF↑j
+
+!!!!!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!!!!!
+
+
+
+
+no_EGO_sensor_or_absorber:              ; CODE XREF: power_on__ignition_key_turned_+4CF↑j
                                         ; power_on__ignition_key_turned_+4D7↑j ...
-                setb    TCON.0          ; Timer Control Register
-                clr     TCON.1          ; Timer Control Register
+                setb    TCON.0          ; TCON.IT0 = 1
+                                        ; External interrupt 1 level/edge trigger control flag,
+                                        ; If IT1 = 0, level triggered external interrupt 1 is selected.
+                                        ; If IT1 = 1, negative edge triggered external interrupt 1 is selected.
+                clr     TCON.1          ; TCON.IE0 = 0
+                                        ; External interrupt 0 request flag
+                                        ; Set by hardware. Cleared by hardware when processor vectors to interrupt routine
+                                        ; (if IT0 = 1) or by hardware (if IT0 = 0).
                 setb    IEN0.0          ; Interrupt Enable Register 0
                 orl     CCEN, #30h      ; Compare/Capture Enable Register
                 orl     CCEN, #40h      ; Compare/Capture Enable Register
