@@ -503,6 +503,18 @@ inline bool kitting_has_irom() {
   return CHECK_BIT_AT(FLASH[0x8741, 0]);
 }
 
+inline bool kitting_has_camshaft_position_sensor() {
+  return CHECK_BIT_AT(FLASH[0x873F], 4);
+}
+
+inline bool kitting_camshaft_position_sensor_cross_section_aligned_with_TDC() {
+  return CHECK_BIT_AT(FLASH[0x873F], 5);
+}
+
+inline bool kitting_has_knock_sensor() {
+  return CHECK_BIT_AT(FLASH[0x873F], 2);
+}
+
 void reset_init(void) {
   disable_interrupts();
   clear_stack();
@@ -1478,10 +1490,10 @@ void reset_interrupt() noreturn {
   RAM[0x20] |= SET_BIT(R0 || R1, 7);
   
   init_xram();
-  
-  RAM[0x2D] |= SET_BIT(CHECK_BIT_AT(FLASH[0x873F], 4), 7); // Has camshaft position sensor
-  RAM[0x2E] |= SET_BIT(CHECK_BIT_AT(FLASH[0x873F], 5), 0); // Camshaft position sensor cross-section is aligned with TDC
-  RAM[0x2E] |= SET_BIT(CHECK_BIT_AT(FLASH[0x873F], 2), 1); // Is there knock sensor
+
+  RAM[0x2D] |= SET_BIT(kitting_has_camshaft_position_sensor(), 7); // Has camshaft position sensor
+  RAM[0x2E] |= SET_BIT(kitting_camshaft_position_sensor_cross_section_aligned_with_TDC(), 0); // Camshaft position sensor cross-section is aligned with TDC
+  RAM[0x2E] |= SET_BIT(kitting_has_knock_sensor(), 1); // Is there knock sensor
   
   if (CHECK_BIT_AT(FLASH[0x8741], 0)) // Is there IROM?
     read_eeprom_to_xram();
