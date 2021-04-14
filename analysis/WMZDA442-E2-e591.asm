@@ -41,7 +41,7 @@ IE0:
                 db 0FFh
                 db 0FFh
                 db 0FFh
-                db 0FFh
+code_9:         db 0FFh
                 db 0FFh
 
 ; =============== S U B R O U T I N E =======================================
@@ -8468,11 +8468,6 @@ code_280B:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;  - Intake Air Temperature
                                         ;  - CO Potentiometer
                                         ;  - Ignition Voltage
-
-
-
-!!!!!!!!!! CONTINUE HIGH-LEVEL FROM HERE !!!!!!!!!!!
-
 INIT XRAM[0xF8CD]..XRAM[0xF8CD+0x7F] (0x80 bytes)
                 mov     DPTR, #87B7h
                 clr     A
@@ -8720,6 +8715,13 @@ code_2942:                              ; CODE XREF: power_on__ignition_key_turn
                 jz      funny_thing_with_ISO9141 ; if (!(P9 & 0x20)) jump ...
                                         ;
                                         ; if (!(LO of MC33199 (ISO9141) active)) jump ...
+
+
+
+!!!!!!!!!! CONTINUE HIGH-LEVEL FROM HERE !!!!!!!!!!!
+
+
+
 
 
 !!!!!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!!!!!
@@ -34741,262 +34743,14 @@ kitting_byte_0: db  3Fh ; ?
                 db  74h ; t
                 db  73h ; s
                 db  72h ; r
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    2
-                db    4
-                db    4
-                db    3
-                db    4
-                db    4
-                db    3
-                db    2
-                db    2
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    2
-                db    4
-                db    5
-                db    5
-                db    6
-                db    6
-                db    6
-                db    5
-                db    4
-                db    2
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    2
-                db    3
-                db    4
-                db    5
-                db    6
-                db    7
-                db    7
-                db    6
-                db    4
-                db    2
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    2
-                db    2
-                db    3
-                db    4
-                db    5
-                db    5
-                db    5
-                db    5
-                db    4
-                db    2
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    1
-                db    1
-                db    2
-                db    2
-                db    2
-                db    3
-                db    3
-                db    4
-                db    3
-                db    1
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    1
-                db    1
-                db    2
-                db    2
-                db    1
-                db    2
-                db    2
-                db    3
-                db    1
-                db    1
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    1
-                db    0
-                db    1
-                db    1
-                db    0
-                db    1
-                db    1
-                db    1
-                db    0
-                db    1
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    1
-                db    2
-                db    0
-                db    0
-                db    0
-                db    0
-                db    1
-                db    0
-                db    1
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
+_9a1c_start:    db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,4,4,3,4,4,3,2,2,0,0,0,0,0
+                db 0,2,4,5,5,6,6,6,5,4,2,0,0,0,0,0,0,2,3,4,5,6,7,7,6,4,2,0,0,0,0,0,0,2
+                db 2,3,4,5,5,5,5,4,2,0,0,0,0,0,0,1,1,2,2,2,3,3,4,3,1,0,0,0,0,0,0,1,1,2
+                db 2,1,2,2,3,1,1,0,0,0,0,0,0,1,0,1,1,0,1,1,1,0,1,0,0,0,0,0,0,0,1,2,0,0
+                db 0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 db  80h
                 db  80h
                 db  80h
@@ -39601,22 +39355,7 @@ abf1_start:     db 0, 0, 0, 0, 0, 0, 2, 2
                 db  14h
                 db  14h
                 db  14h
-                db    9
-                db    9
-                db    9
-                db    9
-                db    9
-                db    9
-                db    9
-                db    8
-                db    6
-                db    3
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
-                db    0
+adf1_start:     db 9,9,9,9,9,9,9,8,6,3,0,0,0,0,0,0
                 db    0
                 db    0
                 db    0
