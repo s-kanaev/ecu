@@ -1734,5 +1734,124 @@ inline byte tripple_rotate_right(byte Data, byte Mask) {
 no_EGO_sensor_or_absorber:
 {
   // start init of timer1
+  // TCON.IT0 External interrupt 1 level/edge trigger control flag,
+  // If IT0 = 0, level triggered external interrupt 0 is selected.
+  // If IT0 = 1, negative edge triggered external interrupt 0 is selected.
+  // (external interrupt 0 is at P3.2, which isn't connected to anywhere)
+  SET_BIT_IN(TCON, 0);
+  // TCON.IE0 = 0
+  // External interrupt 0 request flag
+  // Set by hardware. Cleared by hardware when processor vectors to interrupt routine
+  // (if IT0 = 1) or by hardware (if IT0 = 0).
+  CLEAR_BIT_IN(TCON, 1);
+
+  // IEN0.EX0 = 1, enable external interrupt 0
+  SET_BIT_IN(IEN0, 0);
+
+  // COCAH2 = 1
+  // COCAL1 = 1
+  // CC2 (P1.2) capture on write to register CCL2.
+  // P1.2 - camshaft position sensor
+  CCEN |= 0x30;
+
+  // COCAH3 = 0
+  // COCAL3 = 1
+  // CC3, capture on rising edge at P1.3 (INT6)
+  // P1.3 - crankshaft position sensor
+  CCEN |= 0x40;
+
+  // IRCON0.IEX6 = 0
+  // External interrupt 6 edge flag
+  // Set by hardware when external interrupt edge was detected or when a compare
+  // event occurred at pin 1.3/INT6/CC3. Cleared by hardware when processor vectors
+  // to interrupt routine.
+  CLEAR_BIT_IN(IRCON0, 5);
+
+  // IEN1.EX6 = 1
+  // External interrupt 6 / capture/compare interrupt 3 enable
+  // If EX6 = 0, external interrupt 6 is disabled.
+  SET_BIT_IN(IEN1, 5);
+
+  // Timer1:
+  // TMOD.GATE = 1
+  // TMOD.M0 = 1
+  // GATE:
+  // Gating control
+  // When set, timer/counter 'x' is enabled only while 'INT x' pin is high and 'TRx' control bit is set.
+  // When cleared timer 'x' is enabled whenever 'TRx' control bit is set.
+  // M0 = 1, M1 = 0 => 16 bit timer/counter
+  TMOD |= 0x50;
+
+  // TCON.(!TR1) = 0
+  // TR1: Timer 1 run control bit.
+  // Set/cleared by software to turn timer/counter 1 on/off.
+  CLEAR_BIT_IN(TCON, 6);  // stop timer1
+
+  TL1 = TH1 = 0;
+  SET_BIT_IN(TCON, 6);  // start timer1
+
+  // Timer0:
+  // TMOD.M0 = 1
+  // M0 = 0, M1 = 1 => 16 bit timer/counter
+  TMOD |= 0x01;
+
+  CLEAR_BIT_IN(TCON, 4);  // stop timer0
+  TL0 = 0xCB;
+  TH0 = 0xFA; // init timer0 register with 0xFACB
+  CLEAR_BIT_IN(TCON, 5);  // clear timer0 overflow bit
+  SET_BIT_IN(TCON, 4);    // start timer0
+
+  // IEN0.ET0 = 1
+  // Timer 0 overflow interrupt enable.
+  // If ET0 = 0, the timer 0 interrupt is disabled.
+  SET_BIT_IN(IEN0, 1);
+
+  RAM[0x35] = 0x14;
+  CLEAR_BIT_IN(RAM[0x28], 0);
+  XRAM[0xF96D] = 0xF7;
+  XRAM[0xF96E] = 0x0A;
+  XRAM[0xF96F] = 0;
+  XRAM[0xG970] = 0;
+
+  // watchdog:
+  // Reload value = 0x78
+  // WDTREL.WPSEL = 1, PRSC.WDTP = 1 => watchdog input freq = f_osc/384
+  WDTREL = 0xF8;
+
+  // IEN0.(!WDT) = 0
+  // Watchdog timer refresh flag
+  // Set to initiate a refresh of the watchdog timer. Must be set directly before SWDT is set to prevent an unintentional refresh of the watchdog timer.
+  SET_BIT_IN(IEN0, 6);
+
+  // IEN1.(!SWDT) = 0
+  // Watchdog timer start flag
+  // Set to activate the watchdog timer. When directly set after setting WDT, a watchdog timer refresh is performed.
+  SET_BIT_IN(IEN1, 6);
+
+  if (status_watchdog_triggerred() || !status_xram_checksum_invalid())
+    jump funny_thing_with_ISO9141;
+
+  if (!(P9 & 0x20)) // LO of MC33199 (ISO9141) IS NOT active
+    jump funny_thing_with_ISO9141;
+
+  CLEAR_BIT_IN(P3, 1);  // TxD @ MC33199 (ISO9141)
+
+  WAIT_MACHINE_CYCLES_BY_2(0x0E);
+  
+  if (P9 & 0x20) // LO of MC33199 (ISO9141) IS active
+    jump funny_thing_with_ISO9141;
+
+  SET_BIT_IN(P3, 1);  // TxD @ MC33199 (ISO9141)
+
+  WAIT_MACHINE_CYCLES_BY_2(0x0E);
+  
+  if (!(P9 & 0x20)) // LO of MC33199 (ISO9141) IS NOT active
+    jump funny_thing_with_ISO9141;
+  
+  jump FAED_trampoline; // work mode ?
+
+// _2950:
+funny_thing_with_ISO9141:
+  // K/L-line communication?
   // ... TODO ...
 }
