@@ -215,7 +215,7 @@ byte FLASH[0x10000] = {
 
   [0x8057] = 0x64,  // minimum A/D Converted Coolant Temperature
   [0x8058] = 0xF0,  // maximum A/D Converted Coolant Temperature
-  [0x805D] = 0x00,  // fallback A/D Converted Coolant Temperature ?
+  [0x805D] = 0x00,  // somehow used in processing of A/D Converted Coolant Temperature ?
   [0x805E] = 0x64,  // minimum A/D Converted Intake Air Temperature
   [0x805F] = 0xF0,  // maximum A/D Converted Intake Air Temperature
 
@@ -232,7 +232,14 @@ byte FLASH[0x10000] = {
   [0x8093] = 0x00,  // fallback data for XRAM[0xF770]
 
   // Table for Coolant Temperature
+  // Temp, decimal, C: -54   -54   -54   -54   -54   -54   -54   -54   -23     8    99    71   102   133   164   164   164
+  // Global formula: Real temperature = -60 (decimal) + Table value
+  // ADC voltage:        0  .311  .622  .934  1.245 1.556 1.867 2.179 2.49  2.801 3.112 3.424 3.735 4.046 4.357 4.669 4.99
+  // ADC Voltage = 10mV * Temperature (Kelvin)
   [0x831F..0x832F] = {0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x25, 0x44, 0x63, 0x83, 0xA2, 0xC1, 0xE0, 0xE0, 0xE0},
+  // Table #2 for Coolant Temperature - usage unknown
+  [0x8330..0x8340] = {0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x25, 0x44, 0x63, 0x83, 0xA2, 0xC1, 0xE0, 0xE0, 0xE0},
+  // Table for Intake Air Temperature
   [0x8341..0x8351] = {0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x25, 0x44, 0x63, 0x83, 0xA2, 0xC1, 0xE0, 0xE0, 0xE0},
 
   [0x873F] = 0x3F,  // kitting bits: 0011 1111
@@ -877,24 +884,38 @@ void open_bypass_air_valve(void) {
 //           factor*(T[N+1] - T[N]) if factor isn't nil
 //           N = Offset
 // _635D:
+// Example inputs:
+// A. FlashPtr = 0x831F (coolant temperature table), Negate = false
+// A.1. Offset = 0x08, Factor = 0xF4
+// A.2. Offset = 0x0B, Factor = 0xF0
 word GetValueFromTableImpl(word FlashPtr, byte Offset, byte Factor, bool Negate) {
   if (!Factor)
     return COMPOSE_WORD(FLASH[FlashPtr + Offset], 0);
 
+  // A.1. TableData = FLASH[0x831F + 0x08 + 1] = 0x44
+  // A.2. TableData = FLASH[0x831F + 0x0B + 1] = 0xA2
   byte TableData = FLASH[FlashPtr + Offset + 1];
 
   if (Negate)
     TableData ^= 0x80;
 
+  // A.1. Prod1 = 0x44 * 0xF4
+  // A.2. Prod1 = 0xA2 * 0xF0
   word Prod1 = TableData * Factor; // A - low byte of result, B - high byte of result
 
+  // A.1. TableData = FLASH[0x831F + 0x08] = 0x25
+  // A.2. TableData = FLASH[0x831F + 0x0B] = 0x83
   TableData = FLASH[FlashPtr + Offset];
 
   if (Negate)
     TableData ^= 0x80;
 
+  // A.1. Prod1 = 0x25 * 0xF4
+  // A.2. Prod1 = 0x83 * 0xF0
   word Prod2 = TableData * (-Factor);
 
+  // A.1. Result = (0x25 + 0x44) * 0xF4 = 0x6414
+  // A.2. Result = (0x83 + 0xA2) * 0xF0 = 0x12B0
   word Result = Prod1 + Prod2;
 
   if (Negate) {
@@ -1139,6 +1160,9 @@ void UpdateRam63() {
 }
 
 
+// example inputs:
+// 1. 0x831F, 0x8F40 for Collant Temperature = 8 degrees
+// 2. 0x831F, 0xBF00 for Collant Temperature = 102 degrees
 word GetAdcValueFromTable(word FlashPtr, word ADCValue) {
   // max value in ADCValue = F0:FF
   // max offset = HIGH(ADCValue) >> 4 = F0 >> 4 = F
@@ -1146,14 +1170,25 @@ word GetAdcValueFromTable(word FlashPtr, word ADCValue) {
   // max Factor = (HIGH(ADCValue) << 4) | (LOW(ADCValue) >> 4) = (EF << 4) | (C0 >> 4) = FC
   // With non nil factor, offset is incremented.
   // Hence, table size is 0x11
+
+  // 1. Offset = 0x8F >> 4 = 0x08, Factor = (0x8F << 4) | (0x40 >> 4) = 0xF4
+  // 2. Offset = 0xBF >> 4 = 0x0B, Factor = (0xBF << 4) | (0x00 >> 4) = 0xF0
   byte Offset = HIGH(ADCValue) >> 4;
   byte Factor = (HIGH(ADCValue) << 4) | (LOW(ADCValue) >> 4);
   return GetValueFromTableImpl(FlashPtr, Offset, Factor, false);
 }
 
+// example inputs:
+// 1. 0x831F, 0x8F40 for Collant Temperature = 8 degrees
+// 2. 0x831F, 0xBF00 for Collant Temperature = 102 degrees
 word GetAdcValueFromTableAndAdjustForCalculus(word FlashPtr, word ADCValue) {
+  // 1. Result = (0x25 + 0x44) * 0xF4 = 0x6414
+  // 2. Result = (0x83 + 0xA2) * 0xF0 = 0x12B0
+
   word Result = GetAdcValueFromTable(FlashPtr, ADCValue);
 
+  // 1. Returned value: 0x5014
+  // 2. Returned value: 0x0000
   if (HIGH(Result) < 0x14)
     return COMPOSE_WORD(0, 0);
 
@@ -1167,7 +1202,11 @@ byte AdjustTemperature(word TemperatureTableValue) {
 
   byte Result = 0xFF;
   
+  // 1. 0x5014 < MAX_SUM - TO_ADD, true
+  // 2. 0x0000 < MAX_SUM - TO_ADD, true
   if (TemperatureTableValue <= MAX_SUM - TO_ADD) {
+    // 1. TemperatureTableValue = 0x5014 + 0x50 = 0x5064
+    // 2. TemperatureTableValue = 0x0000 + 0x50 = 0x0050
     TemperatureTableValue += TO_ADD;
 
     word Quot;
@@ -1178,10 +1217,14 @@ byte AdjustTemperature(word TemperatureTableValue) {
       Quot = TemperatureTableValue / DIVIDER;
     } while (CHECK_BIT_AT(RAM[0x27], 2));
 
+    // 1. Quot = 0x5064 / 0xA0 = 0x80
+    // 2. Quot = 0x0050 / 0xA0 = 0
     if (!HIGH(Quot))
-      Result = HIGH(Quot);
+      Result = LOW(Quot);
   }
 
+  // 1. Returned value: 0x80
+  // 2. Returned value: 0x00
   return Result;
 }
 
@@ -1212,18 +1255,30 @@ void Inputs_Part1() {
 
   // COOLANT TEMPERATURE
   {
+    // example 1 - Temperature is 8 degrees Celsius,
+    // voltage = 2.801 V ~ 10mV * (273 + 8) = 10mV * 281 = 2810 mV = 2.810 V
+    // CoolantTemp should be (10-bit value): 2^10 * 2.801 / 5 = 0x23D = 0010 0011 1101 => 1000 1111 0100 0000 => 0x8F40
+    // example 2 - Temperature is 102 degrees Celsius
+    // voltage = 3.735 V ~ 10mV * (273 + 102) = 10mV * 375 = 3750 mV = 3.75 V
+    // CoolantTemp should be (10-bit value): 2^10 * 3.735 / 5 = 0x2FC = 0010 1111 1100 => 1011 1111 0000 0000 => 0xBF00
+    // example 3 - Temperature ~80 - TODO
     word CoolantTemp = ADC_10bit(COOLANT_TEMP_PIN);
     XRAM[0xF686] = HIGH(CoolantTemp);
     bool CoolantTempNotInLimits = false;
 
     if (!FLASH[0x805D]) {
+      // 0x8F < 0x64 - false
+      // 0xBF < 0x64 - false
       if (HIGH(CoolantTemp) < FLASH[0x8057]) {
         // coolant_temp_less_than_low_limit
         SET_BIT_IN(RAM[0x23], 2);
         CLEAR_BIT_IN(RAM[0x23], 3);
 
         CoolantTempNotInLimits = true;
-      } else if (HIGH(CoolantTemp) > FLASH[0x8058]) {
+      } else
+        // 0x8F > 0xF0 - false
+        // 0xBF > 0xF0 - false
+        if (HIGH(CoolantTemp) > FLASH[0x8058]) {
         // coolant_temp_larger_than_high_limit
         CLEAR_BIT_IN(RAM[0x23], 2);
         SET_BIT_IN(RAM[0x23], 3);
@@ -1234,16 +1289,23 @@ void Inputs_Part1() {
 
     word AdjustedCoolantTemp;
 
+    // CoolantTempNotInLimits = false in both examples
     if (!CoolantTempNotInLimits || FLASH[0x805D]) {
       CLEAR_BIT_IN(RAM[0x23], 2);
       CLEAR_BIT_IN(RAM[0x23], 3);
 
+      // 1. AdjustedCoolantTemp: 0x5014
+      // 2. AdjustedCoolantTemp: 0x0000
       AdjustedCoolantTemp = GetAdcValueFromTableAndAdjustForCalculus(0x831F, CoolantTemp);
     } else if (CoolantTempNotInLimits) /* CoolantTempNotInLimits && !FLASH[0x805D] */ {
       AdjustedCoolantTemp = COMPOSE_WORD(FLASH[0x8A4B], 0);
     }
 
+    // 1. 0x50
+    // 2. 0x00
     RAM[0x3A] = HIGH(AdjustedCoolantTemp);
+    // 1. 0x80
+    // 2. 0x00
     RAM[0x3D] = AdjustTemperature(AdjustedCoolantTemp);
   }
 
