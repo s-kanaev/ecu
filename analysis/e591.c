@@ -232,10 +232,11 @@ byte FLASH[0x10000] = {
   [0x8093] = 0x00,  // fallback data for XRAM[0xF770]
 
   // Table for Coolant Temperature
-  // Temp, decimal, C: -54   -54   -54   -54   -54   -54   -54   -54   -23     8    99    71   102   133   164   164   164
+  // Temp, decimal, C: -54   -54   -54   -54   -54   -54   -54   -54   -23     8    39    71   102   133   164   164   164
   // Global formula: Real temperature = -60 (decimal) + Table value
   // ADC voltage:        0  .311  .622  .934  1.245 1.556 1.867 2.179 2.49  2.801 3.112 3.424 3.735 4.046 4.357 4.669 4.99
   // ADC Voltage = 10mV * Temperature (Kelvin)
+  //                    0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f     10
   [0x831F..0x832F] = {0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x25, 0x44, 0x63, 0x83, 0xA2, 0xC1, 0xE0, 0xE0, 0xE0},
   // Table #2 for Coolant Temperature - usage unknown
   [0x8330..0x8340] = {0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x25, 0x44, 0x63, 0x83, 0xA2, 0xC1, 0xE0, 0xE0, 0xE0},
@@ -888,12 +889,14 @@ void open_bypass_air_valve(void) {
 // A. FlashPtr = 0x831F (coolant temperature table), Negate = false
 // A.1. Offset = 0x08, Factor = 0xF4
 // A.2. Offset = 0x0B, Factor = 0xF0
+// A.3. Offset = 0x0A, Factor = 0xF4
 word GetValueFromTableImpl(word FlashPtr, byte Offset, byte Factor, bool Negate) {
   if (!Factor)
     return COMPOSE_WORD(FLASH[FlashPtr + Offset], 0);
 
   // A.1. TableData = FLASH[0x831F + 0x08 + 1] = 0x44
   // A.2. TableData = FLASH[0x831F + 0x0B + 1] = 0xA2
+  // A.3. TableData = FLASH[0x831F + 0x0A + 1] = 0x83
   byte TableData = FLASH[FlashPtr + Offset + 1];
 
   if (Negate)
@@ -901,10 +904,12 @@ word GetValueFromTableImpl(word FlashPtr, byte Offset, byte Factor, bool Negate)
 
   // A.1. Prod1 = 0x44 * 0xF4
   // A.2. Prod1 = 0xA2 * 0xF0
+  // A.3. Prod1 = 0x83 * 0xF4
   word Prod1 = TableData * Factor; // A - low byte of result, B - high byte of result
 
   // A.1. TableData = FLASH[0x831F + 0x08] = 0x25
   // A.2. TableData = FLASH[0x831F + 0x0B] = 0x83
+  // A.3. TableData = FLASH[0x831F + 0x0A] = 0x63
   TableData = FLASH[FlashPtr + Offset];
 
   if (Negate)
@@ -912,10 +917,12 @@ word GetValueFromTableImpl(word FlashPtr, byte Offset, byte Factor, bool Negate)
 
   // A.1. Prod1 = 0x25 * 0xF4
   // A.2. Prod1 = 0x83 * 0xF0
+  // A.3. Prod1 = 0x63 * 0xF4
   word Prod2 = TableData * (-Factor);
 
   // A.1. Result = (0x25 + 0x44) * 0xF4 = 0x6414
   // A.2. Result = (0x83 + 0xA2) * 0xF0 = 0x12B0
+  // A.3. Result = (0x63 + 0x83) * 0xF4 = 0xDB38
   word Result = Prod1 + Prod2;
 
   if (Negate) {
@@ -1161,8 +1168,9 @@ void UpdateRam63() {
 
 
 // example inputs:
-// 1. 0x831F, 0x8F40 for Collant Temperature = 8 degrees
-// 2. 0x831F, 0xBF00 for Collant Temperature = 102 degrees
+// 1. 0x831F, 0x8F40 for Coolant Temperature = 8 degrees
+// 2. 0x831F, 0xBF00 for Coolant Temperature = 102 degrees
+// 3. 0xAF40, 0xBF00 for Coolant Temperature = 71 degrees
 word GetAdcValueFromTable(word FlashPtr, word ADCValue) {
   // max value in ADCValue = F0:FF
   // max offset = HIGH(ADCValue) >> 4 = F0 >> 4 = F
@@ -1173,22 +1181,26 @@ word GetAdcValueFromTable(word FlashPtr, word ADCValue) {
 
   // 1. Offset = 0x8F >> 4 = 0x08, Factor = (0x8F << 4) | (0x40 >> 4) = 0xF4
   // 2. Offset = 0xBF >> 4 = 0x0B, Factor = (0xBF << 4) | (0x00 >> 4) = 0xF0
+  // 3. Offset = 0xAF >> 4 = 0x0A, Factor = (0xAF << 4) | (0x40 >> 4) = 0xF4
   byte Offset = HIGH(ADCValue) >> 4;
   byte Factor = (HIGH(ADCValue) << 4) | (LOW(ADCValue) >> 4);
   return GetValueFromTableImpl(FlashPtr, Offset, Factor, false);
 }
 
 // example inputs:
-// 1. 0x831F, 0x8F40 for Collant Temperature = 8 degrees
-// 2. 0x831F, 0xBF00 for Collant Temperature = 102 degrees
+// 1. 0x831F, 0x8F40 for Coolant Temperature = 8 degrees
+// 2. 0x831F, 0xBF00 for Coolant Temperature = 102 degrees
+// 3. 0xAF40, 0xBF00 for Coolant Temperature = 71 degrees
 word GetAdcValueFromTableAndAdjustForCalculus(word FlashPtr, word ADCValue) {
   // 1. Result = (0x25 + 0x44) * 0xF4 = 0x6414
   // 2. Result = (0x83 + 0xA2) * 0xF0 = 0x12B0
+  // 3. Result = (0x63 + 0x83) * 0xF4 = 0xDB38
 
   word Result = GetAdcValueFromTable(FlashPtr, ADCValue);
 
   // 1. Returned value: 0x5014
   // 2. Returned value: 0x0000
+  // 3. Returned value: 0xC738
   if (HIGH(Result) < 0x14)
     return COMPOSE_WORD(0, 0);
 
@@ -1204,9 +1216,11 @@ byte AdjustTemperature(word TemperatureTableValue) {
   
   // 1. 0x5014 < MAX_SUM - TO_ADD, true
   // 2. 0x0000 < MAX_SUM - TO_ADD, true
+  // 3. 0xC738 < MAX_SUM - TO_ADD, true
   if (TemperatureTableValue <= MAX_SUM - TO_ADD) {
     // 1. TemperatureTableValue = 0x5014 + 0x50 = 0x5064
     // 2. TemperatureTableValue = 0x0000 + 0x50 = 0x0050
+    // 3. TemperatureTableValue = 0xC738 + 0x50 = 0xC788
     TemperatureTableValue += TO_ADD;
 
     word Quot;
@@ -1219,12 +1233,14 @@ byte AdjustTemperature(word TemperatureTableValue) {
 
     // 1. Quot = 0x5064 / 0xA0 = 0x80
     // 2. Quot = 0x0050 / 0xA0 = 0
+    // 3. Quot = 0xC788 / 0xA0 = 0x013F
     if (!HIGH(Quot))
       Result = LOW(Quot);
   }
 
   // 1. Returned value: 0x80
   // 2. Returned value: 0x00
+  // 3. Returned value: 0xFF
   return Result;
 }
 
@@ -1261,7 +1277,9 @@ void Inputs_Part1() {
     // example 2 - Temperature is 102 degrees Celsius
     // voltage = 3.735 V ~ 10mV * (273 + 102) = 10mV * 375 = 3750 mV = 3.75 V
     // CoolantTemp should be (10-bit value): 2^10 * 3.735 / 5 = 0x2FC = 0010 1111 1100 => 1011 1111 0000 0000 => 0xBF00
-    // example 3 - Temperature ~80 - TODO
+    // example 3 - Temperature is 71 degrees Celcius
+    // volatage = 3.424 V ~ 10mV * (273 + 71) = 10mV * 344 = 3440 mV = 3.44 V
+    // CoolantTemp should be (10-bit value): 2^10 * 3.424 / 5 = 0x2BD = 0010 1011 1101 => 1010 1111 0100 0000 => 0xAF40
     word CoolantTemp = ADC_10bit(COOLANT_TEMP_PIN);
     XRAM[0xF686] = HIGH(CoolantTemp);
     bool CoolantTempNotInLimits = false;
@@ -1269,6 +1287,7 @@ void Inputs_Part1() {
     if (!FLASH[0x805D]) {
       // 0x8F < 0x64 - false
       // 0xBF < 0x64 - false
+      // 0xAF < 0x64 - false
       if (HIGH(CoolantTemp) < FLASH[0x8057]) {
         // coolant_temp_less_than_low_limit
         SET_BIT_IN(RAM[0x23], 2);
@@ -1278,6 +1297,7 @@ void Inputs_Part1() {
       } else
         // 0x8F > 0xF0 - false
         // 0xBF > 0xF0 - false
+        // 0xAF > 0xF0 - false
         if (HIGH(CoolantTemp) > FLASH[0x8058]) {
         // coolant_temp_larger_than_high_limit
         CLEAR_BIT_IN(RAM[0x23], 2);
@@ -1296,6 +1316,7 @@ void Inputs_Part1() {
 
       // 1. AdjustedCoolantTemp: 0x5014
       // 2. AdjustedCoolantTemp: 0x0000
+      // 2. AdjustedCoolantTemp: 0xC738
       AdjustedCoolantTemp = GetAdcValueFromTableAndAdjustForCalculus(0x831F, CoolantTemp);
     } else if (CoolantTempNotInLimits) /* CoolantTempNotInLimits && !FLASH[0x805D] */ {
       AdjustedCoolantTemp = COMPOSE_WORD(FLASH[0x8A4B], 0);
@@ -1303,9 +1324,11 @@ void Inputs_Part1() {
 
     // 1. 0x50
     // 2. 0x00
+    // 2. 0xC7
     RAM[0x3A] = HIGH(AdjustedCoolantTemp);
     // 1. 0x80
     // 2. 0x00
+    // 3. 0xFF
     RAM[0x3D] = AdjustTemperature(AdjustedCoolantTemp);
   }
 
@@ -1795,8 +1818,31 @@ inline byte tripple_rotate_right(byte Data, byte Mask) {
 // _28CD:
 no_EGO_sensor_or_absorber:
 {
-  // start init of timer1
-  // TCON.IT0 External interrupt 1 level/edge trigger control flag,
+  // Summary:
+  // - External interrupt 0 (P3.2, not connected to anywhere):
+  //  - Trigger by level (as opposed to negative edge)
+  //  - Cleared external interrup 0 flag
+  //  - Enable external interrupt 0
+  // - CCU, CC2 (P1.2, INT5, camshaft position sensor):
+  //  - capture on write to register CCL2
+  // - CCU, CC3 (P1.3, INT6, crankshaft position sensor):
+  //  - capture on rising edge at P1.3
+  //  - clear external interrupt 6 edge flag
+  //  - enable external interrupt 6
+  // - Timer1:
+  //  - mode: 16 bit timer/counter
+  //  - timer/counter is enabled only while INT 1 (P3.3) pin is high (sure!) and TR1 bit is set
+  //    P3.3 = SDA @ NM24C04 / AT24C04 (EEPROM, I2C), pulled to +5V through 4.7k resistor
+  //  - started from 0x0000
+  // - Timer0:
+  //  - mode: 16 bit timer/counter
+  //  - started from 0xFACB
+  // - Watchdog:
+  //  - input freq = f_osc/384
+  //
+  // Also, checks for state of LO @ MC33199 (ISO9141) and jumps to either funny_thing_with_ISO9141 or to FAED_trampoline
+
+  // TCON.IT0 External interrupt 0 level/edge trigger control flag,
   // If IT0 = 0, level triggered external interrupt 0 is selected.
   // If IT0 = 1, negative edge triggered external interrupt 0 is selected.
   // (external interrupt 0 is at P3.2, which isn't connected to anywhere)
