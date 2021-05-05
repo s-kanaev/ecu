@@ -3498,7 +3498,7 @@ code_E8E:                               ; CODE XREF: TF0_0:code_E89↑j
 
 code_E9E:                               ; CODE XREF: TF0_0+E2↑j
                 setb    RAM_2F.0
-                lcall   code_C000
+                lcall   init_xram_for_serial0
                 mov     S0RELH, #0FFh   ; Serial Channel 0 Reload Reg., High Byte
                 mov     S0RELL, #0D0h   ; Serial Channel 0 Reload Reg., Low Byte
                 ljmp    code_11E7
@@ -4041,7 +4041,7 @@ code_1192:                              ; CODE XREF: TF0_0+1A4↑j
                 orl     IEN0, #10h      ; Interrupt Enable Register 0
                 mov     RAM_77, #0FFh
                 clr     RAM_2F.0
-                lcall   code_C000
+                lcall   init_xram_for_serial0
                 mov     S0RELH, #0FFh   ; Serial Channel 0 Reload Reg., High Byte
                 mov     S0RELL, #0CCh   ; Serial Channel 0 Reload Reg., Low Byte
                 ljmp    code_1263
@@ -8728,15 +8728,16 @@ code_2942:                              ; CODE XREF: power_on__ignition_key_turn
 
 
 
-                ljmp    FAED_trampoline
+                ljmp    control_loop_trampoline
 ; ---------------------------------------------------------------------------
 
 funny_thing_with_ISO9141:               ; CODE XREF: power_on__ignition_key_turned_+591↑j
                                         ; power_on__ignition_key_turned_+597↑j ...
-                setb    P3.1            ; Port 3 (PDIR=0)
+                setb    P3.1            ; set high on TxD @ MC33199 (ISO9141) (TxD, serial channel0)
                 clr     RAM_2F.0
                 clr     RAM_2F.1
-                lcall   code_C000
+!!!!!!!!!!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!!!!!!!!!
+                lcall   init_xram_for_serial0
                 mov     S0RELH, #0FFh   ; Serial Channel 0 Reload Reg., High Byte
                 mov     S0RELL, #0CCh   ; Serial Channel 0 Reload Reg., Low Byte
                 mov     S0CON, #58h ; 'X' ; Serial Channel 0 Control Register
@@ -43967,84 +43968,84 @@ adf1_start:     db 9,9,9,9,9,9,9,8,6,3,0,0,0,0,0,0
 ; =============== S U B R O U T I N E =======================================
 
 
-code_C000:                              ; CODE XREF: TF0_0+EA↑p
+init_xram_for_serial0:                  ; CODE XREF: TF0_0+EA↑p
                                         ; TF0_0+3F1↑p ...
                 jb      RAM_2F.0, code_C006
                 ljmp    code_C0EB
 ; ---------------------------------------------------------------------------
 
-code_C006:                              ; CODE XREF: code_C000↑j
+code_C006:                              ; CODE XREF: init_xram_for_serial0↑j
                 jb      RAM_2F.1, code_C07A
                 mov     A, #17h
                 mov     DPTR, #0F981h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF981] = 0x17
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF982] = 0
                 mov     A, #1Bh
                 mov     DPTR, #0F983h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF983] = 0x1B
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF984] = 0
                 mov     A, #0
                 mov     DPTR, #0F989h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF989] = 0
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF98A] = 0
                 mov     A, #13h
                 mov     DPTR, #0F98Bh
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF98B] = 0x13
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF98C] = 0
                 mov     A, #0
                 mov     DPTR, #0F991h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF991] = 0x13
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF992] = 0
                 mov     A, #89h
                 mov     DPTR, #0F993h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF993] = 0x89
                 inc     DPTR
                 mov     A, #13h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF994] = 0x13
                 mov     A, #4
                 mov     DPTR, #0F995h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF995] = 0x4
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF996] = 0
                 mov     A, #15h
                 mov     DPTR, #0F997h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF997] = 0x15
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF998] = 0
                 mov     A, #1Ah
                 mov     DPTR, #0F98Dh
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF98D] = 0x1A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF98E] = 0
                 mov     A, #31h ; '1'
                 mov     DPTR, #0F98Fh
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF98F] = 0x31
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF990] = 0
                 mov     A, #0
                 mov     DPTR, #0F987h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF987] = 0
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF988] = 0
                 ljmp    code_C1CC
 ; ---------------------------------------------------------------------------
 
-code_C07A:                              ; CODE XREF: code_C000:code_C006↑j
+code_C07A:                              ; CODE XREF: init_xram_for_serial0:code_C006↑j
                 mov     A, #0FFh
                 mov     DPTR, #0F983h
                 movx    @DPTR, A
@@ -44114,7 +44115,7 @@ code_C07A:                              ; CODE XREF: code_C000:code_C006↑j
                 ljmp    code_C1CC
 ; ---------------------------------------------------------------------------
 
-code_C0EB:                              ; CODE XREF: code_C000+3↑j
+code_C0EB:                              ; CODE XREF: init_xram_for_serial0+3↑j
                 jb      RAM_2F.1, code_C15E
                 mov     A, #17h
                 mov     DPTR, #0F981h
@@ -44185,7 +44186,7 @@ code_C0EB:                              ; CODE XREF: code_C000+3↑j
                 sjmp    code_C1CC
 ; ---------------------------------------------------------------------------
 
-code_C15E:                              ; CODE XREF: code_C000:code_C0EB↑j
+code_C15E:                              ; CODE XREF: init_xram_for_serial0:code_C0EB↑j
                 mov     A, #0FFh
                 mov     DPTR, #0F983h
                 movx    @DPTR, A
@@ -44253,8 +44254,8 @@ code_C15E:                              ; CODE XREF: code_C000:code_C0EB↑j
                 mov     A, #0
                 movx    @DPTR, A
 
-code_C1CC:                              ; CODE XREF: code_C000+77↑j
-                                        ; code_C000+E8↑j ...
+code_C1CC:                              ; CODE XREF: init_xram_for_serial0+77↑j
+                                        ; init_xram_for_serial0+E8↑j ...
                 clr     RAM_2F.2
                 clr     RAM_2F.4
                 clr     RAM_2F.5
@@ -44273,13 +44274,13 @@ code_C1CC:                              ; CODE XREF: code_C000+77↑j
                 inc     DPTR
                 mov     A, #0
                 movx    @DPTR, A
-                orl     IEN0, #10h      ; Interrupt Enable Register 0
+                orl     IEN0, #10h      ; enable serial channel 0 interrupt
                 mov     RAM_77, #0FFh
                 ret
 ; ---------------------------------------------------------------------------
 
-code_C1F5:                              ; CODE XREF: code_C000+1E1↑j
-                anl     IEN0, #0EFh     ; Interrupt Enable Register 0
+code_C1F5:                              ; CODE XREF: init_xram_for_serial0+1E1↑j
+                anl     IEN0, #0EFh     ; disable serial0 interrupt
                 mov     A, #0
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
@@ -44288,7 +44289,7 @@ code_C1F5:                              ; CODE XREF: code_C000+1E1↑j
                 movx    @DPTR, A
                 mov     RAM_77, #4
                 ret
-; End of function code_C000
+; End of function init_xram_for_serial0
 
 
 ; =============== S U B R O U T I N E =======================================
@@ -44930,7 +44931,7 @@ code_C542:                              ; CODE XREF: RI0_TI0_0+1C↑j
 
 
 code_C54D:                              ; CODE XREF: IE0_0+1C2↑p
-                                        ; power_on__ignition_key_turned_+2E12↑p
+                                        ; power_on__ignition_key_turned_+2E12↑p ...
                 jnb     RAM_2F.1, code_C553
                 ljmp    code_C65B
 ; ---------------------------------------------------------------------------
@@ -53913,8 +53914,8 @@ code_E6EB:                              ; CODE XREF: code_DCAE+D8↑p
 ; ---------------------------------------------------------------------------
 ; START OF FUNCTION CHUNK FOR power_on__ignition_key_turned_
 
-FAED_trampoline:                        ; CODE XREF: power_on__ignition_key_turned_+5BB↑j
-                ljmp    code_FAED
+control_loop_trampoline:                ; CODE XREF: power_on__ignition_key_turned_+5BB↑j
+                ljmp    control_loop
 ; END OF FUNCTION CHUNK FOR power_on__ignition_key_turned_
 ; ---------------------------------------------------------------------------
                 db    0
@@ -54436,461 +54437,304 @@ FAED_trampoline:                        ; CODE XREF: power_on__ignition_key_turn
                 db 0FDh
                 db 0D0h
                 db 0E0h
-                db 0D2h
-                db 0AFh
-                db  85h
-                db  20h
-                db  30h ; 0
-                db  75h ; u
-                db  41h ; A
-                db    0
-                db  78h ; x
-                db  83h
-                db  79h ; y
-                db  7Ch ; |
-                db  7Ah ; z
-                db    0
-                db 0C2h
-                db 0AFh
-                db 0E7h
-                db  77h ; w
-                db    0
-                db    9
-                db  87h
-                db 0F0h
-                db  77h ; w
-                db    0
-                db 0D2h
-                db 0AFh
-                db    9
-                db  30h ; 0
-                db 0E0h
-                db    3
-                db  43h ; C
-                db    2
-                db    3
-                db  30h ; 0
-                db 0F0h
-                db    3
-                db  43h ; C
-                db    2
-                db    3
-                db  30h ; 0
-                db 0E1h
-                db    3
-                db  43h ; C
-                db    2
-                db    4
-                db  30h ; 0
-                db 0F1h
-                db    3
-                db  43h ; C
-                db    2
-                db    8
-                db  30h ; 0
-                db 0E2h
-                db    3
-                db  43h ; C
-                db    2
-                db  10h
-                db  30h ; 0
-                db 0F2h
-                db    3
-                db  43h ; C
-                db    2
-                db  20h
-                db  30h ; 0
-                db 0E3h
-                db    3
-                db  43h ; C
-                db    2
-                db  40h ; @
-                db  30h ; 0
-                db 0F3h
-                db    3
-                db  43h ; C
-                db    2
-                db  80h
-                db 0A6h
-                db    2
-                db    8
-                db  7Ah ; z
-                db    0
-                db  30h ; 0
-                db 0E4h
-                db    3
-                db  43h ; C
-                db    2
-                db    3
-                db  30h ; 0
-                db 0F4h
-                db    3
-                db  43h ; C
-                db    2
-                db    3
-                db  30h ; 0
-                db 0E5h
-                db    3
-                db  43h ; C
-                db    2
-                db    4
-                db  30h ; 0
-                db 0F5h
-                db    3
-                db  43h ; C
-                db    2
-                db    8
-                db  30h ; 0
-                db 0E6h
-                db    3
-                db  43h ; C
-                db    2
-                db  10h
-                db  30h ; 0
-                db 0F6h
-                db    3
-                db  43h ; C
-                db    2
-                db  20h
-                db  30h ; 0
-                db 0E7h
-                db    3
-                db  43h ; C
-                db    2
-                db  40h ; @
-                db  30h ; 0
-                db 0F7h
-                db    3
-                db  43h ; C
-                db    2
-                db  80h
-                db 0A6h
-                db    2
-                db    8
-                db  7Ah ; z
-                db    0
-                db  78h ; x
-                db  85h
-                db  30h ; 0
-                db 0EFh
-                db  43h ; C
-                db  53h ; S
-                db 0FAh
-                db  7Fh ; 
-                db    0
-                db 0D2h
-                db 0EEh
-                db    0
-                db 0C2h
-                db 0EEh
-                db    0
-                db 0C2h
-                db 0D5h
-                db  20h
-                db 0D5h
-                db  0Ch
-                db  79h ; y
-                db    8
-                db 0A2h
-                db 0EFh
-                db 0D2h
-                db 0EEh
-                db  13h
-                db 0C2h
-                db 0EEh
-                db 0D9h
-                db 0F7h
-                db 0F9h
-                db 0B2h
-                db 0D5h
-                db 0E9h
-                db  23h ; #
-                db  23h ; #
-                db 0F9h
-                db 0F4h
-                db  54h ; T
-                db    3
-                db 0A2h
-                db 0E0h
-                db  82h
-                db 0E1h
-                db  34h ; 4
-                db    0
-                db 0F5h
-                db 0F0h
-                db 0E9h
-                db  23h ; #
-                db  23h ; #
-                db 0F9h
-                db 0F4h
-                db  54h ; T
-                db    3
-                db 0A2h
-                db 0E0h
-                db  82h
-                db 0E1h
-                db  34h ; 4
-                db    0
-                db 0C4h
-                db  45h ; E
-                db 0F0h
-                db 0F6h
-                db    8
-                db 0B8h
-                db  89h
-                db 0CBh
-                db  80h
-                db  35h ; 5
-                db  53h ; S
-                db 0FAh
-                db  7Fh ; 
-                db  79h ; y
-                db    2
-                db 0A2h
-                db 0EFh
-                db 0D2h
-                db 0EEh
-                db  33h ; 3
-                db 0C2h
-                db 0EEh
-                db 0D9h
-                db 0F7h
-                db 0F4h
-                db  54h ; T
-                db    3
-                db 0A2h
-                db 0E0h
-                db  82h
-                db 0E1h
-                db  34h ; 4
-                db    0
-                db 0F5h
-                db 0F0h
-                db  79h ; y
-                db    2
-                db 0A2h
-                db 0EFh
-                db 0D2h
-                db 0EEh
-                db  33h ; 3
-                db 0C2h
-                db 0EEh
-                db 0D9h
-                db 0F7h
-                db 0F4h
-                db  54h ; T
-                db    3
-                db 0A2h
-                db 0E0h
-                db  82h
-                db 0E1h
-                db  34h ; 4
-                db    0
-                db 0C4h
-                db  45h ; E
-                db 0F0h
-                db 0F6h
-                db    8
-                db 0B8h
-                db  89h
-                db 0CEh
-                db  43h ; C
-                db 0FAh
-                db  80h
-                db 0E5h
-                db  52h ; R
-                db 0F5h
-                db 0F0h
-                db  60h ; `
-                db  0Fh
-                db 0A8h
-                db  51h ; Q
-                db 0E6h
-                db  55h ; U
-                db 0F0h
-                db 0C5h
-                db 0F0h
-                db  13h
-                db  40h ; @
-                db    5
-                db 0C5h
-                db 0F0h
-                db  13h
-                db  80h
-                db 0F6h
-                db 0C5h
-                db 0F0h
-                db 0F5h
-                db  50h ; P
-                db 0D2h
-                db 0AEh
-                db 0D2h
-                db 0BEh
-                db 0C3h
-                db  12h
-                db 0C5h
-                db  4Dh ; M
-                db 0E5h
-                db  41h ; A
-                db  60h ; `
-                db 0F4h
-                db 0B4h
-                db  1Eh
-                db    0
-                db  40h ; @
-                db    5
-                db 0B4h
-                db  2Ch ; ,
-                db    0
-                db  40h ; @
-                db  0Dh
-                db 0C2h
-                db    0
-                db 0C2h
-                db    1
-                db 0C2h
-                db    2
-                db 0C2h
-                db    3
-                db 0D2h
-                db    5
-                db    2
-                db 0F2h
-                db  0Eh
-                db 0C2h
-                db 0AFh
-                db 0F8h
-                db 0E5h
-                db  40h ; @
-                db  70h ; p
-                db  20h
-                db  75h ; u
-                db  80h
-                db 0FFh
-                db  75h ; u
-                db  90h
-                db 0CFh
-                db  75h ; u
-                db 0A0h
-                db 0FFh
-                db  75h ; u
-                db 0B0h
-                db 0FFh
-                db  75h ; u
-                db 0E8h
-                db 0BFh
-                db  75h ; u
-                db 0F8h
-                db  9Fh
-                db  75h ; u
-                db 0FAh
-                db 0FFh
-                db  75h ; u
-                db 0F9h
-                db 0B3h
-                db  75h ; u
-                db  7Eh ; ~
-                db  40h ; @
-                db  75h ; u
-                db  7Fh ; 
-                db  40h ; @
-                db  80h
-                db  1Eh
-                db  75h ; u
-                db  80h
-                db 0FFh
-                db  75h ; u
-                db  90h
-                db 0CCh
-                db  75h ; u
-                db 0A0h
-                db 0FFh
-                db  75h ; u
-                db 0B0h
-                db 0FFh
-                db  75h ; u
-                db 0E8h
-                db  80h
-                db  75h ; u
-                db 0F8h
-                db  80h
-                db  75h ; u
-                db 0FAh
-                db 0FFh
-                db  75h ; u
-                db 0F9h
-                db 0BDh
-                db  75h ; u
-                db  7Eh ; ~
-                db 0AEh
-                db  75h ; u
-                db  7Fh ; 
-                db 0AEh
-                db 0E8h
-                db 0C0h
-                db 0E0h
-                db  78h ; x
-                db  7Eh ; ~
-                db  53h ; S
-                db 0FAh
-                db 0BFh
-                db 0E6h
-                db    8
-                db 0F6h
-                db  75h ; u
-                db 0F0h
-                db    8
-                db  13h
-                db  92h
-                db 0FDh
-                db 0D2h
-                db 0FEh
-                db 0A2h
-                db 0FFh
-                db 0C2h
-                db 0FEh
-                db 0D5h
-                db 0F0h
-                db 0F4h
-                db  13h
-                db    8
-                db 0B8h
-                db  80h
-                db 0E9h
-                db  43h ; C
-                db 0FAh
-                db  40h ; @
-                db 0D0h
-                db 0E0h
-                db 0F8h
-                db 0D2h
-                db    0
-                db 0C2h
-                db    1
-                db 0C2h
-                db    2
-                db 0C2h
-                db    3
-                db 0C2h
-                db    5
-                db 0E5h
-                db  61h ; a
-                db 0C3h
-                db  94h
-                db  55h ; U
-                db  60h ; `
-                db    0
-                db  90h
-                db 0F3h
-                db 0D5h
-                db 0E8h
-                db 0C3h
-                db  94h
-                db  1Eh
-                db 0F8h
-                db  23h ; #
-                db  28h ; (
-                db  73h ; s
+; ---------------------------------------------------------------------------
+
+code_F20E:                              ; CODE XREF: code:F34C↓j
+                setb    IEN0.7          ; Interrupt Enable Register 0
+                mov     RAM_30, RAM_20
+                mov     RAM_41, #0
+                mov     R0, #83h
+                mov     R1, #7Ch ; '|'
+                mov     R2, #0
+                clr     IEN0.7          ; Interrupt Enable Register 0
+                mov     A, @R1
+                mov     @R1, #0
+                inc     R1
+                mov     B, @R1          ; B-Register
+                mov     @R1, #0
+                setb    IEN0.7          ; Interrupt Enable Register 0
+                inc     R1
+                jnb     ACC.0, code_F22F ; Accumulator
+                orl     RAM_2, #3
+
+code_F22F:                              ; CODE XREF: code:F229↑j
+                jnb     B.0, code_F235  ; B-Register
+                orl     RAM_2, #3
+
+code_F235:                              ; CODE XREF: code:code_F22F↑j
+                jnb     ACC.1, code_F23B ; Accumulator
+                orl     RAM_2, #4
+
+code_F23B:                              ; CODE XREF: code:code_F235↑j
+                jnb     B.1, code_F241  ; B-Register
+                orl     RAM_2, #8
+
+code_F241:                              ; CODE XREF: code:code_F23B↑j
+                jnb     ACC.2, code_F247 ; Accumulator
+                orl     RAM_2, #10h
+
+code_F247:                              ; CODE XREF: code:code_F241↑j
+                jnb     B.2, code_F24D  ; B-Register
+                orl     RAM_2, #20h
+
+code_F24D:                              ; CODE XREF: code:code_F247↑j
+                jnb     ACC.3, code_F253 ; Accumulator
+                orl     RAM_2, #40h
+
+code_F253:                              ; CODE XREF: code:code_F24D↑j
+                jnb     B.3, code_F259  ; B-Register
+                orl     RAM_2, #80h
+
+code_F259:                              ; CODE XREF: code:code_F253↑j
+                mov     @R0, RAM_2
+                inc     R0
+                mov     R2, #0
+                jnb     ACC.4, code_F264 ; Accumulator
+                orl     RAM_2, #3
+
+code_F264:                              ; CODE XREF: code:F25E↑j
+                jnb     B.4, code_F26A  ; B-Register
+                orl     RAM_2, #3
+
+code_F26A:                              ; CODE XREF: code:code_F264↑j
+                jnb     ACC.5, code_F270 ; Accumulator
+                orl     RAM_2, #4
+
+code_F270:                              ; CODE XREF: code:code_F26A↑j
+                jnb     B.5, code_F276  ; B-Register
+                orl     RAM_2, #8
+
+code_F276:                              ; CODE XREF: code:code_F270↑j
+                jnb     ACC.6, code_F27C ; Accumulator
+                orl     RAM_2, #10h
+
+code_F27C:                              ; CODE XREF: code:code_F276↑j
+                jnb     B.6, code_F282  ; B-Register
+                orl     RAM_2, #20h
+
+code_F282:                              ; CODE XREF: code:code_F27C↑j
+                jnb     ACC.7, code_F288 ; Accumulator
+                orl     RAM_2, #40h
+
+code_F288:                              ; CODE XREF: code:code_F282↑j
+                jnb     B.7, code_F28E  ; B-Register
+                orl     RAM_2, #80h
+
+code_F28E:                              ; CODE XREF: code:code_F288↑j
+                mov     @R0, RAM_2
+                inc     R0
+                mov     R2, #0
+                mov     R0, #85h
+                jnb     P4.7, code_F2DB ; Port 4 (PDIR=0)
+                anl     P6, #7Fh        ; Port 6 (PDIR=0)
+                nop
+                setb    P4.6            ; Port 4 (PDIR=0)
+                nop
+                clr     P4.6            ; Port 4 (PDIR=0)
+                nop
+                clr     PSW.5           ; Program Status Word
+
+code_F2A4:                              ; CODE XREF: code:F2D6↓j
+                jb      PSW.5, code_F2B3 ; Program Status Word
+                mov     R1, #8
+
+code_F2A9:                              ; CODE XREF: code:F2B0↓j
+                mov     C, P4.7         ; Port 4 (PDIR=0)
+                setb    P4.6            ; Port 4 (PDIR=0)
+                rrc     A
+                clr     P4.6            ; Port 4 (PDIR=0)
+                djnz    R1, code_F2A9
+                mov     R1, A
+
+code_F2B3:                              ; CODE XREF: code:code_F2A4↑j
+                cpl     PSW.5           ; Program Status Word
+                mov     A, R1
+                rl      A
+                rl      A
+                mov     R1, A
+                cpl     A
+                anl     A, #3
+                mov     C, ACC.0        ; Accumulator
+                anl     C, ACC.1        ; Accumulator
+                addc    A, #0
+                mov     B, A            ; B-Register
+                mov     A, R1
+                rl      A
+                rl      A
+                mov     R1, A
+                cpl     A
+                anl     A, #3
+                mov     C, ACC.0        ; Accumulator
+                anl     C, ACC.1        ; Accumulator
+                addc    A, #0
+                swap    A
+                orl     A, B            ; B-Register
+                mov     @R0, A
+                inc     R0
+                cjne    R0, #89h, code_F2A4
+                sjmp    code_F310
+; ---------------------------------------------------------------------------
+
+code_F2DB:                              ; CODE XREF: code:F295↑j
+                anl     P6, #7Fh        ; Port 6 (PDIR=0)
+
+code_F2DE:                              ; CODE XREF: code:F30D↓j
+                mov     R1, #2
+
+code_F2E0:                              ; CODE XREF: code:F2E7↓j
+                mov     C, P4.7         ; Port 4 (PDIR=0)
+                setb    P4.6            ; Port 4 (PDIR=0)
+                rlc     A
+                clr     P4.6            ; Port 4 (PDIR=0)
+                djnz    R1, code_F2E0
+                cpl     A
+                anl     A, #3
+                mov     C, ACC.0        ; Accumulator
+                anl     C, ACC.1        ; Accumulator
+                addc    A, #0
+                mov     B, A            ; B-Register
+                mov     R1, #2
+
+code_F2F6:                              ; CODE XREF: code:F2FD↓j
+                mov     C, P4.7         ; Port 4 (PDIR=0)
+                setb    P4.6            ; Port 4 (PDIR=0)
+                rlc     A
+                clr     P4.6            ; Port 4 (PDIR=0)
+                djnz    R1, code_F2F6
+                cpl     A
+                anl     A, #3
+                mov     C, ACC.0        ; Accumulator
+                anl     C, ACC.1        ; Accumulator
+                addc    A, #0
+                swap    A
+                orl     A, B            ; B-Register
+                mov     @R0, A
+                inc     R0
+                cjne    R0, #89h, code_F2DE
+
+code_F310:                              ; CODE XREF: code:F2D9↑j
+                orl     P6, #80h        ; Port 6 (PDIR=0)
+                mov     A, RAM_52
+                mov     B, A            ; B-Register
+                jz      code_F328
+                mov     R0, RAM_51
+                mov     A, @R0
+                anl     A, B            ; B-Register
+
+code_F31E:                              ; CODE XREF: code:F326↓j
+                xch     A, B            ; B-Register
+                rrc     A
+                jc      code_F328
+                xch     A, B            ; B-Register
+                rrc     A
+                sjmp    code_F31E
+; ---------------------------------------------------------------------------
+
+code_F328:                              ; CODE XREF: code:F317↑j
+                                        ; code:F321↑j
+                xch     A, B            ; B-Register
+                mov     RAM_50, A
+
+code_F32C:                              ; CODE XREF: code:F336↓j
+                setb    IEN0.6          ; Interrupt Enable Register 0
+                setb    IEN1.6          ; Interrupt Enable Register 1
+                clr     C
+                lcall   code_C54D
+                mov     A, RAM_41
+                jz      code_F32C
+                cjne    A, #1Eh, code_F33B
+
+code_F33B:                              ; CODE XREF: code:F338↑j
+                jc      code_F342
+                cjne    A, #2Ch, code_F340 ; ','
+
+code_F340:                              ; CODE XREF: code:F33D↑j
+                jc      code_F34F
+
+code_F342:                              ; CODE XREF: code:code_F33B↑j
+                clr     RAM_20.0
+                clr     RAM_20.1
+                clr     RAM_20.2
+                clr     RAM_20.3
+                setb    RAM_20.5
+                ljmp    code_F20E
+; ---------------------------------------------------------------------------
+
+code_F34F:                              ; CODE XREF: code:code_F340↑j
+                clr     IEN0.7          ; Interrupt Enable Register 0
+                mov     R0, A
+                mov     A, RAM_40
+                jnz     code_F376
+                mov     P0, #0FFh       ; Port 0 (PDIR=0)
+                mov     P1, #0CFh       ; Port 1 (PDIR=0)
+                mov     P2, #0FFh       ; Port 2 (PDIR=0)
+                mov     P3, #0FFh       ; Port 3 (PDIR=0)
+                mov     P4, #0BFh       ; Port 4 (PDIR=0)
+                mov     P5, #9Fh        ; Port 5 (PDIR=0)
+                mov     P6, #0FFh       ; Port 6 (PDIR=0)
+                mov     P9, #0B3h       ; Port 9 (PDIR=0)
+                mov     RAM_7E, #40h ; '@'
+                mov     RAM_7F, #40h ; '@'
+                sjmp    code_F394
+; ---------------------------------------------------------------------------
+
+code_F376:                              ; CODE XREF: code:F354↑j
+                mov     P0, #0FFh       ; Port 0 (PDIR=0)
+                mov     P1, #0CCh       ; Port 1 (PDIR=0)
+                mov     P2, #0FFh       ; Port 2 (PDIR=0)
+                mov     P3, #0FFh       ; Port 3 (PDIR=0)
+                mov     P4, #80h        ; Port 4 (PDIR=0)
+                mov     P5, #80h        ; Port 5 (PDIR=0)
+                mov     P6, #0FFh       ; Port 6 (PDIR=0)
+                mov     P9, #0BDh       ; Port 9 (PDIR=0)
+                mov     RAM_7E, #0AEh
+                mov     RAM_7F, #0AEh
+
+code_F394:                              ; CODE XREF: code:F374↑j
+                mov     A, R0
+                push    ACC             ; Accumulator
+                mov     R0, #7Eh ; '~'
+                anl     P6, #0BFh       ; Port 6 (PDIR=0)
+
+code_F39C:                              ; CODE XREF: code:F3B0↓j
+                mov     A, @R0
+                inc     R0
+                mov     @R0, A
+                mov     B, #8           ; B-Register
+
+code_F3A2:                              ; CODE XREF: code:F3AB↓j
+                rrc     A
+                mov     P5.5, C         ; Port 5 (PDIR=0)
+                setb    P5.6            ; Port 5 (PDIR=0)
+                mov     C, P5.7         ; Port 5 (PDIR=0)
+                clr     P5.6            ; Port 5 (PDIR=0)
+                djnz    B, code_F3A2    ; B-Register
+                rrc     A
+                inc     R0
+                cjne    R0, #80h, code_F39C
+                orl     P6, #40h        ; Port 6 (PDIR=0)
+                pop     ACC             ; Accumulator
+                mov     R0, A
+                setb    RAM_20.0
+                clr     RAM_20.1
+                clr     RAM_20.2
+                clr     RAM_20.3
+                clr     RAM_20.5
+                mov     A, RAM_61
+                clr     C
+                subb    A, #55h ; 'U'
+                jz      code_F3CA
+
+code_F3CA:                              ; CODE XREF: code:F3C8↑j
+                mov     DPTR, #0F3D5h
+                mov     A, R0
+                clr     C
+                subb    A, #1Eh
+                mov     R0, A
+                rl      A
+                add     A, R0
+                jmp     @A+DPTR
+; ---------------------------------------------------------------------------
                 db    2
                 db 0F3h
                 db 0FFh
@@ -56710,57 +56554,99 @@ FAED_trampoline:                        ; CODE XREF: power_on__ignition_key_turn
 ; ---------------------------------------------------------------------------
 ; START OF FUNCTION CHUNK FOR power_on__ignition_key_turned_
 
-code_FAED:                              ; CODE XREF: power_on__ignition_key_turned_:FAED_trampoline↑j
-                clr     A
-                mov     PCON, A         ; Power Control Register
-                mov     SYSCON, #0A1h   ; System Control Register
-                mov     SYSCON1, A      ; System Control Register 1
-                mov     PRSC, #0D5h     ; Prescaler Control Register
-                orl     SYSCON, #10h    ; System Control Register
-                mov     CMEN, A         ; Compare Enable Register (RMAP=0)
-                anl     SYSCON, #0EFh   ; System Control Register
-                mov     CCEN, A         ; Compare/Capture Enable Register
-                mov     CC4EN, A        ; Compare/Capture 4 Enable Register
-                mov     CMEN, A         ; Compare Enable Register (RMAP=0)
-                mov     IRCON0, A       ; Interrupt Request Control Register 0
-                mov     IRCON1, A       ; Interrupt Request Control Register 1
+control_loop:                           ; CODE XREF: power_on__ignition_key_turned_:control_loop_trampoline↑j
+                clr     A               ; A = 0
+                mov     PCON, A         ; PCON = 0
+                                        ; Disable power saving,
+                                        ; SMOD = 0, serial baud rate not doubled
+                mov     SYSCON, #0A1h   ; SYSCON = 0xA1 = 1010 0001
+                                        ; CLKP = 1 - P1.6/CLKOUT outputs the system clock which is 1/6 or 1/12 of
+                                        ; the oscillator frequency.
+                                        ; EALE = 1
+                                        ; XMAP1 = 0 - RD/WR signals not activated when accessing XRAM
+                                        ; XMAP0 = 1 - When XMAP0 is set, the access to the XRAM is enabled and
+                                        ;             all accesses using MOVX instructions with an address in
+                                        ;             the range of F400H to FFFFH will access internally the XRAM
+                mov     SYSCON1, A      ; SYSCON1 = 0
+                                        ;  - programming disabled
+                                        ;  - code and data memory not unswapped
+                                        ;  - chip mode switch disabled
+                mov     PRSC, #0D5h     ; PRSC = 0xD5
+                                        ; T2P1 = 0; T2P0 = 1 - set timer2 freq = f_osc/12 or f_osc/24
+                                        ; T1P1 = 0; T1P0 = 1 - divider ratio = 1:2
+                                        ; T0P1 = 0; T0P0 = 1 - divider ratio = 1:2
+                orl     SYSCON, #10h    ; SYSCON.RMAP = 1
+                mov     CMEN, A         ; CC1EN = 0
+                anl     SYSCON, #0EFh   ; SYSCON.RMAP = 0
+                mov     CCEN, A         ; CCEN = 0
+                mov     CC4EN, A        ; CC4EN = 0
+                mov     CMEN, A         ; CMEN = 0
+                mov     IRCON0, A       ; IRCON0 = 0
+                mov     IRCON1, A       ; IRCON1 = 0
                 mov     IEN0, A         ; Interrupt Enable Register 0
                 mov     IEN1, A         ; Interrupt Enable Register 1
-                mov     IEN2, A         ; Interrupt Enable Register 2
-                mov     TCON, A         ; Timer Control Register
-                mov     TMOD, A         ; Timer Mode Register
-                mov     T2CON, A        ; Timer 2 Control Register
-                mov     CTCON, #40h ; '@' ; Compare Timer Control Register
-                mov     CT1CON, #40h ; '@' ; Compare Timer 1 Control Register
-                mov     IEN3, A         ; Interrupt Enable Register 3
-                mov     IRCON2, A       ; Interrupt Request Control Register 2 (PDIR=0)
-                mov     ADCON0, A       ; A/D Converter Control Register 0
-                mov     DPSEL, A        ; Data Pointer Select Register
-                mov     TMOD, #1        ; Timer Mode Register
-                clr     TCON.4          ; Timer Control Register
+                mov     IEN2, A         ; IEN0 = IEN1 = IEN2 = 0
+                                        ;
+                                        ; timer0, timer1 overflow interrupt disabled
+                                        ; timer2 interrupt disabled
+                mov     TCON, A         ; TCON = 0
+                mov     TMOD, A         ; TMOD = 0
+                mov     T2CON, A        ; T2CON = 0
+                mov     CTCON, #40h ; '@' ; CTCON = 0x40
+                                        ; CTP = 1, CLK0..2 = 0, compare timer input clock = f_osc / 2
+                mov     CT1CON, #40h ; '@' ; CT1CON = 0x40
+                                        ; CT1P = 1, CLK10..12 = 0, compare timer1 input clock = f_osc / 2
+                mov     IEN3, A         ; IEN0 = 0 - disable interrupts: all, timer2, serial channel 0, timer1 overflow, external 1, timer0 overflow, external 0
+                                        ; IEN1 = 0 - disable interrupts: timer2 external reload, external interrupts 2-6, adc
+                                        ; IEN2 = 0 - disable interrupts: register compare match interrupt, compare timer interrupt, CM0-7 compare match interrupt, serial iface1
+                                        ; IEN3 = 0 - disable interrupts: compare timer1 overflow, compare timer1 - general capture/compare interrupt.
+                mov     IRCON2, A       ; IRCON0 = 0
+                                        ; clear interrupt flags of compare timer1
+                mov     ADCON0, A       ; ADCON0 = 0
+                mov     DPSEL, A        ; DPSEL = 0
+                mov     TMOD, #1        ; TMOD = 0x01
+                                        ; timer0 mode - 16 bit timer, no gate control
+                                        ; timer1 mode - 8 bit timer, no gate control
+                clr     TCON.4          ; TCON &= ~(1 << 4), stop timer0
                 mov     TL0, #7Bh ; '{' ; Timer 0, Low Byte
                 mov     TH0, #0FFh      ; Timer 0, High Byte
-                clr     TCON.5          ; Timer Control Register
-                setb    TCON.4          ; Timer Control Register
+                clr     TCON.5          ; clear timer0 overflow bit
+                setb    TCON.4          ; restart timer0 with initial value of 0xFF7B
                 clr     PSW.5           ; Program Status Word
                 mov     R0, #0
                 mov     R1, #0
 
+!!!!!!!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!!!!!!
+
 wait_until_timer0_overflows:            ; CODE XREF: power_on__ignition_key_turned_:wait_until_timer0_overflows↓j
-                                        ; code:code_FF04↓j
-                jnb     TCON.5, wait_until_timer0_overflows ; Timer Control Register
+                                        ; code:done_with_this_part↓j
+                jnb     TCON.5, wait_until_timer0_overflows ; wait until timer0 overflows,
+                                        ; output of timer0 overflow is:
+                                        ;  R1, R0, PSW.5 (F1)
+                                        ;
+                                        ; F1 - selects table of addresses
+                                        ;  - 0xFB57 when cleared
+                                        ;  - 0xFB66 when set
+                                        ;
+                                        ; R1 - offset in table, should be divisible by 3 (ljmp instr with 2-byte address)
+                                        ;
+                                        ; R0 - ?
+                                        ;
+                                        ; Function of timer0?
+                                        ;
+                                        ; How R1, R0, PSW.F1 are set?
                 clr     TCON.4          ; stop timer0 operation
                 mov     TL0, #7Bh ; '{' ; Timer 0, Low Byte
                 mov     TH0, #0FFh      ; Timer 0, High Byte
                 clr     TCON.5          ; Timer Control Register
                 setb    TCON.4          ; restart timer0 with initial value of 0xFF7B
                 jb      PSW.5, code_FB50 ; Program Status Word
-                mov     DPTR, #0FB57h
+                mov     DPTR, #jump_table_1
                 sjmp    code_FB53
 ; ---------------------------------------------------------------------------
 
 code_FB50:                              ; CODE XREF: power_on__ignition_key_turned_+D7B6↑j
-                mov     DPTR, #0FB66h
+                mov     DPTR, #jump_table_2
 
 code_FB53:                              ; CODE XREF: power_on__ignition_key_turned_+D7BC↑j
                 mov     A, R1           ; what value is in R1?
@@ -56770,7 +56656,9 @@ code_FB53:                              ; CODE XREF: power_on__ignition_key_turn
 ; END OF FUNCTION CHUNK FOR power_on__ignition_key_turned_ ; The other values, succeeding these adresses, look good also.
                                         ; What is the value of R1 at the moment?
 ; ---------------------------------------------------------------------------
-                ljmp    code_FB78
+
+jump_table_1:                           ; DATA XREF: power_on__ignition_key_turned_+D7B9↑o
+                ljmp    code_FB78       ; will get here after the first timer0 overflow
 ; ---------------------------------------------------------------------------
                 db    2
                 db 0FEh
@@ -56785,6 +56673,8 @@ code_FB53:                              ; CODE XREF: power_on__ignition_key_turn
                 db 0FEh
                 db  9Ah
 ; ---------------------------------------------------------------------------
+
+jump_table_2:                           ; DATA XREF: power_on__ignition_key_turned_:code_FB50↑o
                 ljmp    code_FBA2
 ; ---------------------------------------------------------------------------
                 db    2
@@ -56805,8 +56695,11 @@ code_FB75:                              ; CODE XREF: code:FBA9↓j
                 ljmp    code_FE9A
 ; ---------------------------------------------------------------------------
 
-code_FB78:                              ; CODE XREF: code:FB57↑j
-                mov     DPTR, #0FBBAh
+code_FB78:                              ; CODE XREF: code:jump_table_1↑j
+                mov     DPTR, #jump_table_3 ; DPTR = 0xFBBA
+                                        ; A = R0
+                                        ;
+                                        ; R0 contains offset (in ljmp cmds) in jump table, which is pointed to by DPTR
                 mov     A, R0
                 sjmp    code_FB92
 ; ---------------------------------------------------------------------------
@@ -56835,23 +56728,28 @@ code_FB78:                              ; CODE XREF: code:FB57↑j
 code_FB92:                              ; CODE XREF: code:FB7C↑j
                                         ; code:FBAB↓j
                 mov     B, #3           ; B-Register
-                mul     AB
+                mul     AB              ; B:A = A * 0x03
                 add     A, DPL          ; Data Pointer, Low Byte
                 mov     DPL, A          ; Data Pointer, Low Byte
                 mov     A, DPH          ; Data Pointer, High Byte
                 addc    A, B            ; B-Register
-                mov     DPH, A          ; Data Pointer, High Byte
+                mov     DPH, A          ; DPTR += (A * 0x03)
+                                        ; DPTR += (R0 * 0x03)
+                                        ;
+                                        ; Acc contains offset (in ljmp cmds) in jump table, which is pointed to by DPTR
+                                        ;
+                                        ; one of the tables is @ 0xFBBA
                 clr     A
                 jmp     @A+DPTR
 ; ---------------------------------------------------------------------------
 
-code_FBA2:                              ; CODE XREF: code:FB66↑j
+code_FBA2:                              ; CODE XREF: code:jump_table_2↑j
                 mov     DPTR, #0FD04h
                 mov     A, R0
                 clr     C
                 subb    A, #0Ah
-                jc      code_FB75
-                sjmp    code_FB92
+                jc      code_FB75       ; if (R0 < 0x10) jump ...
+                sjmp    code_FB92       ; if (R0 >= 0x10) jump ...
 ; ---------------------------------------------------------------------------
                 db  90h
                 db 0FDh
@@ -56866,9 +56764,11 @@ code_FBA2:                              ; CODE XREF: code:FB66↑j
                 db  2Dh ; -
                 db  80h
                 db 0D8h
-                db    2
-                db 0FDh
-                db 0ACh
+; ---------------------------------------------------------------------------
+
+jump_table_3:                           ; DATA XREF: code:code_FB78↑o
+                ljmp    code_FDAC
+; ---------------------------------------------------------------------------
                 db    2
                 db 0FDh
                 db 0A9h
@@ -57196,9 +57096,11 @@ code_FBA2:                              ; CODE XREF: code:FB66↑j
                 db    2
                 db 0FDh
                 db 0A9h
-                db    2
-                db 0FEh
-                db  86h
+; ---------------------------------------------------------------------------
+
+jump_table_4:
+                ljmp    code_FE86
+; ---------------------------------------------------------------------------
                 db    2
                 db 0FDh
                 db 0A9h
@@ -57364,11 +57266,13 @@ code_FBA2:                              ; CODE XREF: code:FB66↑j
                 db    2
                 db 0FEh
                 db  9Ah
-                db 0C2h
-                db 0F9h
-                db    2
-                db 0FEh
-                db  9Ah
+; ---------------------------------------------------------------------------
+
+code_FDAC:                              ; CODE XREF: code:jump_table_3↑j
+                clr     P5.1            ; "!IN2" @ TPS2814 #1, Ignition coil for cylinders 1/4,
+                                        ; power on for Ignition Coil 1/4
+                ljmp    code_FE9A
+; ---------------------------------------------------------------------------
                 db  43h ; C
                 db  7Eh ; ~
                 db    8
@@ -57582,11 +57486,12 @@ code_FBA2:                              ; CODE XREF: code:FB66↑j
                 db    2
                 db 0FEh
                 db  9Ah
-                db 0D2h
-                db 0F9h
-                db    2
-                db 0FEh
-                db  9Ah
+; ---------------------------------------------------------------------------
+
+code_FE86:                              ; CODE XREF: code:jump_table_4↑j
+                setb    P5.1            ; turn off Ignition Coil 1/4, IGNITE!
+                ljmp    code_FE9A
+; ---------------------------------------------------------------------------
                 db 0D2h
                 db 0F8h
                 db    2
@@ -57605,73 +57510,82 @@ code_FBA2:                              ; CODE XREF: code:FB66↑j
 ; ---------------------------------------------------------------------------
 
 code_FE9A:                              ; CODE XREF: code:code_FB75↑j
+                                        ; code:FDAE↑j ...
                 mov     A, R0
-                push    ACC             ; Accumulator
-                mov     R0, #7Eh ; '~'
-                anl     P6, #0BFh       ; Port 6 (PDIR=0)
+                push    ACC             ; push R0
+                mov     R0, #7Eh ; '~'  ; R0 = 0x7E, RAM ptr
+                anl     P6, #0BFh       ; P6 &= 1011 1111,
+                                        ;
+                                        ; set low @ "!CE" @ HIP0045
+                                        ;
+                                        ; gonna talk to HIP0045
 
-code_FEA2:                              ; CODE XREF: code:FEB6↓j
-                mov     A, @R0
+send_RAM_7E__over_SPI_to_HIP0045_once_2:
+                                        ; CODE XREF: code:FEB6↓j
+                mov     A, @R0          ; A = RAM[R0] = RAM[0x7E]
                 inc     R0
-                mov     @R0, A
-                mov     B, #8           ; B-Register
+                mov     @R0, A          ; RAM[R0 + 1] = RAM[R0]
+                                        ; ++R0
+                                        ;
+                                        ; // RAM[0x7F] = RAM[0x7E]
+                mov     B, #8           ; B = 8
 
-code_FEA8:                              ; CODE XREF: code:FEB1↓j
+send_8_bits_over_spi_to_hip0045_2:      ; CODE XREF: code:FEB1↓j
                 rrc     A
                 mov     P5.5, C         ; Port 5 (PDIR=0)
                 setb    P5.6            ; Port 5 (PDIR=0)
                 mov     C, P5.7         ; Port 5 (PDIR=0)
                 clr     P5.6            ; Port 5 (PDIR=0)
-                djnz    B, code_FEA8    ; B-Register
+                djnz    B, send_8_bits_over_spi_to_hip0045_2 ; B-Register
                 rrc     A
                 inc     R0
-                cjne    R0, #80h, code_FEA2
-                orl     P6, #40h        ; Port 6 (PDIR=0)
+                cjne    R0, #80h, send_RAM_7E__over_SPI_to_HIP0045_once_2
+                orl     P6, #40h        ; turn off SPI of HIP0045
                 pop     ACC             ; Accumulator
-                mov     R0, A
+                mov     R0, A           ; restore R0
                 setb    IEN0.6          ; Interrupt Enable Register 0
-                setb    IEN1.6          ; Interrupt Enable Register 1
-                cpl     PSW.5           ; Program Status Word
-                jb      PSW.5, code_FF04 ; Program Status Word
+                setb    IEN1.6          ; refresh watchdog timer
+                cpl     PSW.5           ; PSW.5 ~= PSW.5 (F0)
+                jb      PSW.5, done_with_this_part ; if (PSW.5) jump ...
                 inc     R0
-                mov     A, R0
-                cjne    A, #37h, code_FF04 ; '7'
-                mov     R0, #0
+                mov     A, R0           ; A = R0 + 1
+                cjne    A, #37h, done_with_this_part ; '7' ; if (R0 + 1 != 0x37) jump ...
+                mov     R0, #0          ; R0 = 0
                 inc     R1
-                mov     A, R1
-                cjne    A, #5, code_FF04
-                mov     R1, #0
+                mov     A, R1           ; A = R1 + 1
+                cjne    A, #5, done_with_this_part ; if (R1 + 1 != 0x05) jump ...
+                mov     R1, #0          ; R1 = 0
                 mov     A, P9           ; Port 9 (PDIR=0)
-                anl     A, #20h
-                jz      code_FEFE
+                anl     A, #20h         ; test P9, bit 5, LO @ MC33199
+                jz      got_to_reset    ; if (LO @ MC33199 is low) jump ...
                 clr     P3.1            ; Port 3 (PDIR=0)
                 push    ACC             ; Accumulator
                 mov     A, #0Eh
 
-code_FEE2:                              ; CODE XREF: code:code_FEE2↓j
-                djnz    ACC, code_FEE2  ; Accumulator
+wait_1c_cycles_1:                       ; CODE XREF: code:wait_1c_cycles_1↓j
+                djnz    ACC, wait_1c_cycles_1 ; Accumulator
                 pop     ACC             ; Accumulator
                 mov     A, P9           ; Port 9 (PDIR=0)
                 anl     A, #20h
-                jnz     code_FEFE
+                jnz     got_to_reset
                 setb    P3.1            ; Port 3 (PDIR=0)
                 push    ACC             ; Accumulator
                 mov     A, #0Eh
 
-code_FEF3:                              ; CODE XREF: code:code_FEF3↓j
-                djnz    ACC, code_FEF3  ; Accumulator
+wait_1c_cycles_2:                       ; CODE XREF: code:wait_1c_cycles_2↓j
+                djnz    ACC, wait_1c_cycles_2 ; Accumulator
                 pop     ACC             ; Accumulator
                 mov     A, P9           ; Port 9 (PDIR=0)
                 anl     A, #20h
-                jnz     code_FF04
+                jnz     done_with_this_part
 
-code_FEFE:                              ; CODE XREF: code:FEDA↑j
+got_to_reset:                           ; CODE XREF: code:FEDA↑j
                                         ; code:FEEB↑j
                 orl     IP0, #80h       ; Interrupt Priority Register 0
-                ljmp    power_on__ignition_key_turned_
+                ljmp    power_on__ignition_key_turned_ ; RESET!
 ; ---------------------------------------------------------------------------
 
-code_FF04:                              ; CODE XREF: code:FEC5↑j
+done_with_this_part:                    ; CODE XREF: code:FEC5↑j
                                         ; code:FECA↑j ...
                 ljmp    wait_until_timer0_overflows
 ; ---------------------------------------------------------------------------
@@ -61165,7 +61079,7 @@ RAM_50 equ 50h                          ; DATA XREF: IE0_0+3C0↑r
 RAM_51 equ 51h                          ; DATA XREF: IE0_0+52A↑w
                                         ; power_on__ignition_key_turned_+17D6↑r ...
 RAM_52 equ 52h                          ; DATA XREF: IE0_0+535↑w
-                                        ; power_on__ignition_key_turned_+2700↑r
+                                        ; power_on__ignition_key_turned_+2700↑r ...
 RAM_53 equ 53h                          ; DATA XREF: IE0_0+540↑w
                                         ; power_on__ignition_key_turned_+1742↑r ...
 RAM_54 equ 54h                          ; DATA XREF: IE0_0+56F↑w
@@ -61248,7 +61162,7 @@ RAM_77 equ 77h                          ; DATA XREF: TF0_0:code_DF8↑r
 RAM_7E equ 7Eh                          ; DATA XREF: power_on__ignition_key_turned_+8D↑w
                                         ; power_on__ignition_key_turned_+AD↑w ...
 RAM_7F equ 7Fh                          ; DATA XREF: power_on__ignition_key_turned_+90↑w
-                                        ; power_on__ignition_key_turned_+B0↑w
+                                        ; power_on__ignition_key_turned_+B0↑w ...
 ; end of 'RAM'
 
 ; ===========================================================================
