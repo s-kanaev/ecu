@@ -152,11 +152,12 @@ byte RAM[0x100] = {
   [0x2A] = 0x00,  // some status word
                   // bit 3 ???
   [0x2B..0x2C] = 0x00,
-  [0x2D] = 0x00,  // bit 7 = FLASH[873F] bit 4
-  [0x2E] = 0x00,  // bit 0 = FLASH[873F] bit 5
-                  // bit 1 = FLASH[873F] bit 2
+  [0x2D] = 0x00,  // bit 7 = FLASH[0x873F] bit 4, is there camshaft position sensor
+  [0x2E] = 0x00,  // bit 0 = FLASH[0x873F] bit 5, camshaft position sensor cross-section is aligned with TDC
+                  // bit 1 = FLASH[0x873F] bit 2, is there knock sensor
 
-  [0x2F] = 0
+  [0x2F] = 0,     // bit 0 - ???
+                  // bit 1 - ???
 
   [0x3A] = 0,     // Adjusted coolant temperature
 
@@ -606,6 +607,8 @@ void init_HIP0045(void) {
   RAM[0x7F] = RAM[0x7E];
 
   SendOverSPI(RAM[0x7E], P5_5, P5_7, P5_6);
+
+  P6 |= 0x40; // disabke HIP0045 by setting P6_6 high
 /*
   HIP0045 configured with byte 0x44 sent in following order: 
   D7I..D1I = 0010 0010
@@ -1538,6 +1541,127 @@ adjusted_coolant_temp_less_than_flash_8788:
   }
 }
 
+// _28CD:
+void FinishInitPeripherals() {
+  // Summary:
+  // - External interrupt 0 (P3.2, not connected to anywhere):
+  //  - Trigger by level (as opposed to negative edge)
+  //  - Cleared external interrup 0 flag
+  //  - Enable external interrupt 0
+  // - CCU, CC2 (P1.2, INT5, camshaft position sensor):
+  //  - capture on write to register CCL2
+  // - CCU, CC3 (P1.3, INT6, crankshaft position sensor):
+  //  - capture on rising edge at P1.3
+  //  - clear external interrupt 6 edge flag
+  //  - enable external interrupt 6
+  // - Timer1:
+  //  - mode: 16 bit timer/counter
+  //  - timer/counter is enabled only while INT 1 (P3.3) pin is high (sure!) and TR1 bit is set
+  //    P3.3 = SDA @ NM24C04 / AT24C04 (EEPROM, I2C), pulled to +5V through 4.7k resistor
+  //  - started from 0x0000
+  // - Timer0:
+  //  - mode: 16 bit timer/counter
+  //  - started from 0xFACB
+  // - Watchdog:
+  //  - input freq = f_osc/384
+  //
+  // Also, checks for state of LO @ MC33199 (ISO9141) and jumps to either funny_thing_with_ISO9141 or to FAED_trampoline
+
+  // TCON.IT0 External interrupt 0 level/edge trigger control flag,
+  // If IT0 = 0, level triggered external interrupt 0 is selected.
+  // If IT0 = 1, negative edge triggered external interrupt 0 is selected.
+  // (external interrupt 0 is at P3.2, which isn't connected to anywhere)
+  SET_BIT_IN(TCON, 0);
+  // TCON.IE0 = 0
+  // External interrupt 0 request flag
+  // Set by hardware. Cleared by hardware when processor vectors to interrupt routine
+  // (if IT0 = 1) or by hardware (if IT0 = 0).
+  CLEAR_BIT_IN(TCON, 1);
+
+  // IEN0.EX0 = 1, enable external interrupt 0
+  SET_BIT_IN(IEN0, 0);
+
+  // COCAH2 = 1
+  // COCAL1 = 1
+  // CC2 (P1.2) capture on write to register CCL2.
+  // P1.2 - camshaft position sensor
+  CCEN |= 0x30;
+
+  // COCAH3 = 0
+  // COCAL3 = 1
+  // CC3, capture on rising edge at P1.3 (INT6)
+  // P1.3 - crankshaft position sensor
+  CCEN |= 0x40;
+
+  // IRCON0.IEX6 = 0
+  // External interrupt 6 edge flag
+  // Set by hardware when external interrupt edge was detected or when a compare
+  // event occurred at pin 1.3/INT6/CC3. Cleared by hardware when processor vectors
+  // to interrupt routine.
+  CLEAR_BIT_IN(IRCON0, 5);
+
+  // IEN1.EX6 = 1
+  // External interrupt 6 / capture/compare interrupt 3 enable
+  // If EX6 = 0, external interrupt 6 is disabled.
+  SET_BIT_IN(IEN1, 5);
+
+  // Timer1:
+  // TMOD.GATE = 1
+  // TMOD.M0 = 1
+  // GATE:
+  // Gating control
+  // When set, timer/counter 'x' is enabled only while 'INT x' pin is high and 'TRx' control bit is set.
+  // When cleared timer 'x' is enabled whenever 'TRx' control bit is set.
+  // M0 = 1, M1 = 0 => 16 bit timer/counter
+  TMOD |= 0x50;
+
+  // TCON.(!TR1) = 0
+  // TR1: Timer 1 run control bit.
+  // Set/cleared by software to turn timer/counter 1 on/off.
+  CLEAR_BIT_IN(TCON, 6);  // stop timer1
+
+  TL1 = TH1 = 0;
+  SET_BIT_IN(TCON, 6);  // start timer1
+
+  // Timer0:
+  // TMOD.M0 = 1
+  // M0 = 0, M1 = 1 => 16 bit timer/counter
+  TMOD |= 0x01;
+
+  CLEAR_BIT_IN(TCON, 4);  // stop timer0
+  TL0 = 0xCB;
+  TH0 = 0xFA; // init timer0 register with 0xFACB
+  CLEAR_BIT_IN(TCON, 5);  // clear timer0 overflow bit
+  SET_BIT_IN(TCON, 4);    // start timer0
+
+  // IEN0.ET0 = 1
+  // Timer 0 overflow interrupt enable.
+  // If ET0 = 0, the timer 0 interrupt is disabled.
+  SET_BIT_IN(IEN0, 1);
+
+  RAM[0x35] = 0x14;
+  CLEAR_BIT_IN(RAM[0x28], 0);
+  XRAM[0xF96D] = 0xF7;
+  XRAM[0xF96E] = 0x0A;
+  XRAM[0xF96F] = 0;
+  XRAM[0xG970] = 0;
+
+  // watchdog:
+  // Reload value = 0x78
+  // WDTREL.WPSEL = 1, PRSC.WDTP = 1 => watchdog input freq = f_osc/384
+  WDTREL = 0xF8;
+
+  // IEN0.(!WDT) = 0
+  // Watchdog timer refresh flag
+  // Set to initiate a refresh of the watchdog timer. Must be set directly before SWDT is set to prevent an unintentional refresh of the watchdog timer.
+  SET_BIT_IN(IEN0, 6);
+
+  // IEN1.(!SWDT) = 0
+  // Watchdog timer start flag
+  // Set to activate the watchdog timer. When directly set after setting WDT, a watchdog timer refresh is performed.
+  SET_BIT_IN(IEN1, 6);
+}
+
 /*
 INTERRUPTS:
  - reset
@@ -1801,6 +1925,8 @@ _2801:
   InitXramF500AndF7A4();
 
 _28CD:
+  FinishInitPeripherals();
+  jump check_K_L_Line;
   // ... TODO ...
 }
 
@@ -1814,128 +1940,8 @@ inline byte tripple_rotate_right(byte Data, byte Mask) {
   return Data & Mask;
 }
 
-
-// _28CD:
-no_EGO_sensor_or_absorber:
+check_K_L_Line:
 {
-  // Summary:
-  // - External interrupt 0 (P3.2, not connected to anywhere):
-  //  - Trigger by level (as opposed to negative edge)
-  //  - Cleared external interrup 0 flag
-  //  - Enable external interrupt 0
-  // - CCU, CC2 (P1.2, INT5, camshaft position sensor):
-  //  - capture on write to register CCL2
-  // - CCU, CC3 (P1.3, INT6, crankshaft position sensor):
-  //  - capture on rising edge at P1.3
-  //  - clear external interrupt 6 edge flag
-  //  - enable external interrupt 6
-  // - Timer1:
-  //  - mode: 16 bit timer/counter
-  //  - timer/counter is enabled only while INT 1 (P3.3) pin is high (sure!) and TR1 bit is set
-  //    P3.3 = SDA @ NM24C04 / AT24C04 (EEPROM, I2C), pulled to +5V through 4.7k resistor
-  //  - started from 0x0000
-  // - Timer0:
-  //  - mode: 16 bit timer/counter
-  //  - started from 0xFACB
-  // - Watchdog:
-  //  - input freq = f_osc/384
-  //
-  // Also, checks for state of LO @ MC33199 (ISO9141) and jumps to either funny_thing_with_ISO9141 or to FAED_trampoline
-
-  // TCON.IT0 External interrupt 0 level/edge trigger control flag,
-  // If IT0 = 0, level triggered external interrupt 0 is selected.
-  // If IT0 = 1, negative edge triggered external interrupt 0 is selected.
-  // (external interrupt 0 is at P3.2, which isn't connected to anywhere)
-  SET_BIT_IN(TCON, 0);
-  // TCON.IE0 = 0
-  // External interrupt 0 request flag
-  // Set by hardware. Cleared by hardware when processor vectors to interrupt routine
-  // (if IT0 = 1) or by hardware (if IT0 = 0).
-  CLEAR_BIT_IN(TCON, 1);
-
-  // IEN0.EX0 = 1, enable external interrupt 0
-  SET_BIT_IN(IEN0, 0);
-
-  // COCAH2 = 1
-  // COCAL1 = 1
-  // CC2 (P1.2) capture on write to register CCL2.
-  // P1.2 - camshaft position sensor
-  CCEN |= 0x30;
-
-  // COCAH3 = 0
-  // COCAL3 = 1
-  // CC3, capture on rising edge at P1.3 (INT6)
-  // P1.3 - crankshaft position sensor
-  CCEN |= 0x40;
-
-  // IRCON0.IEX6 = 0
-  // External interrupt 6 edge flag
-  // Set by hardware when external interrupt edge was detected or when a compare
-  // event occurred at pin 1.3/INT6/CC3. Cleared by hardware when processor vectors
-  // to interrupt routine.
-  CLEAR_BIT_IN(IRCON0, 5);
-
-  // IEN1.EX6 = 1
-  // External interrupt 6 / capture/compare interrupt 3 enable
-  // If EX6 = 0, external interrupt 6 is disabled.
-  SET_BIT_IN(IEN1, 5);
-
-  // Timer1:
-  // TMOD.GATE = 1
-  // TMOD.M0 = 1
-  // GATE:
-  // Gating control
-  // When set, timer/counter 'x' is enabled only while 'INT x' pin is high and 'TRx' control bit is set.
-  // When cleared timer 'x' is enabled whenever 'TRx' control bit is set.
-  // M0 = 1, M1 = 0 => 16 bit timer/counter
-  TMOD |= 0x50;
-
-  // TCON.(!TR1) = 0
-  // TR1: Timer 1 run control bit.
-  // Set/cleared by software to turn timer/counter 1 on/off.
-  CLEAR_BIT_IN(TCON, 6);  // stop timer1
-
-  TL1 = TH1 = 0;
-  SET_BIT_IN(TCON, 6);  // start timer1
-
-  // Timer0:
-  // TMOD.M0 = 1
-  // M0 = 0, M1 = 1 => 16 bit timer/counter
-  TMOD |= 0x01;
-
-  CLEAR_BIT_IN(TCON, 4);  // stop timer0
-  TL0 = 0xCB;
-  TH0 = 0xFA; // init timer0 register with 0xFACB
-  CLEAR_BIT_IN(TCON, 5);  // clear timer0 overflow bit
-  SET_BIT_IN(TCON, 4);    // start timer0
-
-  // IEN0.ET0 = 1
-  // Timer 0 overflow interrupt enable.
-  // If ET0 = 0, the timer 0 interrupt is disabled.
-  SET_BIT_IN(IEN0, 1);
-
-  RAM[0x35] = 0x14;
-  CLEAR_BIT_IN(RAM[0x28], 0);
-  XRAM[0xF96D] = 0xF7;
-  XRAM[0xF96E] = 0x0A;
-  XRAM[0xF96F] = 0;
-  XRAM[0xG970] = 0;
-
-  // watchdog:
-  // Reload value = 0x78
-  // WDTREL.WPSEL = 1, PRSC.WDTP = 1 => watchdog input freq = f_osc/384
-  WDTREL = 0xF8;
-
-  // IEN0.(!WDT) = 0
-  // Watchdog timer refresh flag
-  // Set to initiate a refresh of the watchdog timer. Must be set directly before SWDT is set to prevent an unintentional refresh of the watchdog timer.
-  SET_BIT_IN(IEN0, 6);
-
-  // IEN1.(!SWDT) = 0
-  // Watchdog timer start flag
-  // Set to activate the watchdog timer. When directly set after setting WDT, a watchdog timer refresh is performed.
-  SET_BIT_IN(IEN1, 6);
-
   if (status_watchdog_triggerred() || !status_xram_checksum_invalid())
     jump funny_thing_with_ISO9141;
 
@@ -1956,10 +1962,164 @@ no_EGO_sensor_or_absorber:
   if (!(P9 & 0x20)) // LO of MC33199 (ISO9141) IS NOT active
     jump funny_thing_with_ISO9141;
   
-  jump FAED_trampoline; // work mode ?
+  jump FAED_trampoline; // fail control loop
 
 // _2950:
+// K/L-line communication?
 funny_thing_with_ISO9141:
-  // K/L-line communication?
+  SET_BIT_IN(P3, 1); // set high on TxD @ MC33199 (ISO9141) (TxD, serial channel0)
+
+  CLEAR_BIT_IN(RAM[0x2F], 0);
+  CLEAR_BIT_IN(RAM[0x2F], 1);
   // ... TODO ...
+}
+
+void init_xram_for_serial0() {
+  if (CHECK_BIT_AT(RAM[0x2F], 0)) {
+    _C006:
+    if (CHECK_BIT_AT(RAM[0x2F], 1)) {
+      _C07A:
+      XRAM[0xF983] = 0xFF;
+      XRAM[0xF984] = 0xFF;
+
+      XRAM[0xF989] = 0x02;
+      XRAM[0xF98A] = 0;
+      XRAM[0xF98B] = 0x14;
+      XRAM[0xF98C] = 0;
+
+      XRAM[0xF98D] = 0x14;
+      XRAM[0xF98E] = 0;
+      XRAM[0xF98F] = 0x88;
+      XRAM[0xF990] = 0x13;
+
+      XRAM[0xF991] = 0;
+      XRAM[0xF992] = 0;
+      XRAM[0xF993] = 0xC8;
+      XRAM[0xF994] = 0;
+
+      XRAM[0xF995] = 0;
+      XRAM[0xF996] = 0;
+      XRAM[0xF997] = 0x14;
+      XRAM[0xF998] = 0;
+
+      XRAM[0xF985] = 0x0A;
+      XRAM[0xF986] = 0;
+      XRAM[0xF987] = 0x02;
+      XRAM[0xF988] = 0;
+    } else {
+      _C009:
+      XRAM[0xF981] = 0x17;
+      XRAM[0xF982] = 0;
+      XRAM[0xF983] = 0x1B;
+      XRAM[0xF984] = 0;
+
+      XRAM[0xF989] = 0;
+      XRAM[0xF98A] = 0;
+      XRAM[0xF98B] = 0x13;
+      XRAM[0xF98C] = 0;
+
+      XRAM[0xF991] = 0x13;
+      XRAM[0xF992] = 0;
+      XRAM[0xF993] = 0x89;
+      XRAM[0xF994] = 0x13;
+
+      XRAM[0xF995] = 0x4;
+      XRAM[0xF996] = 0;
+      XRAM[0xF997] = 0x15;
+      XRAM[0xF998] = 0;
+
+      XRAM[0xF98D] = 0x1A;
+      XRAM[0xF98E] = 0;
+      XRAM[0xF98F] = 0x31;
+      XRAM[0xF990] = 0;
+
+      XRAM[0xF987] = 0;
+      XRAM[0xF988] = 0;
+    }
+  } else {
+    _C0EB:
+    if (CHECK_BIT_AT(RAM[0x2F], 1)) {
+      _C15E:
+      XRAM[0xF983] = 0xFF;
+      XRAM[0xF984] = 0xFF;
+
+      XRAM[0xF989] = 0x02;
+      XRAM[0xF98A] = 0;
+      XRAM[0xF98B] = 0x14;
+      XRAM[0xF98C] = 0;
+
+      XRAM[0xF98D] = 0xC8;
+      XRAM[0xF98E] = 0;
+      XRAM[0xF98F] = 0x88;
+      XRAM[0xF990] = 0x13;
+
+      XRAM[0xF991] = 0x02;
+      XRAM[0xF992] = 0;
+      XRAM[0xF993] = 0xC8;
+      XRAM[0xF994] = 0;
+
+      XRAM[0xF995] = 0;
+      XRAM[0xF996] = 0;
+      XRAM[0xF997] = 0x14;
+      XRAM[0xF998] = 0;
+
+      XRAM[0xF985] = 0x0A;
+      XRAM[0xF986] = 0;
+      XRAM[0xF987] = 0x02;
+      XRAM[0xF988] = 0;
+    } else {
+      _C0EE:
+      XRAM[0xF981] = 0x17;
+      XRAM[0xF982] = 0;
+      XRAM[0xF983] = 0x1B;
+      XRAM[0xF984] = 0;
+
+      XRAM[0xF989] = 0;
+      XRAM[0xF98A] = 0;
+      XRAM[0xF98B] = 0x14;
+      XRAM[0xF98C] = 0;
+
+      XRAM[0xF991] = 0;
+      XRAM[0xF992] = 0;
+      XRAM[0xF993] = 0x88;
+      XRAM[0xF994] = 0x13;
+
+      XRAM[0xF995] = 0;
+      XRAM[0xF996] = 0;
+      XRAM[0xF997] = 0x14;
+      XRAM[0xF998] = 0;
+
+      XRAM[0xF98D] = 0;
+      XRAM[0xF98E] = 0;
+      XRAM[0xF98F] = 0xF4;
+      XRAM[0xF990] = 0x01;
+
+      XRAM[0xF987] = 0;
+      XRAM[0xF988] = 0;
+    }
+  }
+
+_C1CC:
+  CLEAR_BIT_IN(RAM[0x2F], 2);
+  CLEAR_BIT_IN(RAM[0x2F], 4);
+  CLEAR_BIT_IN(RAM[0x2F], 5);
+  CLEAR_BIT_IN(RAM[0x2F], 6);
+
+  XRAM[0xFBB3] = 0;
+  XRAM[0xF9A3] = 0;
+  XRAM[0xF9A1] = 0;
+
+  if (CHECK_BIT_AT(RAM[0x2F], 1)) {
+    _C1F5:
+    CLEAR_BIT_IN(IEN0, 4); // disable serial0 interrupt
+    XRAM[0xF97F] = 0;
+    XRAM[0xF980] = 0;
+    RAM[0x77] = 0x04;
+  } else {
+    _C1E4:
+    XRAM[0xF97F] = 0;
+    XRAM[0xF980] = 0;
+    SET_BIT_IN(IEN0, 4); // enable serial0 interrupt
+    RAM[0x77] = 0xFF;
+  }
 }
