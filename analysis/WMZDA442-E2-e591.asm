@@ -8728,7 +8728,7 @@ code_2942:                              ; CODE XREF: power_on__ignition_key_turn
 
 
 
-                ljmp    control_loop_trampoline
+                ljmp    fail_control_loop_trampoline
 ; ---------------------------------------------------------------------------
 
 funny_thing_with_ISO9141:               ; CODE XREF: power_on__ignition_key_turned_+591↑j
@@ -8741,37 +8741,50 @@ funny_thing_with_ISO9141:               ; CODE XREF: power_on__ignition_key_turn
                 mov     S0RELH, #0FFh   ; Serial Channel 0 Reload Reg., High Byte
                 mov     S0RELL, #0CCh   ; Serial Channel 0 Reload Reg., Low Byte
                 mov     S0CON, #58h ; 'X' ; Serial Channel 0 Control Register
-                orl     IEN0, #10h      ; Interrupt Enable Register 0
-                setb    IEN0.7          ; Interrupt Enable Register 0
+                orl     IEN0, #10h      ; Enable serial0 interrupt
+                setb    IEN0.7          ; IEN0.EAL - enable interrupts overall
 
 code_2967:                              ; CODE XREF: power_on__ignition_key_turned_+5E5↓j
                                         ; power_on__ignition_key_turned_:code_5371↓j
-                jbc     RAM_28.0, code_2983
+                jbc     RAM_28.0, timer0_overflowed ; if (RAM[0x28] & (1 << 0)) {
+                                        ;   RAM[0x28] &= ~(1 << 0)
+                                        ;   jump ...
+                                        ; }
                 mov     DPTR, #0F96Dh
                 clr     C
-                movx    A, @DPTR
-                subb    A, #1
-                movx    @DPTR, A
-                inc     DPTR
+                movx    A, @DPTR        ; A = XRAM[0xF96D]
+                subb    A, #1           ; A = XRAM[0xF96D] - 1
+                movx    @DPTR, A        ; XRAM[0xF96D] -= 1
+                inc     DPTR            ; ++DPTR
                 movx    A, @DPTR
                 subb    A, #0
-                movx    @DPTR, A
-                jnc     code_2967
+                movx    @DPTR, A        ; XRAM[0xF96E] -= 0 + CY
+                jnc     code_2967       ; if (!CY) jump ...
                 mov     DPTR, #0F96Dh
                 clr     A
-                movx    @DPTR, A
+                movx    @DPTR, A        ; A = XRAM[0xF96D]
 
-code_297E:                              ; CODE XREF: power_on__ignition_key_turned_:code_297E↓j
-                jnb     RAM_28.0, code_297E
-                clr     RAM_28.0
+wait_until_ram_28_0_set:                ; CODE XREF: power_on__ignition_key_turned_:wait_until_ram_28_0_set↓j
+                jnb     RAM_28.0, wait_until_ram_28_0_set ; while (!(RAM[0x28] & (1 << 0))) ;
+                                        ;
+                                        ; // wait until RAM[0x28].0 is set
+                                        ; // wait until timer0 overflow?
+                clr     RAM_28.0        ; RAM[0x28] &= ~(1 << 0)
 
-code_2983:                              ; CODE XREF: power_on__ignition_key_turned_:code_2967↑j
+timer0_overflowed:                      ; CODE XREF: power_on__ignition_key_turned_:code_2967↑j
                 setb    IEN0.6          ; Interrupt Enable Register 0
-                setb    IEN1.6          ; Interrupt Enable Register 1
+                setb    IEN1.6          ; refresh and start watchdog timer
                 mov     C, RAM_2A.2
-                mov     RAM_2D.1, C
+                mov     RAM_2D.1, C     ; RAM[0x2D].1 = RAM[0x2A].2
                 mov     C, RAM_2A.7
-                mov     RAM_2D.2, C
+                mov     RAM_2D.2, C     ; RAM[0x2D].2 = RAM[0x2A].7
+
+
+
+!!!!!!!!!!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!!!!!!!!!!!
+
+
+
                 mov     DPTR, #873Fh
                 clr     A
                 movc    A, @A+DPTR
@@ -53914,8 +53927,8 @@ code_E6EB:                              ; CODE XREF: code_DCAE+D8↑p
 ; ---------------------------------------------------------------------------
 ; START OF FUNCTION CHUNK FOR power_on__ignition_key_turned_
 
-control_loop_trampoline:                ; CODE XREF: power_on__ignition_key_turned_+5BB↑j
-                ljmp    control_loop
+fail_control_loop_trampoline:           ; CODE XREF: power_on__ignition_key_turned_+5BB↑j
+                ljmp    fail_control_loop
 ; END OF FUNCTION CHUNK FOR power_on__ignition_key_turned_
 ; ---------------------------------------------------------------------------
                 db    0
@@ -54249,195 +54262,110 @@ control_loop_trampoline:                ; CODE XREF: power_on__ignition_key_turn
                 db 0E0h
                 db  74h ; t
                 db  0Eh
-                db 0D5h
-                db 0E0h
-                db 0FDh
-                db 0D0h
-                db 0E0h
-                db  74h ; t
-                db  2Ch ; ,
-                db  54h ; T
-                db  3Fh ; ?
-                db  44h ; D
-                db    0
-                db  53h ; S
-                db 0F9h
-                db  7Fh ; 
-                db  75h ; u
-                db 0F0h
-                db    8
-                db  33h ; 3
-                db  92h
-                db  95h
-                db  43h ; C
-                db 0F9h
-                db  40h ; @
-                db  53h ; S
-                db 0F9h
-                db 0BFh
-                db 0D5h
-                db 0F0h
-                db 0F4h
-                db  33h ; 3
-                db  43h ; C
-                db 0F9h
-                db  80h
-                db 0C0h
-                db 0E0h
-                db  74h ; t
-                db  0Eh
-                db 0D5h
-                db 0E0h
-                db 0FDh
-                db 0D0h
-                db 0E0h
-                db  74h ; t
-                db    1
-                db  44h ; D
-                db  40h ; @
-                db  53h ; S
-                db 0F9h
-                db  7Fh ; 
-                db  75h ; u
-                db 0F0h
-                db    8
-                db  33h ; 3
-                db  92h
-                db  95h
-                db  43h ; C
-                db 0F9h
-                db  40h ; @
-                db  53h ; S
-                db 0F9h
-                db 0BFh
-                db 0D5h
-                db 0F0h
-                db 0F4h
-                db  33h ; 3
-                db  43h ; C
-                db 0F9h
-                db  80h
-                db 0C0h
-                db 0E0h
-                db  74h ; t
-                db  0Eh
-                db 0D5h
-                db 0E0h
-                db 0FDh
-                db 0D0h
-                db 0E0h
-                db  74h ; t
-                db  30h ; 0
-                db  54h ; T
-                db  3Fh ; ?
-                db  90h
-                db  24h ; $
-                db 0EFh
-                db  93h
-                db  44h ; D
-                db  80h
-                db  53h ; S
-                db 0F9h
-                db  7Fh ; 
-                db  75h ; u
-                db 0F0h
-                db    8
-                db  33h ; 3
-                db  92h
-                db  95h
-                db  43h ; C
-                db 0F9h
-                db  40h ; @
-                db  53h ; S
-                db 0F9h
-                db 0BFh
-                db 0D5h
-                db 0F0h
-                db 0F4h
-                db  33h ; 3
-                db  43h ; C
-                db 0F9h
-                db  80h
-                db 0C0h
-                db 0E0h
-                db  74h ; t
-                db  0Eh
-                db 0D5h
-                db 0E0h
-                db 0FDh
-                db 0D0h
-                db 0E0h
-                db  74h ; t
-                db  1Fh
-                db  54h ; T
-                db  1Fh
-                db  44h ; D
-                db 0C0h
-                db  53h ; S
-                db 0F9h
-                db  7Fh ; 
-                db  75h ; u
-                db 0F0h
-                db    8
-                db  33h ; 3
-                db  92h
-                db  95h
-                db  43h ; C
-                db 0F9h
-                db  40h ; @
-                db  53h ; S
-                db 0F9h
-                db 0BFh
-                db 0D5h
-                db 0F0h
-                db 0F4h
-                db  33h ; 3
-                db  43h ; C
-                db 0F9h
-                db  80h
-                db 0C0h
-                db 0E0h
-                db  74h ; t
-                db  0Eh
-                db 0D5h
-                db 0E0h
-                db 0FDh
-                db 0D0h
-                db 0E0h
-                db  74h ; t
-                db 0E0h
-                db  53h ; S
-                db 0F9h
-                db  7Fh ; 
-                db  75h ; u
-                db 0F0h
-                db    8
-                db  33h ; 3
-                db  92h
-                db  95h
-                db  43h ; C
-                db 0F9h
-                db  40h ; @
-                db  53h ; S
-                db 0F9h
-                db 0BFh
-                db 0D5h
-                db 0F0h
-                db 0F4h
-                db  33h ; 3
-                db  43h ; C
-                db 0F9h
-                db  80h
-                db 0C0h
-                db 0E0h
-                db  74h ; t
-                db  0Eh
-                db 0D5h
-                db 0E0h
-                db 0FDh
-                db 0D0h
-                db 0E0h
 ; ---------------------------------------------------------------------------
+
+code_F152:                              ; CODE XREF: code:code_F152↓j
+                djnz    ACC, code_F152  ; Accumulator
+                pop     ACC             ; Accumulator
+                mov     A, #2Ch ; ','
+                anl     A, #3Fh
+                orl     A, #0
+                anl     P9, #7Fh        ; Port 9 (PDIR=0)
+                mov     B, #8           ; B-Register
+
+code_F163:                              ; CODE XREF: code:F16C↓j
+                rlc     A
+                mov     P1.5, C         ; Port 1 (PDIR=0)
+                orl     P9, #40h        ; Port 9 (PDIR=0)
+                anl     P9, #0BFh       ; Port 9 (PDIR=0)
+                djnz    B, code_F163    ; B-Register
+                rlc     A
+                orl     P9, #80h        ; Port 9 (PDIR=0)
+                push    ACC             ; Accumulator
+                mov     A, #0Eh
+
+code_F177:                              ; CODE XREF: code:code_F177↓j
+                djnz    ACC, code_F177  ; Accumulator
+                pop     ACC             ; Accumulator
+                mov     A, #1
+                orl     A, #40h
+                anl     P9, #7Fh        ; Port 9 (PDIR=0)
+                mov     B, #8           ; B-Register
+
+code_F186:                              ; CODE XREF: code:F18F↓j
+                rlc     A
+                mov     P1.5, C         ; Port 1 (PDIR=0)
+                orl     P9, #40h        ; Port 9 (PDIR=0)
+                anl     P9, #0BFh       ; Port 9 (PDIR=0)
+                djnz    B, code_F186    ; B-Register
+                rlc     A
+                orl     P9, #80h        ; Port 9 (PDIR=0)
+                push    ACC             ; Accumulator
+                mov     A, #0Eh
+
+code_F19A:                              ; CODE XREF: code:code_F19A↓j
+                djnz    ACC, code_F19A  ; Accumulator
+                pop     ACC             ; Accumulator
+                mov     A, #30h ; '0'
+                anl     A, #3Fh
+                mov     DPTR, #24EFh
+                movc    A, @A+DPTR
+                orl     A, #80h
+                anl     P9, #7Fh        ; Port 9 (PDIR=0)
+                mov     B, #8           ; B-Register
+
+code_F1AF:                              ; CODE XREF: code:F1B8↓j
+                rlc     A
+                mov     P1.5, C         ; Port 1 (PDIR=0)
+                orl     P9, #40h        ; Port 9 (PDIR=0)
+                anl     P9, #0BFh       ; Port 9 (PDIR=0)
+                djnz    B, code_F1AF    ; B-Register
+                rlc     A
+                orl     P9, #80h        ; Port 9 (PDIR=0)
+                push    ACC             ; Accumulator
+                mov     A, #0Eh
+
+code_F1C3:                              ; CODE XREF: code:code_F1C3↓j
+                djnz    ACC, code_F1C3  ; Accumulator
+                pop     ACC             ; Accumulator
+                mov     A, #1Fh
+                anl     A, #1Fh
+                orl     A, #0C0h
+                anl     P9, #7Fh        ; Port 9 (PDIR=0)
+                mov     B, #8           ; B-Register
+
+code_F1D4:                              ; CODE XREF: code:F1DD↓j
+                rlc     A
+                mov     P1.5, C         ; Port 1 (PDIR=0)
+                orl     P9, #40h        ; Port 9 (PDIR=0)
+                anl     P9, #0BFh       ; Port 9 (PDIR=0)
+                djnz    B, code_F1D4    ; B-Register
+                rlc     A
+                orl     P9, #80h        ; Port 9 (PDIR=0)
+                push    ACC             ; Accumulator
+                mov     A, #0Eh
+
+code_F1E8:                              ; CODE XREF: code:code_F1E8↓j
+                djnz    ACC, code_F1E8  ; Accumulator
+                pop     ACC             ; Accumulator
+                mov     A, #0E0h
+                anl     P9, #7Fh        ; Port 9 (PDIR=0)
+                mov     B, #8           ; B-Register
+
+code_F1F5:                              ; CODE XREF: code:F1FE↓j
+                rlc     A
+                mov     P1.5, C         ; Port 1 (PDIR=0)
+                orl     P9, #40h        ; Port 9 (PDIR=0)
+                anl     P9, #0BFh       ; Port 9 (PDIR=0)
+                djnz    B, code_F1F5    ; B-Register
+                rlc     A
+                orl     P9, #80h        ; Port 9 (PDIR=0)
+                push    ACC             ; Accumulator
+                mov     A, #0Eh
+
+code_F209:                              ; CODE XREF: code:code_F209↓j
+                djnz    ACC, code_F209  ; Accumulator
+                pop     ACC             ; Accumulator
 
 code_F20E:                              ; CODE XREF: code:F34C↓j
                 setb    IEN0.7          ; Interrupt Enable Register 0
@@ -56554,7 +56482,7 @@ code_F3CA:                              ; CODE XREF: code:F3C8↑j
 ; ---------------------------------------------------------------------------
 ; START OF FUNCTION CHUNK FOR power_on__ignition_key_turned_
 
-control_loop:                           ; CODE XREF: power_on__ignition_key_turned_:control_loop_trampoline↑j
+fail_control_loop:                      ; CODE XREF: power_on__ignition_key_turned_:fail_control_loop_trampoline↑j
                 clr     A               ; A = 0
                 mov     PCON, A         ; PCON = 0
                                         ; Disable power saving,
@@ -56615,8 +56543,6 @@ control_loop:                           ; CODE XREF: power_on__ignition_key_turn
                 clr     PSW.5           ; Program Status Word
                 mov     R0, #0
                 mov     R1, #0
-
-!!!!!!!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!!!!!!
 
 wait_until_timer0_overflows:            ; CODE XREF: power_on__ignition_key_turned_:wait_until_timer0_overflows↓j
                                         ; code:done_with_this_part↓j
@@ -56703,13 +56629,13 @@ primary_jump_table_1:                   ; DATA XREF: power_on__ignition_key_turn
                 ljmp    select_next_jump_table ; R1 = 4
 ; ---------------------------------------------------------------------------
 
-code_FB75:                              ; CODE XREF: code:FB82↓j
+select_next_jump_table_trampoline_0:    ; CODE XREF: code:FB82↓j
                                         ; code:FB8E↓j ...
                 ljmp    select_next_jump_table
 ; ---------------------------------------------------------------------------
 
 primary_jump_table_0_0:                 ; CODE XREF: code:primary_jump_table_0↑j
-                mov     DPTR, #secondary_jump_table_0 ; DPTR = 0xFBBA
+                mov     DPTR, #secondary_jump_table_0_0 ; DPTR = 0xFBBA
                                         ; A = R0
                                         ;
                                         ; R0 contains offset (in ljmp cmds) in jump table, which is pointed to by DPTR
@@ -56722,9 +56648,9 @@ primary_jump_table_0_0:                 ; CODE XREF: code:primary_jump_table_0�
 ; ---------------------------------------------------------------------------
 
 primary_jump_table_0_2:                 ; CODE XREF: code:FB5D↑j
-                mov     DPTR, #0FC5Fh
+                mov     DPTR, #secondary_jump_table_0_23
                 mov     A, R0
-                jb      ACC.0, code_FB75 ; Accumulator
+                jb      ACC.0, select_next_jump_table_trampoline_0 ; Accumulator
                 rr      A
                 sjmp    perform_jump_through_jump_table ; INPUT:
                                         ;  - R0 - secondary jump table selector
@@ -56734,10 +56660,10 @@ primary_jump_table_0_2:                 ; CODE XREF: code:FB5D↑j
 ; ---------------------------------------------------------------------------
 
 primary_jump_table_0_3:                 ; CODE XREF: code:FB60↑j
-                mov     DPTR, #0FC5Fh
+                mov     DPTR, #secondary_jump_table_0_23
                 mov     A, R0
                 add     A, #37h ; '7'
-                jb      ACC.0, code_FB75 ; Accumulator
+                jb      ACC.0, select_next_jump_table_trampoline_0 ; Accumulator
                 rrc     A
 
 perform_jump_through_jump_table:        ; CODE XREF: code:FB7C↑j
@@ -56767,7 +56693,7 @@ primary_jump_table_1_0:                 ; CODE XREF: code:primary_jump_table_1�
                 mov     A, R0
                 clr     C
                 subb    A, #0Ah
-                jc      code_FB75       ; if (R0 < 0x10) jump ...
+                jc      select_next_jump_table_trampoline_0 ; if (R0 < 0x10) jump ...
                 sjmp    perform_jump_through_jump_table ; if (R0 >= 0x10) jump ...
 ; ---------------------------------------------------------------------------
 
@@ -56777,7 +56703,7 @@ primary_jump_table_1_1:                 ; CODE XREF: code:FB69↑j
                 cjne    A, #0Ah, code_FBB4
 
 code_FBB4:                              ; CODE XREF: code:FBB1↑j
-                jnc     code_FB75
+                jnc     select_next_jump_table_trampoline_0
                 add     A, #2Dh ; '-'
                 sjmp    perform_jump_through_jump_table ; INPUT:
                                         ;  - R0 - secondary jump table selector
@@ -56786,7 +56712,7 @@ code_FBB4:                              ; CODE XREF: code:FBB1↑j
                                         ;  - Acc = R0
 ; ---------------------------------------------------------------------------
 
-secondary_jump_table_0:                 ; DATA XREF: code:primary_jump_table_0_0↑o
+secondary_jump_table_0_0:               ; DATA XREF: code:primary_jump_table_0_0↑o
                 ljmp    turn_on_ignition_coil_1_4 ; R0 = 0
 ; ---------------------------------------------------------------------------
                 ljmp    select_next_jump_table_trampoline ; R0 = 1
@@ -56897,338 +56823,230 @@ secondary_jump_table_0:                 ; DATA XREF: code:primary_jump_table_0_0
 ; ---------------------------------------------------------------------------
                 ljmp    select_next_jump_table_trampoline ; R0 = 0x36
 ; ---------------------------------------------------------------------------
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FEh
-                db  23h ; #
-                db    2
-                db 0FEh
-                db  29h ; )
-                db    2
-                db 0FEh
-                db  2Eh ; .
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FEh
-                db  33h ; 3
-                db    2
-                db 0FEh
-                db  39h ; 9
-                db    2
-                db 0FEh
-                db  3Eh ; >
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FEh
-                db  43h ; C
-                db    2
-                db 0FEh
-                db  49h ; I
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FEh
-                db  4Eh ; N
-                db    2
-                db 0FEh
-                db  54h ; T
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FEh
-                db  59h ; Y
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FEh
-                db  5Fh ; _
-                db    2
-                db 0FEh
-                db  65h ; e
-                db    2
-                db 0FEh
-                db  6Bh ; k
-                db    2
-                db 0FEh
-                db  71h ; q
-                db    2
-                db 0FEh
-                db  76h ; v
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FEh
-                db  7Bh ; {
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FEh
-                db  80h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
+
+secondary_jump_table_0_23:              ; DATA XREF: code:primary_jump_table_0_2↑o
+                                        ; code:primary_jump_table_0_3↑o
+                ljmp    select_next_jump_table_trampoline ; R0 = 0
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 1
+; ---------------------------------------------------------------------------
+                ljmp    code_FE23       ; R0 = 2
+; ---------------------------------------------------------------------------
+                ljmp    code_FE29       ; R0 = 3
+; ---------------------------------------------------------------------------
+                ljmp    code_FE2E       ; R0 = 4
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 5
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 6
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 7
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 8
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 9
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x0a
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x0b
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x0c
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x0d
+; ---------------------------------------------------------------------------
+                ljmp    code_FE33       ; R0 = 0x0e
+; ---------------------------------------------------------------------------
+                ljmp    code_FE39       ; R0 = 0x0f
+; ---------------------------------------------------------------------------
+                ljmp    code_FE3E       ; R0 = 0x10
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x11
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x12
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x13
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x14
+; ---------------------------------------------------------------------------
+                ljmp    code_FE43       ; R0 = 0x15
+; ---------------------------------------------------------------------------
+                ljmp    code_FE49       ; R0 = 0x16
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x17
+; ---------------------------------------------------------------------------
+                ljmp    code_FE4E       ; R0 = 0x18
+; ---------------------------------------------------------------------------
+                ljmp    code_FE54       ; R0 = 0x19
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x1a
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x1b
+; ---------------------------------------------------------------------------
+                ljmp    code_FE59       ; R0 = 0x1c
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x1d
+; ---------------------------------------------------------------------------
+                ljmp    code_FE5F       ; R0 = 0x1e
+; ---------------------------------------------------------------------------
+                ljmp    code_FE65       ; R0 = 0x1f
+; ---------------------------------------------------------------------------
+                ljmp    code_FE6B       ; R0 = 0x20
+; ---------------------------------------------------------------------------
+                ljmp    code_FE71       ; R0 = 0x21
+; ---------------------------------------------------------------------------
+                ljmp    code_FE76       ; R0 = 0x22
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x23
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x24
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x25
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x26
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x27
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x28
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x29
+; ---------------------------------------------------------------------------
+                ljmp    code_FE7B       ; R0 = 0x2a
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x2b
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x2c
+; ---------------------------------------------------------------------------
+                ljmp    code_FE80       ; R0 = 0x2d
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x2e
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x2f
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x30
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x31
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x32
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x33
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x34
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x35
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x36
 ; ---------------------------------------------------------------------------
 
-jump_table_4:
+secondary_jump_table_1_01:              ; R0 = 0
                 ljmp    code_FE86
 ; ---------------------------------------------------------------------------
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FEh
-                db  8Bh
-                db    2
-                db 0FEh
-                db  90h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FEh
-                db  95h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
-                db    2
-                db 0FDh
-                db 0A9h
+                ljmp    select_next_jump_table_trampoline ; R0 = 1
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 2
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 3
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 4
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 5
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 6
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 7
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 8
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 9
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x0a
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x0b
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x0c
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x0d
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x0e
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x0f
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x10
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x11
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x12
+; ---------------------------------------------------------------------------
+                ljmp    code_FE8B       ; R0 = 0x13
+; ---------------------------------------------------------------------------
+                ljmp    code_FE90       ; R0 = 0x14
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x15
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x16
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x17
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x18
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x19
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x1a
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x1b
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x1c
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x1d
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x1e
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x1f
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x20
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x21
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x22
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x23
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x24
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x25
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x26
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x27
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x28
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x29
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x2a
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x2b
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x2c
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x2d
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x2e
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x2f
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x30
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x31
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x32
+; ---------------------------------------------------------------------------
+                ljmp    code_FE95       ; R0 = 0x33
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x34
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x35
+; ---------------------------------------------------------------------------
+                ljmp    select_next_jump_table_trampoline ; R0 = 0x36
 ; ---------------------------------------------------------------------------
 
 select_next_jump_table_trampoline:      ; CODE XREF: code:FBBD↑j
@@ -57236,7 +57054,7 @@ select_next_jump_table_trampoline:      ; CODE XREF: code:FBBD↑j
                 ljmp    select_next_jump_table
 ; ---------------------------------------------------------------------------
 
-turn_on_ignition_coil_1_4:              ; CODE XREF: code:secondary_jump_table_0↑j
+turn_on_ignition_coil_1_4:              ; CODE XREF: code:secondary_jump_table_0_0↑j
                 clr     P5.1            ; "!IN2" @ TPS2814 #1, Ignition coil for cylinders 1/4,
                                         ; power on for Ignition Coil 1/4
                 ljmp    select_next_jump_table
@@ -57346,126 +57164,115 @@ code_FE1E:                              ; CODE XREF: code:FC53↑j
                 clr     P5.2            ; Port 5 (PDIR=0)
                 ljmp    select_next_jump_table
 ; ---------------------------------------------------------------------------
-                db  53h ; S
-                db  7Eh ; ~
-                db 0F7h
-                db    2
-                db 0FEh
-                db  9Ah
-                db 0D2h
-                db  90h
-                db    2
-                db 0FEh
-                db  9Ah
-                db 0D2h
-                db 0ECh
-                db    2
-                db 0FEh
-                db  9Ah
-                db  53h ; S
-                db 0F9h
-                db 0FBh
-                db    2
-                db 0FEh
-                db  9Ah
-                db 0D2h
-                db 0E9h
-                db    2
-                db 0FEh
-                db  9Ah
-                db 0D2h
-                db 0E8h
-                db    2
-                db 0FEh
-                db  9Ah
-                db  53h ; S
-                db  7Eh ; ~
-                db  7Fh ; 
-                db    2
-                db 0FEh
-                db  9Ah
-                db 0D2h
-                db 0EDh
-                db    2
-                db 0FEh
-                db  9Ah
-                db  53h ; S
-                db  7Eh ; ~
-                db 0DFh
-                db    2
-                db 0FEh
-                db  9Ah
-                db 0D2h
-                db  91h
-                db    2
-                db 0FEh
-                db  9Ah
-                db  53h ; S
-                db 0F9h
-                db 0F7h
-                db    2
-                db 0FEh
-                db  9Ah
-                db  43h ; C
-                db  7Eh ; ~
-                db  40h ; @
-                db    2
-                db 0FEh
-                db  9Ah
-                db  43h ; C
-                db 0F9h
-                db    2
-                db    2
-                db 0FEh
-                db  9Ah
-                db  53h ; S
-                db  7Eh ; ~
-                db 0FDh
-                db    2
-                db 0FEh
-                db  9Ah
-                db 0D2h
-                db 0EBh
-                db    2
-                db 0FEh
-                db  9Ah
-                db 0D2h
-                db 0EAh
-                db    2
-                db 0FEh
-                db  9Ah
-                db 0D2h
-                db 0FCh
-                db    2
-                db 0FEh
-                db  9Ah
-                db  53h ; S
-                db  7Eh ; ~
-                db 0FBh
-                db    2
-                db 0FEh
-                db  9Ah
+
+code_FE23:                              ; CODE XREF: code:FC65↑j
+                anl     RAM_7E, #0F7h
+                ljmp    select_next_jump_table
 ; ---------------------------------------------------------------------------
 
-code_FE86:                              ; CODE XREF: code:jump_table_4↑j
+code_FE29:                              ; CODE XREF: code:FC68↑j
+                setb    P1.0            ; Port 1 (PDIR=0)
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE2E:                              ; CODE XREF: code:FC6B↑j
+                setb    P4.4            ; Port 4 (PDIR=0)
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE33:                              ; CODE XREF: code:FC89↑j
+                anl     P9, #0FBh       ; Port 9 (PDIR=0)
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE39:                              ; CODE XREF: code:FC8C↑j
+                setb    P4.1            ; Port 4 (PDIR=0)
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE3E:                              ; CODE XREF: code:FC8F↑j
+                setb    P4.0            ; Port 4 (PDIR=0)
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE43:                              ; CODE XREF: code:FC9E↑j
+                anl     RAM_7E, #7Fh
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE49:                              ; CODE XREF: code:FCA1↑j
+                setb    P4.5            ; Port 4 (PDIR=0)
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE4E:                              ; CODE XREF: code:FCA7↑j
+                anl     RAM_7E, #0DFh
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE54:                              ; CODE XREF: code:FCAA↑j
+                setb    P1.1            ; Port 1 (PDIR=0)
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE59:                              ; CODE XREF: code:FCB3↑j
+                anl     P9, #0F7h       ; Port 9 (PDIR=0)
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE5F:                              ; CODE XREF: code:FCB9↑j
+                orl     RAM_7E, #40h
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE65:                              ; CODE XREF: code:FCBC↑j
+                orl     P9, #2          ; Port 9 (PDIR=0)
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE6B:                              ; CODE XREF: code:FCBF↑j
+                anl     RAM_7E, #0FDh
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE71:                              ; CODE XREF: code:FCC2↑j
+                setb    P4.3            ; Port 4 (PDIR=0)
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE76:                              ; CODE XREF: code:FCC5↑j
+                setb    P4.2            ; Port 4 (PDIR=0)
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE7B:                              ; CODE XREF: code:FCDD↑j
+                setb    P5.4            ; Port 5 (PDIR=0)
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE80:                              ; CODE XREF: code:FCE6↑j
+                anl     RAM_7E, #0FBh
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE86:                              ; CODE XREF: code:secondary_jump_table_1_01↑j
                 setb    P5.1            ; turn off Ignition Coil 1/4, IGNITE!
                 ljmp    select_next_jump_table
 ; ---------------------------------------------------------------------------
-                db 0D2h
-                db 0F8h
-                db    2
-                db 0FEh
-                db  9Ah
-                db 0D2h
-                db 0FBh
-                db    2
-                db 0FEh
-                db  9Ah
-                db 0D2h
-                db 0FAh
-                db    2
-                db 0FEh
-                db  9Ah
+
+code_FE8B:                              ; CODE XREF: code:FD3D↑j
+                setb    P5.0            ; Port 5 (PDIR=0)
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE90:                              ; CODE XREF: code:FD40↑j
+                setb    P5.3            ; Port 5 (PDIR=0)
+                ljmp    select_next_jump_table
+; ---------------------------------------------------------------------------
+
+code_FE95:                              ; CODE XREF: code:FD9D↑j
+                setb    P5.2            ; Port 5 (PDIR=0)
+                ljmp    select_next_jump_table
 ; ---------------------------------------------------------------------------
 
 select_next_jump_table:                 ; CODE XREF: code:FB5A↑j

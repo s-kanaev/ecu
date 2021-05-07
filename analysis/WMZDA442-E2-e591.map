@@ -537,8 +537,8 @@
  00000000:00002942       code_2942
  00000000:00002950       funny_thing_with_ISO9141
  00000000:00002967       code_2967
- 00000000:0000297E       code_297E
- 00000000:00002983       code_2983
+ 00000000:0000297E       wait_until_ram_28_0_set
+ 00000000:00002983       timer0_overflowed
  00000000:000029B4       code_29B4
  00000000:000029BF       code_29BF
  00000000:000029CD       code_29CD
@@ -2023,7 +2023,18 @@
  00000000:0000E6BA       code_E6BA
  00000000:0000E6CA       code_E6CA
  00000000:0000E6EB       code_E6EB
- 00000000:0000F004       control_loop_trampoline
+ 00000000:0000F004       fail_control_loop_trampoline
+ 00000000:0000F152       code_F152
+ 00000000:0000F163       code_F163
+ 00000000:0000F177       code_F177
+ 00000000:0000F186       code_F186
+ 00000000:0000F19A       code_F19A
+ 00000000:0000F1AF       code_F1AF
+ 00000000:0000F1C3       code_F1C3
+ 00000000:0000F1D4       code_F1D4
+ 00000000:0000F1E8       code_F1E8
+ 00000000:0000F1F5       code_F1F5
+ 00000000:0000F209       code_F209
  00000000:0000F20E       code_F20E
  00000000:0000F22F       code_F22F
  00000000:0000F235       code_F235
@@ -2061,13 +2072,13 @@
  00000000:0000F39C       code_F39C
  00000000:0000F3A2       code_F3A2
  00000000:0000F3CA       code_F3CA
- 00000000:0000FAED       control_loop
+ 00000000:0000FAED       fail_control_loop
  00000000:0000FB39       wait_until_timer0_overflows
  00000000:0000FB50       code_FB50
  00000000:0000FB53       code_FB53
  00000000:0000FB57       primary_jump_table_0
  00000000:0000FB66       primary_jump_table_1
- 00000000:0000FB75       code_FB75
+ 00000000:0000FB75       select_next_jump_table_trampoline_0
  00000000:0000FB78       primary_jump_table_0_0
  00000000:0000FB7E       primary_jump_table_0_2
  00000000:0000FB88       primary_jump_table_0_3
@@ -2075,8 +2086,9 @@
  00000000:0000FBA2       primary_jump_table_1_0
  00000000:0000FBAD       primary_jump_table_1_1
  00000000:0000FBB4       code_FBB4
- 00000000:0000FBBA       secondary_jump_table_0
- 00000000:0000FD04       jump_table_4
+ 00000000:0000FBBA       secondary_jump_table_0_0
+ 00000000:0000FC5F       secondary_jump_table_0_23
+ 00000000:0000FD04       secondary_jump_table_1_01
  00000000:0000FDA9       select_next_jump_table_trampoline
  00000000:0000FDAC       turn_on_ignition_coil_1_4
  00000000:0000FDB1       code_FDB1
@@ -2100,7 +2112,28 @@
  00000000:0000FE13       code_FE13
  00000000:0000FE18       code_FE18
  00000000:0000FE1E       code_FE1E
+ 00000000:0000FE23       code_FE23
+ 00000000:0000FE29       code_FE29
+ 00000000:0000FE2E       code_FE2E
+ 00000000:0000FE33       code_FE33
+ 00000000:0000FE39       code_FE39
+ 00000000:0000FE3E       code_FE3E
+ 00000000:0000FE43       code_FE43
+ 00000000:0000FE49       code_FE49
+ 00000000:0000FE4E       code_FE4E
+ 00000000:0000FE54       code_FE54
+ 00000000:0000FE59       code_FE59
+ 00000000:0000FE5F       code_FE5F
+ 00000000:0000FE65       code_FE65
+ 00000000:0000FE6B       code_FE6B
+ 00000000:0000FE71       code_FE71
+ 00000000:0000FE76       code_FE76
+ 00000000:0000FE7B       code_FE7B
+ 00000000:0000FE80       code_FE80
  00000000:0000FE86       code_FE86
+ 00000000:0000FE8B       code_FE8B
+ 00000000:0000FE90       code_FE90
+ 00000000:0000FE95       code_FE95
  00000000:0000FE9A       select_next_jump_table
  00000000:0000FEA2       send_RAM_7E__over_SPI_to_HIP0045_once_2
  00000000:0000FEA8       send_8_bits_over_spi_to_hip0045_2
