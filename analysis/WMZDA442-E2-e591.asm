@@ -4968,6 +4968,7 @@ code_1661:                              ; CODE XREF: IE0_0+28B↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 jnc     code_16A5
                 mov     R0, #0FFh
@@ -5026,6 +5027,7 @@ code_16C7:                              ; CODE XREF: IE0_0+335↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     DPTR, #0F6CAh
                 mov     A, R0
@@ -5086,6 +5088,7 @@ code_16F1:                              ; CODE XREF: IE0_0+35D↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     DPTR, #0F6CAh
                 mov     A, R0
@@ -5157,6 +5160,7 @@ code_174C:                              ; CODE XREF: IE0_0+3B9↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
 
 code_1772:                              ; CODE XREF: IE0_0+2C0↑j
@@ -5189,6 +5193,7 @@ code_1772:                              ; CODE XREF: IE0_0+2C0↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     A, R1
                 jnb     ACC.7, code_1795 ; Accumulator
@@ -5359,6 +5364,7 @@ code_1856:                              ; CODE XREF: IE0_0+4AB↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     DPTR, #0F6D2h
                 mov     A, R0
@@ -5823,6 +5829,7 @@ code_1AD5:                              ; CODE XREF: IE0_0+742↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 pop     ACC             ; Accumulator
                 mov     R3, A
@@ -6973,6 +6980,7 @@ code_20C3:                              ; CODE XREF: IE0_0+D25↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     DPTR, #0F759h
                 movx    A, @DPTR
@@ -6990,6 +6998,7 @@ code_20C3:                              ; CODE XREF: IE0_0+D25↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     DPTR, #0F70Fh
                 mov     A, R0
@@ -7051,6 +7060,7 @@ code_211E:                              ; CODE XREF: IE0_0+D8A↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     DPTR, #0F742h
                 movx    A, @DPTR
@@ -7111,6 +7121,7 @@ code_2167:                              ; CODE XREF: IE0_0+DD3↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     DPTR, #0F751h
                 movx    A, @DPTR
@@ -7171,6 +7182,7 @@ code_21B0:                              ; CODE XREF: IE0_0+E1C↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     DPTR, #0F760h
                 movx    A, @DPTR
@@ -7329,6 +7341,7 @@ code_226D:                              ; CODE XREF: IE0_0:code_1CE2↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     DPTR, #0F75Bh
                 movx    A, @DPTR
@@ -7346,6 +7359,7 @@ code_226D:                              ; CODE XREF: IE0_0:code_1CE2↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     DPTR, #0F735h
                 mov     A, R0
@@ -8685,10 +8699,10 @@ no_EGO_sensor_or_absorber:              ; CODE XREF: power_on__ignition_key_turn
                                         ; Set to activate the watchdog timer. When directly set after setting WDT, a watchdog timer refresh is performed.
                 mov     C, RAM_20.6
                 orl     C, /RAM_20.7    ; C = (watchdog triggered) || !(xram checksum failed)
-                jc      funny_thing_with_ISO9141 ; if ((watchdog triggered) || !(xram checksum failed)) jump ...
+                jc      MAIN_LOOP       ; if ((watchdog triggered) || !(xram checksum failed)) jump ...
                 mov     A, P9           ; A = P9
                 anl     A, #20h
-                jz      funny_thing_with_ISO9141 ; if (!(P9 & 0x20)) jump ...
+                jz      MAIN_LOOP       ; if (!(P9 & 0x20)) jump ...
                                         ;
                                         ; if (!(LO of MC33199 (ISO9141) active)) jump ...
                 clr     P3.1            ; P3.1 = 0, TxD @ MC33199 (ISO9141)
@@ -8700,7 +8714,7 @@ code_2931:                              ; CODE XREF: power_on__ignition_key_turn
                 pop     ACC             ; Accumulator
                 mov     A, P9           ; Port 9 (PDIR=0)
                 anl     A, #20h
-                jnz     funny_thing_with_ISO9141 ; if (P9 & 0x20) jump ...
+                jnz     MAIN_LOOP       ; if (P9 & 0x20) jump ...
                                         ;
                                         ; if (LO of MC33199 (ISO9141) active) jump ...
                 setb    P3.1            ; P3.1 = 1, TxD @ MC33199 (ISO9141)
@@ -8712,7 +8726,7 @@ code_2942:                              ; CODE XREF: power_on__ignition_key_turn
                 pop     ACC             ; Accumulator
                 mov     A, P9           ; Port 9 (PDIR=0)
                 anl     A, #20h
-                jz      funny_thing_with_ISO9141 ; if (!(P9 & 0x20)) jump ...
+                jz      MAIN_LOOP       ; if (!(P9 & 0x20)) jump ...
                                         ;
                                         ; if (!(LO of MC33199 (ISO9141) active)) jump ...
 
@@ -8731,12 +8745,11 @@ code_2942:                              ; CODE XREF: power_on__ignition_key_turn
                 ljmp    fail_control_loop_trampoline
 ; ---------------------------------------------------------------------------
 
-funny_thing_with_ISO9141:               ; CODE XREF: power_on__ignition_key_turned_+591↑j
+MAIN_LOOP:                              ; CODE XREF: power_on__ignition_key_turned_+591↑j
                                         ; power_on__ignition_key_turned_+597↑j ...
                 setb    P3.1            ; set high on TxD @ MC33199 (ISO9141) (TxD, serial channel0)
                 clr     RAM_2F.0
                 clr     RAM_2F.1
-!!!!!!!!!!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!!!!!!!!!
                 lcall   init_xram_for_serial0
                 mov     S0RELH, #0FFh   ; Serial Channel 0 Reload Reg., High Byte
                 mov     S0RELL, #0CCh   ; Serial Channel 0 Reload Reg., Low Byte
@@ -8778,6 +8791,47 @@ timer0_overflowed:                      ; CODE XREF: power_on__ignition_key_turn
                 mov     RAM_2D.1, C     ; RAM[0x2D].1 = RAM[0x2A].2
                 mov     C, RAM_2A.7
                 mov     RAM_2D.2, C     ; RAM[0x2D].2 = RAM[0x2A].7
+                mov     DPTR, #873Fh
+                clr     A
+                movc    A, @A+DPTR      ; A = FLASH[0x873F], kitting bits
+                mov     C, ACC.4        ; is there camshaft position sensor
+                mov     RAM_2D.7, C     ; RAM[0x2D].7 = FLASH[0x873F].4 //is there camshaft position sensor
+                mov     DPTR, #873Fh
+                clr     A
+                movc    A, @A+DPTR
+                mov     C, ACC.5        ; camshaft position sensor cross-section is aligned with TDC
+                mov     RAM_2E.0, C     ; RAM[0x2E].0 = FLASH[0x873F].5 // camshaft position sensor cross-section is aligned with TDC
+                mov     DPTR, #873Fh
+                clr     A
+                movc    A, @A+DPTR
+                mov     C, ACC.2        ; is there knock sensor
+                mov     RAM_2E.1, C     ; RAM[0x2E].1 = FLASH[0x873F].2 // is there knock sensor
+                mov     A, RAM_73
+                jb      ACC.5, code_29B4 ; if (RAM[0x73] & (1 << 5)) jump ...
+                clr     A
+                mov     DPTR, #0F7BCh
+                movx    @DPTR, A        ; XRAM[0xF7BC] = 0
+
+code_29B4:                              ; CODE XREF: power_on__ignition_key_turned_+61A↑j
+                jnb     RAM_28.5, code_29BF ; if (!(RAM[0x28] & (1 << 5))) jump ...
+                mov     A, #0FFh
+                mov     DPTR, #0F6B9h
+                movx    @DPTR, A        ; XRAM[0xF6B9] = 0xFF
+                sjmp    code_29CD
+; ---------------------------------------------------------------------------
+
+code_29BF:                              ; CODE XREF: power_on__ignition_key_turned_:code_29B4↑j
+                jbc     RAM_25.5, code_2A1F ; if (RAM[0x25] & (1 << 5)) {
+                                        ;   RAM[0x25] &= ~(1 << 5)
+                                        ;   jump ...
+                                        ; }
+                mov     DPTR, #0F6B9h
+                movx    A, @DPTR        ; A = XRAM[0xF6B9]
+                inc     A               ; ++A
+                jz      code_29CD       ; if (!A) jump ...
+                                        ; if (XRAM[0xF6B9] == 0xFF) jump ...
+                mov     DPTR, #0F6B9h
+                movx    @DPTR, A        ; ++XRAM[0xF6B9]
 
 
 
@@ -8785,53 +8839,17 @@ timer0_overflowed:                      ; CODE XREF: power_on__ignition_key_turn
 
 
 
-                mov     DPTR, #873Fh
-                clr     A
-                movc    A, @A+DPTR
-                mov     C, ACC.4        ; Accumulator
-                mov     RAM_2D.7, C
-                mov     DPTR, #873Fh
-                clr     A
-                movc    A, @A+DPTR
-                mov     C, ACC.5        ; Accumulator
-                mov     RAM_2E.0, C
-                mov     DPTR, #873Fh
-                clr     A
-                movc    A, @A+DPTR
-                mov     C, ACC.2        ; Accumulator
-                mov     RAM_2E.1, C
-                mov     A, RAM_73
-                jb      ACC.5, code_29B4 ; Accumulator
-                clr     A
-                mov     DPTR, #0F7BCh
-                movx    @DPTR, A
-
-code_29B4:                              ; CODE XREF: power_on__ignition_key_turned_+61A↑j
-                jnb     RAM_28.5, code_29BF
-                mov     A, #0FFh
-                mov     DPTR, #0F6B9h
-                movx    @DPTR, A
-                sjmp    code_29CD
-; ---------------------------------------------------------------------------
-
-code_29BF:                              ; CODE XREF: power_on__ignition_key_turned_:code_29B4↑j
-                jbc     RAM_25.5, code_2A1F
-                mov     DPTR, #0F6B9h
-                movx    A, @DPTR
-                inc     A
-                jz      code_29CD
-                mov     DPTR, #0F6B9h
-                movx    @DPTR, A
 
 code_29CD:                              ; CODE XREF: power_on__ignition_key_turned_+62B↑j
                                         ; power_on__ignition_key_turned_+635↑j
-                jb      RAM_2A.0, code_2A32
+                jb      RAM_2A.0, code_2A32 ; if (RAM[0x2A] & (1 << 0)) jump ...
                 mov     DPTR, #0F6B9h
-                movx    A, @DPTR
+                movx    A, @DPTR        ; A = XRAM[0xF6B9]
                 cjne    A, #5, code_29D7
 
 code_29D7:                              ; CODE XREF: power_on__ignition_key_turned_+642↑j
-                jc      code_2A32
+                jc      code_2A32       ; if (A < 0x05) jump ...
+                                        ; if (XRAM[0xF6B9] < 0x05) jump ...
                 setb    RAM_2A.0
                 clr     RAM_25.1
                 mov     RAM_30, #0
@@ -8842,61 +8860,66 @@ code_29D7:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     RAM_49, A
                 mov     RAM_4A, A
                 mov     RAM_4B, A
-                mov     RAM_4C, A
+                mov     RAM_4C, A       ; RAM[0x2A] |= (1 << 0)
+                                        ; RAM[0x25] &= ~(1 << 1)
+                                        ; RAM[0x30] = RAM[0x44] = RAM[0x45] = RAM[0x48] = RAM[0x49] = RAM[0x4A] = RAM[0x4B] = RAM[0x4C] = 0
                 mov     DPTR, #0F6BAh
                 movx    @DPTR, A
                 mov     DPTR, #0F6BBh
                 movx    @DPTR, A
                 mov     DPTR, #0F6BCh
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6BA] = XRAM[0xF6BB] = XRAM[0xF6BC] = 0
                 mov     SETMSK, #0      ; Compare Set Mask Register
-                mov     CLRMSK, #0      ; Compare Clear Mask Register
+                mov     CLRMSK, #0      ; nullify set/clear masks for timer2 @ port5
                 setb    P5.1            ; Port 5 (PDIR=0)
-                setb    P5.0            ; Port 5 (PDIR=0)
-                anl     IEN2, #0DFh     ; Interrupt Enable Register 2
+                setb    P5.0            ; turn off both igntion coils
+                anl     IEN2, #0DFh     ; Clear IEN2.ECR
+                                        ; COMCLR register compare match interrupt enable
+                                        ; If ECR = 0, the COMCLR compare match interrupt is disabled.
                 anl     CMEN, #0FEh     ; Compare Enable Register (RMAP=0)
-                setb    P4.0            ; Port 4 (PDIR=0)
+                setb    P4.0            ; turn off injector for cyl 1
                 anl     CMEN, #0FBh     ; Compare Enable Register (RMAP=0)
-                setb    P4.2            ; Port 4 (PDIR=0)
+                setb    P4.2            ; turn off injector for cyl 3
                 anl     CMEN, #0F7h     ; Compare Enable Register (RMAP=0)
-                setb    P4.3            ; Port 4 (PDIR=0)
+                setb    P4.3            ; turn off injector for cyl 4
                 anl     CMEN, #0FDh     ; Compare Enable Register (RMAP=0)
-                setb    P4.1            ; Port 4 (PDIR=0)
+                setb    P4.1            ; turn off injector for cyl 2
                 ljmp    code_2B19
 ; ---------------------------------------------------------------------------
 
 code_2A1F:                              ; CODE XREF: power_on__ignition_key_turned_:code_29BF↑j
-                jnb     RAM_2A.0, code_2A2D
+                jnb     RAM_2A.0, code_2A2D ; if (!(RAM[0x2A] & (1 << 0))) jump ...
                 mov     DPTR, #0F6B9h
                 movx    A, @DPTR
                 cjne    A, #2, code_2A29
 
 code_2A29:                              ; CODE XREF: power_on__ignition_key_turned_+694↑j
-                jnc     code_2A2D
-                clr     RAM_2A.0
+                jnc     code_2A2D       ; if (XRAM[0xF6B9] >= 2) jump ...
+                clr     RAM_2A.0        ; RAM[0x2A] &= ~(1 << 0)
 
 code_2A2D:                              ; CODE XREF: power_on__ignition_key_turned_:code_2A1F↑j
                                         ; power_on__ignition_key_turned_:code_2A29↑j
                 clr     A
                 mov     DPTR, #0F6B9h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6B9] = 0
 
 code_2A32:                              ; CODE XREF: power_on__ignition_key_turned_:code_29CD↑j
                                         ; power_on__ignition_key_turned_:code_29D7↑j
-                clr     IEN0.7          ; Interrupt Enable Register 0
-                mov     R0, RAM_44
-                mov     R1, RAM_45
-                setb    IEN0.7          ; Interrupt Enable Register 0
+                clr     IEN0.7          ; disable all interrupts
+                mov     R0, RAM_44      ; R0 = RAM[0x44]
+                mov     R1, RAM_45      ; R1 = RAM[0x45]
+                setb    IEN0.7          ; allow interrupts
                 mov     A, R0
-                orl     A, R1
-                jnz     code_2A7C
-                clr     IEN0.7          ; Interrupt Enable Register 0
-                mov     A, RAM_30
-                mov     R0, RAM_1C
-                mov     R1, RAM_1D
-                setb    IEN0.7          ; Interrupt Enable Register 0
-                cjne    A, #4, code_2AB1
-                clr     RAM_27.2
+                orl     A, R1           ; A = RAM[0x44] | RAM[0x45]
+                jnz     code_2A7C       ; if (Acc) jump ...
+                                        ; if (RAM[0x44] | RAM[0x45]) jump ...
+                clr     IEN0.7          ; disable interrupts
+                mov     A, RAM_30       ; A = RAM[0x30]
+                mov     R0, RAM_1C      ; R0 = RAM[0x1C]
+                mov     R1, RAM_1D      ; R1 = RAM[0x1D]
+                setb    IEN0.7          ; enable interrupts
+                cjne    A, #4, ram_30_less_4 ; if (RAM[0x30] != 4) jump ...
+                clr     RAM_27.2        ; RAM[0x27] &= ~(1 << 2)
 
 code_2A4D:                              ; CODE XREF: power_on__ignition_key_turned_+6DE↓j
                 mov     MD0, #0         ; Multiplication/Division Register 0
@@ -8916,13 +8939,19 @@ code_2A4D:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     R4, MD2         ; Multiplication/Division Register 2
                 mov     B, MD3          ; Multiplication/Division Register 3
                 mov     A, MD4          ; Multiplication/Division Register 4
-                mov     A, MD5          ; Multiplication/Division Register 5
-                jbc     RAM_27.2, code_2A4D
-                setb    RAM_27.2
+                mov     A, MD5          ; Quot, Rem = 0x00082300 / R1:R0
+                                        ; Quot = MD3:MD2:MD1:MD0 = B:R4:R3:R2
+                                        ; Rem = MD5:MD4
+                                        ; Reminder is dismissed
+                jbc     RAM_27.2, code_2A4D ; if (RAM[0x27] & (1 << 2)) {
+                                        ;   RAM[0x27] &= ~(1 << 2)
+                                        ;   jump ...
+                                        ; }
+                setb    RAM_27.2        ; RAM[0x27] |= (1 << 2)
                 mov     A, B            ; B-Register
-                orl     A, R4
-                jz      code_2AB7
-                sjmp    code_2AAB
+                orl     A, R4           ; A = B | R4
+                jz      high_word_of_quot_is_zero ; if (high word of quot is zero) jump ...
+                sjmp    high_word_of_quot_is_not_zero
 ; ---------------------------------------------------------------------------
 
 code_2A7C:                              ; CODE XREF: power_on__ignition_key_turned_+6AA↑j
@@ -8941,66 +8970,73 @@ code_2A7E:                              ; CODE XREF: power_on__ignition_key_turn
                 nop
                 nop
                 nop
-                mov     R2, MD0         ; Multiplication/Division Register 0
+                mov     R2, MD0         ; Quot, Rem = 0x01E84800 / R1:R0
+                                        ; Quot = MD3:MD2:MD1:MD0 = B:R4:R3:R2
+                                        ; Rem = MD5:MD4
+                                        ; Reminder is dismissed
                 mov     R3, MD1         ; Multiplication/Division Register 1
                 mov     R4, MD2         ; Multiplication/Division Register 2
                 mov     B, MD3          ; Multiplication/Division Register 3
                 mov     A, MD4          ; Multiplication/Division Register 4
                 mov     A, MD5          ; Multiplication/Division Register 5
-                jbc     RAM_27.2, code_2A7E
-                setb    RAM_27.2
+                jbc     RAM_27.2, code_2A7E ; if (RAM[0x27] & (1 << 2)) {
+                                        ;   RAM[0x27] &= ~(1 << 2)
+                                        ;   jump ...
+                                        ; }
+                setb    RAM_27.2        ; RAM[0x27] |= (1 << 2)
                 mov     A, B            ; B-Register
                 orl     A, R4
-                jz      code_2AB7
+                jz      high_word_of_quot_is_zero ; if (high word of quot is zero) jump ...
 
-code_2AAB:                              ; CODE XREF: power_on__ignition_key_turned_+6E8↑j
+high_word_of_quot_is_not_zero:          ; CODE XREF: power_on__ignition_key_turned_+6E8↑j
                 mov     R0, #0FFh
                 mov     R1, #0FFh
-                sjmp    code_2ABB
+                sjmp    code_2ABB       ; INPUT:
+                                        ;  - R0
+                                        ;  - R1
 ; ---------------------------------------------------------------------------
 
-code_2AB1:                              ; CODE XREF: power_on__ignition_key_turned_+6B6↑j
+ram_30_less_4:                          ; CODE XREF: power_on__ignition_key_turned_+6B6↑j
                 mov     R0, #0
                 mov     R1, #0
-                sjmp    code_2ABB
+                sjmp    code_2ABB       ; INPUT:
+                                        ;  - R0
+                                        ;  - R1
 ; ---------------------------------------------------------------------------
 
-code_2AB7:                              ; CODE XREF: power_on__ignition_key_turned_+6E6↑j
+high_word_of_quot_is_zero:              ; CODE XREF: power_on__ignition_key_turned_+6E6↑j
                                         ; power_on__ignition_key_turned_+717↑j
-                mov     R0, RAM_2
-                mov     R1, RAM_3
+                mov     R0, RAM_2       ; R0 = R2
+                mov     R1, RAM_3       ; R1 = R3
 
 code_2ABB:                              ; CODE XREF: power_on__ignition_key_turned_+71D↑j
                                         ; power_on__ignition_key_turned_+723↑j
-                mov     DPTR, #0F6BBh
+                mov     DPTR, #0F6BBh   ; INPUT:
+                                        ;  - R0
+                                        ;  - R1
                 mov     A, R0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6BB] = R0
                 inc     DPTR
                 mov     A, R1
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6BC] = R1
                 mov     R2, #20h ; ' '
                 mov     R3, #0
-                lcall   add_word        ; Add words
-                                        ;
-                                        ; INPUT:
-                                        ;  - R1:R0 - first word, R1 - high, R0 - low
-                                        ;  - R3:R2 - second word, R3 - high, R2 - low
-                                        ;
-                                        ; OUTPUT:
-                                        ;  - R1:R0 = (R1:R0) + (R3:R2)
-                                        ;    A = R1
-                                        ;    R1 - high, R0 - low
-                                        ;
-                jnc     code_2AD1
-                mov     RAM_48, #0FFh
-                sjmp    code_2AD6
+                lcall   add_word        ; R1:R0 += 0x0020
+                jnc     code_2AD1       ; if (no overflow took place) jump
+                mov     RAM_48, #0FFh   ; saturate RAM[0x48] to 0xFF
+                sjmp    ram_48_filled
 ; ---------------------------------------------------------------------------
 
 code_2AD1:                              ; CODE XREF: power_on__ignition_key_turned_+738↑j
-                lcall   code_6092
+                lcall   shl_word_twice  ; INPUT:
+                                        ;   R1:R0
+                                        ; OUTPUT:
+                                        ;   R1:R0 = (R1:R0) << 2, or FF:FF (if overflow happens)
+                                        ;   R1 - value for RAM[0x48]
+                                        ;
                 mov     RAM_48, R1
 
-code_2AD6:                              ; CODE XREF: power_on__ignition_key_turned_+73D↑j
+ram_48_filled:                          ; CODE XREF: power_on__ignition_key_turned_+73D↑j
                 mov     DPTR, #0F6BBh
                 movx    A, @DPTR
                 mov     R0, A
@@ -9019,6 +9055,7 @@ code_2AD6:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 jnc     code_2AE9
                 mov     R1, #0FFh
@@ -9693,6 +9730,7 @@ code_2DD4:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     DPTR, #0F6B5h
                 mov     A, R0
@@ -9779,6 +9817,7 @@ code_2E4E:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     DPTR, #0F6B7h
                 mov     A, R0
@@ -10617,6 +10656,7 @@ code_3294:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     A, R3
                 jb      ACC.7, code_32D3 ; Accumulator
@@ -10675,6 +10715,7 @@ code_32D9:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     A, R3
                 jb      ACC.7, code_3313 ; Accumulator
@@ -10885,6 +10926,7 @@ code_3404:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     DPTR, #0F6DEh
                 mov     A, R0
@@ -10963,6 +11005,7 @@ code_3476:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     DPTR, #0F6E2h
                 mov     A, R0
@@ -11009,6 +11052,7 @@ code_349E:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     A, R3
                 jb      ACC.7, code_34C5 ; Accumulator
@@ -14798,6 +14842,7 @@ code_499D:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
 
 code_49EC:                              ; CODE XREF: power_on__ignition_key_turned_+2654↑j
@@ -17536,6 +17581,7 @@ code_55F7:                              ; CODE XREF: code_55DE+14↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 sjmp    code_5619
 ; ---------------------------------------------------------------------------
@@ -17577,6 +17623,7 @@ code_5619:                              ; CODE XREF: code_55DE+1F↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 ret
 ; End of function code_55DE
@@ -18111,6 +18158,7 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 pop     ACC             ; Accumulator
                 add     A, #8
@@ -18149,6 +18197,7 @@ code_58BC:                              ; CODE XREF: code_57FA+BE↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 ret
 ; End of function code_57FA
@@ -18915,6 +18964,7 @@ code_5CC5:                              ; CODE XREF: code_5BB5+10B↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 anl     B, #0F0h        ; B-Register
                 mov     A, R0
@@ -19125,6 +19175,7 @@ code_5DF9:                              ; CODE XREF: code_5D9F:code_5DEE↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     DPTR, #0F78Ah
                 mov     A, R0
@@ -19751,13 +19802,13 @@ code_6076:                              ; CODE XREF: IE0_0+4A8↑p
                 mov     R0, A
                 mov     A, R1
                 addc    A, R1
-                jc      code_607F
+                jc      saturate_r0_r1_to_ff_ff
                 mov     R1, A
                 ret
 ; ---------------------------------------------------------------------------
 
-code_607F:                              ; CODE XREF: code_6076+5↑j
-                                        ; code_6092+7↓j ...
+saturate_r0_r1_to_ff_ff:                ; CODE XREF: code_6076+5↑j
+                                        ; shl_word_twice+7↓j ...
                 mov     R0, #0FFh
                 mov     R1, #0FFh
                 ret
@@ -19787,22 +19838,28 @@ code_608D:                              ; CODE XREF: code_6084+5↑j
 
 ; =============== S U B R O U T I N E =======================================
 
+; INPUT:
+;   R1:R0
+; OUTPUT:
+;   R1:R0 = (R1:R0) << 2, or FF:FF (if overflow happens)
+;   R1 - value for RAM[0x48]
+;
 
-code_6092:                              ; CODE XREF: power_on__ignition_key_turned_:code_2AD1↑p
-                mov     A, R0
-                mov     R0, #2
-                clr     C
+shl_word_twice:                         ; CODE XREF: power_on__ignition_key_turned_:code_2AD1↑p
+                mov     A, R0           ; A = R0
+                mov     R0, #2          ; R0 = 2
+                clr     C               ; CY = 0
 
-code_6096:                              ; CODE XREF: code_6092+A↓j
+code_6096:                              ; CODE XREF: shl_word_twice+A↓j
                 rlc     A
                 xch     A, R1
                 rlc     A
-                jc      code_607F
+                jc      saturate_r0_r1_to_ff_ff
                 xch     A, R1
                 djnz    R0, code_6096
                 mov     R0, A
                 ret
-; End of function code_6092
+; End of function shl_word_twice
 
 
 ; =============== S U B R O U T I N E =======================================
@@ -19818,7 +19875,7 @@ code_60A4:                              ; CODE XREF: code_60A0+A↓j
                 rlc     A
                 xch     A, R1
                 rlc     A
-                jc      code_607F
+                jc      saturate_r0_r1_to_ff_ff
                 xch     A, R1
                 djnz    R0, code_60A4
                 mov     R0, A
@@ -19852,7 +19909,7 @@ code_60BA:                              ; CODE XREF: IE0_0+370↑p
                                         ; power_on__ignition_key_turned_+DF5↑p ...
                 mov     A, R1
                 anl     A, #0F0h
-                jnz     code_607F
+                jnz     saturate_r0_r1_to_ff_ff
                 mov     A, R0
                 anl     A, #0F0h
                 orl     A, R1
@@ -20085,6 +20142,7 @@ code_613E:                              ; CODE XREF: code_6134+3↑j
 ;  - R1:R0 = (R1:R0) + (R3:R2)
 ;    A = R1
 ;    R1 - high, R0 - low
+;    CY - if overflowed
 ;
 
 add_word:                               ; CODE XREF: IE0_0+30E↑p
@@ -20362,6 +20420,7 @@ update_ram_63:                          ; CODE XREF: power_on__ignition_key_turn
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 mov     A, R1           ; A = high byte of sum
                 jnb     ACC.7, code_61ED ; if (A >= 0) jump ...
@@ -21006,6 +21065,7 @@ code_63A5:                              ; CODE XREF: code_638E+D↑j
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 ret
 ; End of function code_638E
@@ -21407,6 +21467,7 @@ adjust_temperature:                     ; CODE XREF: power_on__ignition_key_turn
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 jc      saturate_result ; if (CY) jump ...
 
@@ -21826,6 +21887,7 @@ code_6693:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 jc      code_66ED
                 mov     R2, #0
@@ -21925,6 +21987,7 @@ code_66FA:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;  - R1:R0 = (R1:R0) + (R3:R2)
                                         ;    A = R1
                                         ;    R1 - high, R0 - low
+                                        ;    CY - if overflowed
                                         ;
                 jnc     code_6726
                 mov     R0, #0FFh
@@ -60697,7 +60760,7 @@ RAM_0 equ 0                             ; DATA XREF: power_on__ignition_key_turn
                                         ; power_on__ignition_key_turned_+F22↑r ...
 RAM_1 equ 1                             ; DATA XREF: power_on__ignition_key_turned_:code_2BA9↑r
                                         ; power_on__ignition_key_turned_+8EF↑r ...
-RAM_2 equ 2                             ; DATA XREF: power_on__ignition_key_turned_:code_2AB7↑r
+RAM_2 equ 2                             ; DATA XREF: power_on__ignition_key_turned_:high_word_of_quot_is_zero↑r
                                         ; power_on__ignition_key_turned_:code_3269↑r ...
 RAM_3 equ 3                             ; DATA XREF: power_on__ignition_key_turned_+727↑r
                                         ; power_on__ignition_key_turned_+ED9↑r ...
