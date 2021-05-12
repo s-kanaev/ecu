@@ -535,7 +535,7 @@
  00000000:000028CD       no_EGO_sensor_or_absorber
  00000000:00002931       code_2931
  00000000:00002942       code_2942
- 00000000:00002950       funny_thing_with_ISO9141
+ 00000000:00002950       MAIN_LOOP
  00000000:00002967       code_2967
  00000000:0000297E       wait_until_ram_28_0_set
  00000000:00002983       timer0_overflowed
@@ -550,12 +550,12 @@
  00000000:00002A4D       code_2A4D
  00000000:00002A7C       code_2A7C
  00000000:00002A7E       code_2A7E
- 00000000:00002AAB       code_2AAB
- 00000000:00002AB1       code_2AB1
- 00000000:00002AB7       code_2AB7
+ 00000000:00002AAB       high_word_of_quot_is_not_zero
+ 00000000:00002AB1       ram_30_less_4
+ 00000000:00002AB7       high_word_of_quot_is_zero
  00000000:00002ABB       code_2ABB
  00000000:00002AD1       code_2AD1
- 00000000:00002AD6       code_2AD6
+ 00000000:00002AD6       ram_48_filled
  00000000:00002AE9       code_2AE9
  00000000:00002AF0       code_2AF0
  00000000:00002AF4       code_2AF4
@@ -1273,10 +1273,10 @@
  00000000:0000606C       cast_signed_R2_to_R3R2
  00000000:00006073       code_6073
  00000000:00006076       code_6076
- 00000000:0000607F       code_607F
+ 00000000:0000607F       saturate_r0_r1_to_ff_ff
  00000000:00006084       code_6084
  00000000:0000608D       code_608D
- 00000000:00006092       code_6092
+ 00000000:00006092       shl_word_twice
  00000000:00006096       code_6096
  00000000:000060A0       code_60A0
  00000000:000060A4       code_60A4
