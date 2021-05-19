@@ -171,7 +171,10 @@ byte RAM[0x100] = {
 
   [0x3E] = 0,     // Adjusted intake air temperature
   [0x3F] = 0,     // Adjusted ignition switch voltage
-  [0x40..0x4B] = 0,
+  [0x40..0x43] = 0,
+  [0x44] = 0,     // These two can be changed by some interrupts
+  [0x45] = 0,
+  [0x46..0x4B] = 0,
   [0x4C] = 0,     // offset div 0x11 for tabel at FLASH[0x8AFB]
   [0x4D..0x5C] = 0,
   [0x5D] = 0,     // ???
@@ -1963,17 +1966,80 @@ check_K_L_Line:
     jump funny_thing_with_ISO9141;
   
   jump FAED_trampoline; // fail control loop
+}
 
 // _2950:
 // K/L-line communication?
 funny_thing_with_ISO9141:
+MAIN_LOOP_TRAMPOLINE:
+{
   SET_BIT_IN(P3, 1); // set high on TxD @ MC33199 (ISO9141) (TxD, serial channel0)
 
   CLEAR_BIT_IN(RAM[0x2F], 0);
   CLEAR_BIT_IN(RAM[0x2F], 1);
-  // ... TODO ...
+
+  init_xram_for_serial0();
+
+  S0RELH = 0xFF;
+  S0RELL = 0xCC; // select serial0 frequency
+  S0CON = 0x58; // SM1 = 0
+                // SM0 = 1, 8-bit uart, variable baud rate
+                // SM20 = 0, disable serial0 multiprocessor communication
+                // REN0 = 1, enable receiver
+  SET_BIT_IN(IEN0, 4); // enable serial0 interrupt
+  SET_BIT_IN(IEN0, 7); // enable interrupts overall
+
+  MAIN_LOOP();
 }
 
+// _2967:
+void MAIN_LOOP() {
+  for (;;) {
+    bool Timer0Overflowed = false;
+
+    // implement jbc
+    for (;;) {
+      byte B = RAM[0x28];
+
+      if (CHECK_BIT_AT(B, 0)) {
+        byte Expected = B;
+        CLEAR_BIT_IN(B, 0);
+        byte Desired = B;
+
+        if (CAS(&RAM[0x28], Expected, Desired)) {
+          Timer0Overflowed = true;
+          break;
+        }
+      } else
+        break;
+    }
+
+    if (Timer0Overflowed)
+      break;
+
+    // _296A:
+    word W = COMPOSE_WORD(XRAM[0xF96E], XRAM[0xF96D]);
+    bool Overflow = !W;
+    --W;
+    XRAM[0xF96E] = HIGH(W);
+    XRAM[0xF96D] = LOW(W);
+
+    if (!Overflow)
+      continue;
+
+    XRAM[0xF96D] = 0;
+
+    while (!CHECK_BIT_AT(RAM[0x28], 0));
+    CLEAR_BIT_IN(RAM[0x28], 0);
+    break;
+  }
+
+  // _2983:
+  // Timer0 overflowed
+  // ...
+}
+
+// _C000:
 void init_xram_for_serial0() {
   if (CHECK_BIT_AT(RAM[0x2F], 0)) {
     _C006:
