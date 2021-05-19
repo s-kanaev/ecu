@@ -535,8 +535,8 @@
  00000000:000028CD       no_EGO_sensor_or_absorber
  00000000:00002931       code_2931
  00000000:00002942       code_2942
- 00000000:00002950       MAIN_LOOP
- 00000000:00002967       code_2967
+ 00000000:00002950       MAIN_LOOP_TRAMPOLINE
+ 00000000:00002967       MAIN_LOOP
  00000000:0000297E       wait_until_ram_28_0_set
  00000000:00002983       timer0_overflowed
  00000000:000029B4       code_29B4
@@ -553,7 +553,7 @@
  00000000:00002AAB       high_word_of_quot_is_not_zero
  00000000:00002AB1       ram_30_less_4
  00000000:00002AB7       high_word_of_quot_is_zero
- 00000000:00002ABB       code_2ABB
+ 00000000:00002ABB       calc_ram_48
  00000000:00002AD1       code_2AD1
  00000000:00002AD6       ram_48_filled
  00000000:00002AE9       code_2AE9
@@ -1343,7 +1343,7 @@
  00000000:000062A4       code_62A4
  00000000:000062A5       code_62A5
  00000000:000062AF       code_62AF
- 00000000:000062CE       code_62CE
+ 00000000:000062CE       interpolate_table_value
  00000000:000062DC       get_adc_value_from_table
  00000000:000062EF       code_62EF
  00000000:000062FC       table_lookup_0

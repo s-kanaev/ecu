@@ -8699,10 +8699,10 @@ no_EGO_sensor_or_absorber:              ; CODE XREF: power_on__ignition_key_turn
                                         ; Set to activate the watchdog timer. When directly set after setting WDT, a watchdog timer refresh is performed.
                 mov     C, RAM_20.6
                 orl     C, /RAM_20.7    ; C = (watchdog triggered) || !(xram checksum failed)
-                jc      MAIN_LOOP       ; if ((watchdog triggered) || !(xram checksum failed)) jump ...
+                jc      MAIN_LOOP_TRAMPOLINE ; if ((watchdog triggered) || !(xram checksum failed)) jump ...
                 mov     A, P9           ; A = P9
                 anl     A, #20h
-                jz      MAIN_LOOP       ; if (!(P9 & 0x20)) jump ...
+                jz      MAIN_LOOP_TRAMPOLINE ; if (!(P9 & 0x20)) jump ...
                                         ;
                                         ; if (!(LO of MC33199 (ISO9141) active)) jump ...
                 clr     P3.1            ; P3.1 = 0, TxD @ MC33199 (ISO9141)
@@ -8714,7 +8714,7 @@ code_2931:                              ; CODE XREF: power_on__ignition_key_turn
                 pop     ACC             ; Accumulator
                 mov     A, P9           ; Port 9 (PDIR=0)
                 anl     A, #20h
-                jnz     MAIN_LOOP       ; if (P9 & 0x20) jump ...
+                jnz     MAIN_LOOP_TRAMPOLINE ; if (P9 & 0x20) jump ...
                                         ;
                                         ; if (LO of MC33199 (ISO9141) active) jump ...
                 setb    P3.1            ; P3.1 = 1, TxD @ MC33199 (ISO9141)
@@ -8726,7 +8726,7 @@ code_2942:                              ; CODE XREF: power_on__ignition_key_turn
                 pop     ACC             ; Accumulator
                 mov     A, P9           ; Port 9 (PDIR=0)
                 anl     A, #20h
-                jz      MAIN_LOOP       ; if (!(P9 & 0x20)) jump ...
+                jz      MAIN_LOOP_TRAMPOLINE ; if (!(P9 & 0x20)) jump ...
                                         ;
                                         ; if (!(LO of MC33199 (ISO9141) active)) jump ...
 
@@ -8745,7 +8745,7 @@ code_2942:                              ; CODE XREF: power_on__ignition_key_turn
                 ljmp    fail_control_loop_trampoline
 ; ---------------------------------------------------------------------------
 
-MAIN_LOOP:                              ; CODE XREF: power_on__ignition_key_turned_+591↑j
+MAIN_LOOP_TRAMPOLINE:                   ; CODE XREF: power_on__ignition_key_turned_+591↑j
                                         ; power_on__ignition_key_turned_+597↑j ...
                 setb    P3.1            ; set high on TxD @ MC33199 (ISO9141) (TxD, serial channel0)
                 clr     RAM_2F.0
@@ -8753,11 +8753,16 @@ MAIN_LOOP:                              ; CODE XREF: power_on__ignition_key_turn
                 lcall   init_xram_for_serial0
                 mov     S0RELH, #0FFh   ; Serial Channel 0 Reload Reg., High Byte
                 mov     S0RELL, #0CCh   ; Serial Channel 0 Reload Reg., Low Byte
-                mov     S0CON, #58h ; 'X' ; Serial Channel 0 Control Register
+                mov     S0CON, #58h ; 'X' ; S0CON = 0x58 = 0101 1000
+                                        ;
+                                        ; SM1 = 0
+                                        ; SM0 = 1, 8-bit uart, variable baud rate
+                                        ; SM20 = 0, disable serial0 multiprocessor communication
+                                        ; REN0 = 1, enable receiver
                 orl     IEN0, #10h      ; Enable serial0 interrupt
                 setb    IEN0.7          ; IEN0.EAL - enable interrupts overall
 
-code_2967:                              ; CODE XREF: power_on__ignition_key_turned_+5E5↓j
+MAIN_LOOP:                              ; CODE XREF: power_on__ignition_key_turned_+5E5↓j
                                         ; power_on__ignition_key_turned_:code_5371↓j
                 jbc     RAM_28.0, timer0_overflowed ; if (RAM[0x28] & (1 << 0)) {
                                         ;   RAM[0x28] &= ~(1 << 0)
@@ -8772,7 +8777,7 @@ code_2967:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    A, @DPTR
                 subb    A, #0
                 movx    @DPTR, A        ; XRAM[0xF96E] -= 0 + CY
-                jnc     code_2967       ; if (!CY) jump ...
+                jnc     MAIN_LOOP       ; if (!CY) jump ...
                 mov     DPTR, #0F96Dh
                 clr     A
                 movx    @DPTR, A        ; A = XRAM[0xF96D]
@@ -8784,7 +8789,7 @@ wait_until_ram_28_0_set:                ; CODE XREF: power_on__ignition_key_turn
                                         ; // wait until timer0 overflow?
                 clr     RAM_28.0        ; RAM[0x28] &= ~(1 << 0)
 
-timer0_overflowed:                      ; CODE XREF: power_on__ignition_key_turned_:code_2967↑j
+timer0_overflowed:                      ; CODE XREF: power_on__ignition_key_turned_:MAIN_LOOP↑j
                 setb    IEN0.6          ; Interrupt Enable Register 0
                 setb    IEN1.6          ; refresh and start watchdog timer
                 mov     C, RAM_2A.2
@@ -8991,7 +8996,7 @@ code_2A7E:                              ; CODE XREF: power_on__ignition_key_turn
 high_word_of_quot_is_not_zero:          ; CODE XREF: power_on__ignition_key_turned_+6E8↑j
                 mov     R0, #0FFh
                 mov     R1, #0FFh
-                sjmp    code_2ABB       ; INPUT:
+                sjmp    calc_ram_48     ; INPUT:
                                         ;  - R0
                                         ;  - R1
 ; ---------------------------------------------------------------------------
@@ -8999,7 +9004,7 @@ high_word_of_quot_is_not_zero:          ; CODE XREF: power_on__ignition_key_turn
 ram_30_less_4:                          ; CODE XREF: power_on__ignition_key_turned_+6B6↑j
                 mov     R0, #0
                 mov     R1, #0
-                sjmp    code_2ABB       ; INPUT:
+                sjmp    calc_ram_48     ; INPUT:
                                         ;  - R0
                                         ;  - R1
 ; ---------------------------------------------------------------------------
@@ -9009,7 +9014,7 @@ high_word_of_quot_is_zero:              ; CODE XREF: power_on__ignition_key_turn
                 mov     R0, RAM_2       ; R0 = R2
                 mov     R1, RAM_3       ; R1 = R3
 
-code_2ABB:                              ; CODE XREF: power_on__ignition_key_turned_+71D↑j
+calc_ram_48:                            ; CODE XREF: power_on__ignition_key_turned_+71D↑j
                                         ; power_on__ignition_key_turned_+723↑j
                 mov     DPTR, #0F6BBh   ; INPUT:
                                         ;  - R0
@@ -9039,48 +9044,44 @@ code_2AD1:                              ; CODE XREF: power_on__ignition_key_turn
 ram_48_filled:                          ; CODE XREF: power_on__ignition_key_turned_+73D↑j
                 mov     DPTR, #0F6BBh
                 movx    A, @DPTR
-                mov     R0, A
+                mov     R0, A           ; R0 = A = XRAM[0xF6BB]
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
+                mov     R1, A           ; R1 = XRAM[0xF6BC]
                 mov     R2, #80h
                 mov     R3, #0
-                lcall   add_word        ; Add words
-                                        ;
-                                        ; INPUT:
-                                        ;  - R1:R0 - first word, R1 - high, R0 - low
-                                        ;  - R3:R2 - second word, R3 - high, R2 - low
-                                        ;
-                                        ; OUTPUT:
-                                        ;  - R1:R0 = (R1:R0) + (R3:R2)
-                                        ;    A = R1
-                                        ;    R1 - high, R0 - low
-                                        ;    CY - if overflowed
-                                        ;
-                jnc     code_2AE9
-                mov     R1, #0FFh
+                lcall   add_word        ; R1:R0 = XRAM[0xF6BC]:XRAM[0xF6BB] + 00:80
+                jnc     code_2AE9       ; jump if NO overflow took place
+                mov     R1, #0FFh       ; saturate R1 to 0xFF
 
 code_2AE9:                              ; CODE XREF: power_on__ignition_key_turned_+753↑j
                 mov     RAM_49, R1
-                mov     A, RAM_49
+                mov     A, RAM_49       ; A = RAM[0x49] = R1
                 cjne    A, #1Fh, code_2AF0
 
 code_2AF0:                              ; CODE XREF: power_on__ignition_key_turned_+75B↑j
                 jc      code_2AF4
-                mov     A, #1Fh
+                mov     A, #1Fh         ; if (A < 0x1F)
+                                        ;   A = 0x1F
 
 code_2AF4:                              ; CODE XREF: power_on__ignition_key_turned_:code_2AF0↑j
                 mov     DPTR, #0F6BAh
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6BA] = A
                 mov     DPTR, #0F6BBh
                 movx    A, @DPTR
-                mov     R0, A
+                mov     R0, A           ; R0 = XRAM[0xF6BB]
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
-                mov     DPTR, #83B0h
-                lcall   code_62CE
-                mov     RAM_4A, A
+                mov     R1, A           ; R1 = XRAM[0xF6BC]
+                mov     DPTR, #83B0h    ; DPTR = 0x83B0
+                lcall   interpolate_table_value ; INPUT:
+                                        ;  - R1 - index in table
+                                        ;  - R0 - factor to scale difference
+                                        ;  - DPTR - table ptr in FLASH
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - Acc - table value
+                mov     RAM_4A, A       ; RAM[0x4A] = interpolated value
                 add     A, #4
                 swap    A
                 rl      A
@@ -10376,7 +10377,13 @@ code_3124:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    A, @DPTR
                 mov     R1, A
                 mov     DPTR, #856Ch
-                lcall   code_62CE
+                lcall   interpolate_table_value ; INPUT:
+                                        ;  - R1 - index in table
+                                        ;  - R0 - factor to scale difference
+                                        ;  - DPTR - table ptr in FLASH
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - Acc - table value
                 mov     RAM_43, A
                 mov     B, A            ; B-Register
                 add     A, #4
@@ -16917,7 +16924,7 @@ code_536C:                              ; CODE XREF: power_on__ignition_key_turn
                 setb    RAM_20.5
 
 code_5371:                              ; CODE XREF: power_on__ignition_key_turned_:code_536C↑j
-                ljmp    code_2967
+                ljmp    MAIN_LOOP
 ; END OF FUNCTION CHUNK FOR power_on__ignition_key_turned_
 
 ; =============== S U B R O U T I N E =======================================
@@ -17444,7 +17451,13 @@ code_5546:                              ; CODE XREF: convert_analog_to_digital_1
 code_5555:                              ; CODE XREF: code_55DE↓p
                                         ; code_5783+8↓p
                 mov     DPTR, #856Ch
-                lcall   code_62CE
+                lcall   interpolate_table_value ; INPUT:
+                                        ;  - R1 - index in table
+                                        ;  - R0 - factor to scale difference
+                                        ;  - DPTR - table ptr in FLASH
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - Acc - table value
                 push    ACC             ; Accumulator
                 mov     R3, A
                 mov     R2, RAM_4A
@@ -18066,7 +18079,13 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                 mov     R0, #0
                 lcall   code_60D3
                 mov     DPTR, #83B0h
-                lcall   code_62CE
+                lcall   interpolate_table_value ; INPUT:
+                                        ;  - R1 - index in table
+                                        ;  - R0 - factor to scale difference
+                                        ;  - DPTR - table ptr in FLASH
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - Acc - table value
                 push    ACC             ; Accumulator
                 mov     R2, A
                 mov     DPTR, #0F6ADh
@@ -18076,7 +18095,13 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                 movx    A, @DPTR
                 mov     R1, A
                 mov     DPTR, #856Ch
-                lcall   code_62CE
+                lcall   interpolate_table_value ; INPUT:
+                                        ;  - R1 - index in table
+                                        ;  - R0 - factor to scale difference
+                                        ;  - DPTR - table ptr in FLASH
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - Acc - table value
                 push    ACC             ; Accumulator
                 mov     R3, A
                 mov     DPTR, #8C0Bh
@@ -20736,22 +20761,30 @@ code_62AF:                              ; CODE XREF: lookup_17byte_table_with_sa
 
 ; =============== S U B R O U T I N E =======================================
 
+; INPUT:
+;  - R1 - index in table
+;  - R0 - factor to scale difference
+;  - DPTR - table ptr in FLASH
+;
+; OUTPUT:
+;  - Acc - table value
 
-code_62CE:                              ; CODE XREF: power_on__ignition_key_turned_+771↑p
+interpolate_table_value:                ; CODE XREF: power_on__ignition_key_turned_+771↑p
                                         ; power_on__ignition_key_turned_+D9D↑p ...
                 mov     A, R1
                 movc    A, @A+DPTR
-                xch     A, R1
+                xch     A, R1           ; Acc = R1
+                                        ; R1 = FLASH[DPTR + R1]
                 inc     A
                 movc    A, @A+DPTR
                 clr     C
-                subb    A, R1
+                subb    A, R1           ; A = FLASH[DPTR + R1 + 1] - FLASH[DPTR + R1]
                 mov     B, R0           ; B-Register
-                mul     AB
-                mov     A, B            ; B-Register
-                add     A, R1
+                mul     AB              ; B:A = R0 * (FLASH[DPTR + R1 + 1] - FLASH[DPTR + R1])
+                mov     A, B            ; A = B (HIGH(B:A))
+                add     A, R1           ; A = FLASH[DPTR + R1] + HIGH(R0 * (FLASH[DPTR + R1 + 1] - FLASH[DPTR + R1]))
                 ret
-; End of function code_62CE
+; End of function interpolate_table_value
 
 
 ; =============== S U B R O U T I N E =======================================
