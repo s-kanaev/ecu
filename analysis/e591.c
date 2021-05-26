@@ -1992,29 +1992,63 @@ MAIN_LOOP_TRAMPOLINE:
   MAIN_LOOP();
 }
 
+inline bool CHECK_AND_CLEAR_BIT(byte RamPtr, bit Bit) {
+  bool Ret = false;
+
+  if (CHECK_BIT_AT(RAM[RamPtr], Bit)) {
+    /* bit is set */
+    /* clear bit atomically */
+    for (;;) {
+      byte Expected = RAM[RamPtr];
+      byte Desired = Expected;
+      CLEAR_BIT_IN(Expected, Bit);
+
+      if (CAS(&RAM[RamPtr], Expected, Desired)) {
+        Ret = true;
+        break;
+      }
+    }
+  } else {
+    /* bit is clear */
+    break;
+  }
+
+  return Ret;
+}
+
+#define COPY_BIT(Dst, DstBit, Src, SrcBit)              \
+do {                                                    \
+  Dst |= SET_BIT_V(CHECK_BIT_AT(Src, SrcBit), DstBit);  \
+} while (0)
+
+inline void TURN_OFF_IGNITION_COIL_1_4() {
+  CLEAR_BIT_IN(P5, 1);
+}
+
+inline void TURN_OFF_IGNITION_COIL_2_3() {
+  CLEAR_BIT_IN(P5, 0);
+}
+
+inline void TURN_OFF_INJECTOR_1() {
+  CLEAR_BIT_IN(P4, 0);
+}
+
+inline void TURN_OFF_INJECTOR_2() {
+  CLEAR_BIT_IN(P4, 1);
+}
+
+inline void TURN_OFF_INJECTOR_3() {
+  CLEAR_BIT_IN(P4, 2);
+}
+
+inline void TURN_OFF_INJECTOR_4() {
+  CLEAR_BIT_IN(P4, 3);
+}
+
 // _2967:
 void MAIN_LOOP() {
   for (;;) {
-    bool Timer0Overflowed = false;
-
-    // implement jbc
-    for (;;) {
-      byte B = RAM[0x28];
-
-      if (CHECK_BIT_AT(B, 0)) {
-        byte Expected = B;
-        CLEAR_BIT_IN(B, 0);
-        byte Desired = B;
-
-        if (CAS(&RAM[0x28], Expected, Desired)) {
-          Timer0Overflowed = true;
-          break;
-        }
-      } else
-        break;
-    }
-
-    if (Timer0Overflowed)
+    if (CHECK_AND_CLEAR_BIT(0x28, 0))
       break;
 
     // _296A:
@@ -2036,7 +2070,79 @@ void MAIN_LOOP() {
 
   // _2983:
   // Timer0 overflowed
-  // ...
+  
+  // IEN0.(!WDT) = 0
+  SET_BIT_IN(IEN0, 6);
+  SET_BIT_IN(IEN1, 6); // reset and activate watchdog timer
+
+  COPY_BIT(RAM[0x2D], 1, RAM[0x2A], 2);
+  COPY_BIT(RAM[0x2D], 2, RAM[0x2A], 7);
+
+  RAM[0x2D] |= SET_BIT_V(kitting_has_camshaft_position_sensor(), 7);
+  RAM[0x2E] |= SET_BIT_V(kitting_camshaft_position_sensor_cross_section_aligned_with_TDC(), 0);
+  RAM[0x2E] |= SET_BIT_V(kitting_has_knock_sensor(), 1);
+
+  // _29AC:
+  if (!CHECK_BIT_AT(RAM[0x73], 5)) {
+    // _29AF:
+    XRAM[0xF7BC] = 0;
+  }
+
+  // _29B4:
+  if (CHECK_BIT_AT(RAM[0x28], 5)) {
+    // _29B7:
+    XRAM[0xF6B9] = 0xFF;
+  } else {
+    // _29BF:
+    if (CHECK_AND_CLEAR_BIT(0x25, 5))
+      jump _2A1F;
+
+    if (XRAM[0xF6B9] != 0xFF)
+      ++XRAM[0xF6B9];
+  }
+
+  // _29CD:
+  if (CHECK_BIT_AT(RAM[0x2A], 0))
+    jump _2A32;
+
+  if (XRAM[0xF6B9] < 0x05)
+    jump _2A32;
+
+  // _29D9:
+  SET_BIT_IN(RAM[0x2A], 0);
+  CLEAR_BIT_IN(RAM[0x25], 1);
+  RAM[0x30] = RAM[0x44] = RAM[0x45] = RAM[0x48] = RAM[0x49] = RAM[0x4A] = RAM[0x4B] = RAM[0x4C] = 0
+  XRAM[0xF6BA] = XRAM[0xF6BB] = XRAM[0xF6BC] = 0;
+
+  // _29FB:
+  // nullify set/clear masks for timer2 @ port5
+  SETMSK = 0;
+  CLRMSK = 0;
+
+  TURN_OFF_IGNITION_COIL_1_4();
+  TURN_OFF_IGNITION_COIL_2_3();
+
+  // Clear IEN2.ECR
+  // COMCLR register compare match interrupt enable
+  // If ECR = 0, the COMCLR compare match interrupt is disabled.
+  IEN2 &= 0xDF;
+
+  CMEN &= 0xFE;
+  TURN_OFF_INJECTOR_1();
+  CMEN &= 0xFB;
+  TURN_OFF_INJECTOR_3();
+  CMEN &= 0xF7;
+  TURN_OFF_INJECTOR_4();
+  CMEN &= 0xFD;
+  TURN_OFF_INJECTOR_2();
+
+  // _2A1C:
+  jump _2B19;
+}
+
+_2A1F:
+{
+  // TODO
 }
 
 // _C000:
