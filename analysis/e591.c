@@ -6,8 +6,10 @@ TYPES:
 
 typedef uint8_t byte;
 typedef uint16_t word;
+typedef uint32_t quad;
 typedef int8_t sbyte;
 typedef int16_t sword;
+typedef int32_t squad;
 typedef int pin;
 
 #define PACKED __attribute__((__packed__))
@@ -54,6 +56,7 @@ void disable_access_to_xram();
 
 #define BYTE(x) (byte)(x)
 #define WORD(x) (word)(x)
+#define QUAD(x) (quad)(x)
 
 #define WAIT_MACHINE_CYCLES_BY_2(x) /* waits for x*2 machine cycles, x = 0 is 0x100 */
 /* SET_BIT(3) = 0x08*/
@@ -83,6 +86,10 @@ do {                          \
 #define SET_HIGH(b) (WORD(BYTE(b)) << 8)
 #define SET_LOW(b) (BYTE(b))
 #define COMPOSE_WORD(h, l) (SET_HIGH((h)) | SET_LOW((l)))
+
+#define LOW_W(q) WORD(QUAD(q) & 0x0000FFFF)
+#define HIGH_W(q) WORD((QUAD(q) & 0xFFFF0000) >> 16)
+#define QUAD_BYTE(q, b) BYTE((QUAD(q) >> (b * 8)) && 0xFF)
 
 #define IS_NEGATIVE(x) ((x) & (1 << (8 * sizeof(x) - 1))) /* x < 0 */
 
@@ -2095,7 +2102,7 @@ void MAIN_LOOP() {
   } else {
     // _29BF:
     if (CHECK_AND_CLEAR_BIT(0x25, 5))
-      jump _2A1F;
+      jump init_xram_f6bb_f6bc_and_ram_48;
 
     if (XRAM[0xF6B9] != 0xFF)
       ++XRAM[0xF6B9];
@@ -2140,8 +2147,90 @@ void MAIN_LOOP() {
   jump _2B19;
 }
 
-_2A1F:
+init_xram_f6bb_f6bc_and_ram_48:
 {
+  if (CHECK_BIT_AT(RAM[0x2A], 0) && (XRAM[0xF6B9] < 2))
+    CLEAR_BIT_IN(RAM[0x20], 2);
+
+  // _2A2D:
+  XRAM[0xF6B9] = 0;
+
+_2A32:
+
+  CLEAR_BIT_IN(IEN0, 7); // disable all interrupts
+  byte Ram44 = RAM[0x44];
+  byte Ram45 = RAM[0x45];
+  SET_BIT_IN(IEN0, 7); // allow interrupts
+
+  quad Dividend;
+  word Divisor;
+  quad Quot;
+  bool DivisionSkipped = false;
+  word QuotW;
+
+  if (Ram44 || Ram45) {
+    // _2A7C:
+    CLEAR_BIT_IN(RAM[0x27], 2);
+    do {
+      Dividend = 0x01E84800;
+      Divisor = COMPOSE_WORD(Ram45, Ram44);
+      Quot = Dividend / Divisor;
+    } while (CHECK_AND_CLEAR_BIT(RAM[0x27], 2));
+    SET_BIT_IN(RAM[0x27], 2);
+  } else {
+    CLEAR_BIT_IN(IEN0, 7); // disable all interrupts
+    byte Ram30 = RAM[0x30];
+    byte Ram1C = RAM[0x1C];
+    byte Ram1D = RAM[0x1D];
+    SET_BIT_IN(IEN0, 7); // allow interrupts
+
+    if (Ram30 != 4) {
+      QuotW = 0;
+      DivisionSkipped = true;
+    } else {
+      // _2A4B:
+      CLEAR_BIT_IN(RAM[0x27], 2);
+      do {
+        Dividend = 0x00082300;
+        Divisor = COMPOSE_WORD(Ram1D, Ram1C);
+        Quot = Dividend / Divisor;
+      } while (CHECK_AND_CLEAR_BIT(RAM[0x27], 2));
+      SET_BIT_IN(RAM[0x27], 2);
+    }
+  }
+  
+  if (!DivisionSkipped) {
+    A = QUAD_BYTE(Quot, 3) | QUAD_BYTE(Quot, 2);
+    if (!A) {
+      // _high_word_of_quot_is_zero:
+      QuotW = LOW_W(Quot);
+    } else {
+      // _high_word_of_quot_is_not_zero:
+      QuotW = 0xFFFF // saturate
+    }
+  }
+
+  // _calc_ram_48:
+  XRAM[0xF6BB] = LOW(QuotW);
+  XRAM[0xF6BC] = HIGH(QuotW);
+
+  {
+    quad X = QUAD(QuotW) + QUAD(0x0020);
+    byte Ram48Val = 0xFF;
+
+    if (X >= QUAD(0xFFFF)) {
+      X = LOW_W(X) << 2;
+
+      if (X >= QUAD(0xFFFF))
+        Ram48Val = QUAD_BYTE(X, 0);
+    }
+
+    RAM[0x48] = Ram48Val;
+  }
+
+  // _ram_48_filled:
+  // TODO
+
   // TODO
 }
 
