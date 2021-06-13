@@ -2101,8 +2101,10 @@ void MAIN_LOOP() {
     XRAM[0xF6B9] = 0xFF;
   } else {
     // _29BF:
-    if (CHECK_AND_CLEAR_BIT(0x25, 5))
-      jump init_xram_f6bb_f6bc_and_ram_48;
+    if (CHECK_AND_CLEAR_BIT(0x25, 5)) {
+      init_xram_f6bb_f6bc_and_ram_48_49_4b_4c_49_4b_4c(false);
+      jump _2B19;
+    }
 
     if (XRAM[0xF6B9] != 0xFF)
       ++XRAM[0xF6B9];
@@ -2110,10 +2112,10 @@ void MAIN_LOOP() {
 
   // _29CD:
   if (CHECK_BIT_AT(RAM[0x2A], 0))
-    jump _2A32;
+    init_xram_f6bb_f6bc_and_ram_48_49_4b_4c_49_4b_4c_49_4b_4c(true);
 
   if (XRAM[0xF6B9] < 0x05)
-    jump _2A32;
+    init_xram_f6bb_f6bc_and_ram_48_49_4b_4c_49_4b_4c_49_4b_4c(true);
 
   // _29D9:
   SET_BIT_IN(RAM[0x2A], 0);
@@ -2147,13 +2149,21 @@ void MAIN_LOOP() {
   jump _2B19;
 }
 
-init_xram_f6bb_f6bc_and_ram_48:
-{
-  if (CHECK_BIT_AT(RAM[0x2A], 0) && (XRAM[0xF6B9] < 2))
-    CLEAR_BIT_IN(RAM[0x20], 2);
+// Returns FLASH[FlashPtr + TableIdx] + HIGH(DiffFactor * (FLASH[FlashPtr + TableIdx + 1] - FLASH[FlashPtr + TableIdx]))
+// _62CE:
+byte InterpolateTableValue(word FlashPtr, byte TableIdx, byte DiffFactor) {
+  return FLASH[FlashPtr + TableIdx] + HIGH(WORD(DiffFactor) * (FLASH[FlashPtr + TableIdx + 1] - FLASH[FlashPtr + TableIdx]));
+}
 
-  // _2A2D:
-  XRAM[0xF6B9] = 0;
+// _2B19 should be called after this sub-proc
+void init_xram_f6bb_f6bc_and_ram_48_49_4b_4c_49_4b_4c_49_4b_4c(bool SkipIntro) {
+  if (!SkipIntro) {
+    if (CHECK_BIT_AT(RAM[0x2A], 0) && (XRAM[0xF6B9] < 2))
+      CLEAR_BIT_IN(RAM[0x20], 2);
+
+    // _2A2D:
+    XRAM[0xF6B9] = 0;
+  }
 
 _2A32:
 
@@ -2229,8 +2239,25 @@ _2A32:
   }
 
   // _ram_48_filled:
-  // TODO
+  {
+    word XramData = COMPOSE_WORD(XRAM[0xF6BC], XRAM[0xF6BB]);
+    const word Diff = WORD(0x80);
 
+    byte Ram49 = COMPOSE_WORD(0xFF, 0xFF - 0x80) < XramData ? 0xFF : HIGH(XramData + Diff);
+    RAM[0x49] = Ram49;
+  }
+  
+  XRAM[0xF6BA] = RAM[0x49] < 0x1F ? 0x1F : RAM[0x49];
+
+  RAM[0x4A] = InterpolateTableValue(0x83B0, XRAM[0xF6BC], XRAM[0xF6BB]); // TODO Table size?
+  RAM[0x4B] = ((RAM[0x4A] + 4) >> 3) & 0x1F;
+  RAM[0x4C] = ((RAM[0x4A] + 8) >> 4); // high nibble
+
+  // continue in _2B19
+}
+
+_2B19:
+{
   // TODO
 }
 
