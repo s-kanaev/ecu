@@ -543,7 +543,7 @@
  00000000:000029BF       code_29BF
  00000000:000029CD       code_29CD
  00000000:000029D7       code_29D7
- 00000000:00002A1F       code_2A1F
+ 00000000:00002A1F       init_xram_f6bb_f6bc_and_ram_48_49_4b_4c
  00000000:00002A29       code_2A29
  00000000:00002A2D       code_2A2D
  00000000:00002A32       code_2A32
@@ -551,7 +551,7 @@
  00000000:00002A7C       code_2A7C
  00000000:00002A7E       code_2A7E
  00000000:00002AAB       high_word_of_quot_is_not_zero
- 00000000:00002AB1       ram_30_less_4
+ 00000000:00002AB1       ram_30_ne_4
  00000000:00002AB7       high_word_of_quot_is_zero
  00000000:00002ABB       calc_ram_48
  00000000:00002AD1       code_2AD1
