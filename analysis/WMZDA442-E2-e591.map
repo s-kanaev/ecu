@@ -560,7 +560,7 @@
  00000000:00002AF0       code_2AF0
  00000000:00002AF4       code_2AF4
  00000000:00002B19       code_2B19
- 00000000:00002B3C       code_2B3C
+ 00000000:00002B3C       query_inputs
  00000000:00002B9D       code_2B9D
  00000000:00002BA9       code_2BA9
  00000000:00002BAC       code_2BAC
@@ -1262,7 +1262,7 @@
  00000000:00005FE2       multiply_signed
  00000000:00005FE7       code_5FE7
  00000000:00005FF4       code_5FF4
- 00000000:00005FFB       code_5FFB
+ 00000000:00005FFB       scale_ADC_10bit_value
  00000000:0000600D       code_600D
  00000000:00006019       code_6019
  00000000:0000601F       code_601F
@@ -1376,8 +1376,8 @@
  00000000:0000647B       code_647B
  00000000:0000648A       code_648A
  00000000:00006497       code_6497
- 00000000:00006498       code_6498
- 00000000:000064A4       code_64A4
+ 00000000:00006498       add_byte_in_xram_word
+ 00000000:000064A4       add_word_in_xram_word
  00000000:000064AC       get_adc_value_from_table_and_adjust_for_calculus
  00000000:000064B8       code_64B8
  00000000:000064BA       adjust_temperature
