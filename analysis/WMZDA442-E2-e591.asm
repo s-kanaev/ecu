@@ -4517,12 +4517,12 @@ code_1431:                              ; CODE XREF: IE0_0:code_1420↑j
                 clr     A
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   code_60EB
                 mov     A, R1
                 jz      code_1443
@@ -4954,12 +4954,12 @@ code_1661:                              ; CODE XREF: IE0_0+28B↑j
                 inc     DPTR
                 movx    A, @DPTR
                 mov     R1, A
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     A, R2
                 jnb     ACC.7, code_16A5 ; Accumulator
                 mov     DPTR, #0F6C8h
@@ -5055,12 +5055,12 @@ code_16F1:                              ; CODE XREF: IE0_0+35D↑j
                 movc    A, @A+DPTR
                 jz      code_1731
                 mov     B, RAM_49       ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   code_60BA
                 mov     DPTR, #0F67Fh
                 movx    A, @DPTR
@@ -5329,12 +5329,12 @@ code_1825:                              ; CODE XREF: IE0_0+42A↑j
                 mov     DPTR, #0F600h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   code_6076
                 jnb     RAM_2B.1, code_1856
                 mov     DPTR, #0F6CCh
@@ -5360,12 +5360,12 @@ code_1825:                              ; CODE XREF: IE0_0+42A↑j
 
 code_1856:                              ; CODE XREF: IE0_0+4AB↑j
                 mov     B, R4           ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     R2, RAM_8
                 mov     R3, RAM_9
                 mov     DPTR, #0F6CEh
@@ -5378,12 +5378,12 @@ code_1856:                              ; CODE XREF: IE0_0+4AB↑j
                 cpl     A
                 inc     A
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   add_word        ; Add words
                                         ;
                                         ; INPUT:
@@ -5471,27 +5471,27 @@ code_1890:                              ; CODE XREF: IE0_0+4C6↑j
                 movx    A, @DPTR
                 mov     R1, A
                 mov     B, RAM_49       ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     B, #40h ; '@'   ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   code_60D3
                 mov     B, #0D2h        ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     A, R1
                 jnz     code_18F3
                 mov     A, R0
@@ -5566,12 +5566,12 @@ code_1934:                              ; CODE XREF: IE0_0:code_1927↑j
                 mov     A, B            ; B-Register
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 jnb     RAM_2B.7, code_19AA
                 mov     DPTR, #0F6C2h
                 movx    A, @DPTR
@@ -5643,12 +5643,12 @@ code_19AA:                              ; CODE XREF: IE0_0+5C2↑j
                 mov     A, RAM_41
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     DPTR, #0F6C5h
                 movx    A, @DPTR
                 rr      A
@@ -5664,21 +5664,21 @@ code_19C4:                              ; CODE XREF: IE0_0:code_19C0↑j
                 mov     DPTR, #0A4A1h
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     DPTR, #0F600h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   code_6076
                 mov     R2, RAM_8
                 mov     R3, RAM_9
@@ -5948,12 +5948,12 @@ code_1B33:                              ; CODE XREF: IE0_0+7A0↑j
                 add     A, B            ; B-Register
                 rrc     A
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   code_60D3
 
 code_1B56:                              ; CODE XREF: IE0_0+796↑j
@@ -6002,12 +6002,12 @@ code_1B78:                              ; CODE XREF: IE0_0+7E5↑j
                 add     A, B            ; B-Register
                 rrc     A
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   code_60D3
 
 code_1B9B:                              ; CODE XREF: IE0_0+7DB↑j
@@ -6383,12 +6383,12 @@ code_1D63:                              ; CODE XREF: IE0_0+9CB↑j
                 mov     DPTR, #0F745h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     R4, B           ; B-Register
                 mov     A, R0
                 mov     R2, A
@@ -6403,12 +6403,12 @@ code_1D63:                              ; CODE XREF: IE0_0+9CB↑j
                 mov     DPTR, #0F754h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     A, R4
                 add     A, B            ; B-Register
                 mov     R4, A
@@ -6427,12 +6427,12 @@ code_1D63:                              ; CODE XREF: IE0_0+9CB↑j
                 mov     DPTR, #0F763h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     A, R4
                 add     A, B            ; B-Register
                 mov     A, R2
@@ -6485,12 +6485,12 @@ code_1DBE:                              ; CODE XREF: IE0_0+A50↓j
                 mov     DPTR, #0F745h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     DPTR, #0F748h
                 mov     A, R0
                 movx    @DPTR, A
@@ -6506,12 +6506,12 @@ code_1DBE:                              ; CODE XREF: IE0_0+A50↓j
                 mov     DPTR, #0F754h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     DPTR, #0F757h
                 mov     A, R0
                 movx    @DPTR, A
@@ -6527,12 +6527,12 @@ code_1DBE:                              ; CODE XREF: IE0_0+A50↓j
                 mov     DPTR, #0F763h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     DPTR, #0F766h
                 mov     A, R0
                 movx    @DPTR, A
@@ -6702,12 +6702,12 @@ code_1DBE:                              ; CODE XREF: IE0_0+A50↓j
                 mov     DPTR, #0F742h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     A, R1
                 jnz     code_1F35
                 mov     A, R2
@@ -6751,12 +6751,12 @@ code_1F39:                              ; CODE XREF: IE0_0+BA5↑j
                 mov     DPTR, #0F751h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     A, R1
                 jnz     code_1F71
                 mov     A, R2
@@ -6800,12 +6800,12 @@ code_1F75:                              ; CODE XREF: IE0_0+BE1↑j
                 mov     DPTR, #0F760h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     A, R1
                 jnz     code_1FAD
                 mov     A, R2
@@ -9201,14 +9201,8 @@ code_2AF4:                              ; CODE XREF: power_on__ignition_key_turn
 
 
 
-
-!!!!!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!!!!!
-
-
-
-
 code_2B19:                              ; CODE XREF: power_on__ignition_key_turned_+68A↑j
-                jb      RAM_28.6, code_2B3C ; if (RAM[0x28] & (1 << 6)) jump ...
+                jb      RAM_28.6, query_inputs ; if (RAM[0x28] & (1 << 6)) jump ...
                 mov     DPTR, #809Bh
                 clr     A
                 movc    A, @A+DPTR
@@ -9217,7 +9211,7 @@ code_2B19:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    A, @DPTR        ; A = XRAM[0xF679]
                 clr     C
                 subb    A, B            ; A = XRAM[0xF679] - FLASH[0x809B]
-                jc      code_2B3C       ; if (A < 0) jump ...
+                jc      query_inputs    ; if (A < 0) jump ...
                 mov     DPTR, #809Ah
                 clr     A
                 movc    A, @A+DPTR
@@ -9225,13 +9219,16 @@ code_2B19:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     A, RAM_49       ; A = RAM[0x49]
                 clr     C
                 subb    A, B            ; A = RAM[0x49] - FLASH[0x809A]
-                jc      code_2B3C       ; if (A < 0) jump ...
+                jc      query_inputs    ; if (A < 0) jump ...
                 setb    RAM_28.6        ; if (!(RAM[0x28] & (1 << 6)) &&
                                         ;     ((XRAM[0xF679] - FLASH[0x809B] < 0) ||
                                         ;      (RAM[0x49] - FLASH[0x809A] > 0))
                                         ;   RAM[0x28] |= (1 << 6);
 
-code_2B3C:                              ; CODE XREF: power_on__ignition_key_turned_:code_2B19↑j
+
+COOLANT TEMPERATURE SENSOR
+
+query_inputs:                           ; CODE XREF: power_on__ignition_key_turned_:code_2B19↑j
                                         ; power_on__ignition_key_turned_+798↑j ...
                 mov     B, #7           ; Coolant temperature sensor
                 lcall   convert_analog_to_digital_10bit ; A/D convert value at requested pin
@@ -9245,18 +9242,30 @@ code_2B3C:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;    R1 - high (bits 7..0)
                                         ;    R0 - low (bits 7..6), bits 5..0 - not used
                 mov     A, R1
-                mov     DPTR, #0F686h
+                mov     DPTR, #0F686h   ; XRAM[0xF686] = HIGH(ADC(CoolantTemp))
                 movx    @DPTR, A        ; XRAM[0xF686] = HIGH(ADC(CoolantTemperatureSensor))
                 mov     B, #8           ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     DPTR, #0F69Eh
-                lcall   code_64A4
-                mov     B, #0Eh         ; B-Register
+                lcall   add_word_in_xram_word ; INPUT:
+                                        ;  - DPTR - address of low byte of word, DPTR+1 - address of high byte
+                                        ;  - R1:R0 - word to add
+                                        ;
+                                        ; word V = COMPOSE_WORD(XRAM[DPTR+1], XRAM[DPTR]);
+                                        ; V += R1:R0
+                                        ; XRAM[DPTR] = LOW(V);
+                                        ; XRAM[DPTR+1] = HIGH(V);
+                                        ;
+                                        ; A = HIGH(V)
+
+
+INTAKE AIR TEMPERATURE SENSOR
+                mov     B, #0Eh         ; Intake air temperature sensor
                 lcall   convert_analog_to_digital_10bit ; A/D convert value at requested pin
                                         ;
                                         ; Input
@@ -9269,17 +9278,29 @@ code_2B3C:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;    R0 - low (bits 7..6), bits 5..0 - not used
                 mov     A, R1
                 mov     DPTR, #0F687h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF686] = HIGH(ADC(IntakeAirTemp))
                 mov     B, #8           ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     DPTR, #0F6A0h
-                lcall   code_64A4
-                mov     B, #8           ; B-Register
+                lcall   add_word_in_xram_word ; INPUT:
+                                        ;  - DPTR - address of low byte of word, DPTR+1 - address of high byte
+                                        ;  - R1:R0 - word to add
+                                        ;
+                                        ; word V = COMPOSE_WORD(XRAM[DPTR+1], XRAM[DPTR]);
+                                        ; V += R1:R0
+                                        ; XRAM[DPTR] = LOW(V);
+                                        ; XRAM[DPTR+1] = HIGH(V);
+                                        ;
+                                        ; A = HIGH(V)
+
+
+CO POTENTIOMETER
+                mov     B, #8           ; CO potentiometer
                 lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
                                         ;
                                         ; Input
@@ -9290,10 +9311,21 @@ code_2B3C:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;  - A = R0 - converted value
                                         ;
                 mov     DPTR, #0F689h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF689] = HIGH(ADC(COpotentiometer))
                 mov     DPTR, #0F6A4h
-                lcall   code_6498
-                mov     B, #9           ; B-Register
+                lcall   add_byte_in_xram_word ; INPUT:
+                                        ;  - DPTR - address of low byte of word, DPTR+1 - address of high byte
+                                        ;  - Acc - byte to add
+                                        ;
+                                        ; word V = COMPOSE_WORD(XRAM[DPTR+1], XRAM[DPTR]);
+                                        ; V += Acc
+                                        ; XRAM[DPTR] = LOW(V);
+                                        ; XRAM[DPTR+1] = HIGH(V);
+                                        ;
+
+
+IGNITION SWITCH
+                mov     B, #9           ; Ignition switch
                 lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
                                         ;
                                         ; Input
@@ -9304,15 +9336,23 @@ code_2B3C:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;  - A = R0 - converted value
                                         ;
                 mov     DPTR, #0F688h
-                movx    @DPTR, A
-                mov     R0, A
+                movx    @DPTR, A        ; XRAM[0xF688] = HIGH(ADC(IgnitionSwitch))
+                mov     R0, A           ; R0 = HIGH(ADC(IgnitionSwitch))
                 mov     DPTR, #0F69Bh
-                lcall   code_6498
+                lcall   add_byte_in_xram_word ; INPUT:
+                                        ;  - DPTR - address of low byte of word, DPTR+1 - address of high byte
+                                        ;  - Acc - byte to add
+                                        ;
+                                        ; word V = COMPOSE_WORD(XRAM[DPTR+1], XRAM[DPTR]);
+                                        ; V += Acc
+                                        ; XRAM[DPTR] = LOW(V);
+                                        ; XRAM[DPTR+1] = HIGH(V);
+                                        ;
                 mov     DPTR, #8096h
                 clr     A
                 movc    A, @A+DPTR
-                mov     R1, A
-                mov     B, #9           ; B-Register
+                mov     R1, A           ; R1 = FLASH[0x8096]
+                mov     B, #9           ; Ignition switch
                 lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
                                         ;
                                         ; Input
@@ -9324,25 +9364,31 @@ code_2B3C:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                 clr     C
                 subb    A, #0
-                jnc     code_2B9D
+                jnc     code_2B9D       ; if (A >= 0) jump ...
                 clr     A
 
 code_2B9D:                              ; CODE XREF: power_on__ignition_key_turned_+808↑j
                 mov     B, #75h ; 'u'   ; B-Register
-                mul     AB
-                rlc     A
+                mul     AB              ; B:A = A * 0x75
+                rlc     A               ; C = !!(A & (1 << 7))
+                                        ; A <<= 1
                 mov     A, B            ; B-Register
-                rlc     A
+                rlc     A               ; C = !!(B & (1 << 7))
+                                        ; A = (B << 1) | ((A & (1 << 7)) >> 7)
                 jnc     code_2BA9
-                mov     A, #0FFh
+                mov     A, #0FFh        ; if (CY)
+                                        ;   A = 0xFF; // staurate
 
 code_2BA9:                              ; CODE XREF: power_on__ignition_key_turned_+813↑j
                 cjne    A, RAM_1, code_2BAC
 
 code_2BAC:                              ; CODE XREF: power_on__ignition_key_turned_:code_2BA9↑j
-                cpl     C
-                mov     RAM_28.4, C
-                mov     B, #0Ch         ; B-Register
+                cpl     C               ; C = !(A < R1) // R1 = FLASH[0x8096]
+                mov     RAM_28.4, C     ; RAM[0x28] |= ((!(A < R1)) << 4)
+
+
+THROTTLE POSITION SENSOR
+                mov     B, #0Ch         ; Throttle Position Sensor
                 lcall   convert_analog_to_digital_10bit ; A/D convert value at requested pin
                                         ;
                                         ; Input
@@ -9355,26 +9401,42 @@ code_2BAC:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;    R0 - low (bits 7..6), bits 5..0 - not used
                 mov     A, R1
                 mov     DPTR, #0F685h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF685] = HIGH(ADC(ThrottlePositionSensor))
                 mov     B, #8           ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     DPTR, #0F6A6h
-                lcall   code_64A4
+                lcall   add_word_in_xram_word ; INPUT:
+                                        ;  - DPTR - address of low byte of word, DPTR+1 - address of high byte
+                                        ;  - R1:R0 - word to add
+                                        ;
+                                        ; word V = COMPOSE_WORD(XRAM[DPTR+1], XRAM[DPTR]);
+                                        ; V += R1:R0
+                                        ; XRAM[DPTR] = LOW(V);
+                                        ; XRAM[DPTR+1] = HIGH(V);
+                                        ;
+                                        ; A = HIGH(V)
                 mov     DPTR, #0F69Dh
                 movx    A, @DPTR
-                jnz     code_2BD7
+                jnz     code_2BD7       ; if (XRAM[0xF69D]) jump ...
                 mov     A, R1
                 mov     DPTR, #0F6B3h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6B3] = HIGH(ScaledThrottlePositionSensor)
                 mov     DPTR, #0F6B4h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6B4] = LOW(ScaledThrottlePositionSensor)
                 sjmp    code_2BF3
 ; ---------------------------------------------------------------------------
+
+
+
+!!!!!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!!!!!
+
+
+
 
 code_2BD7:                              ; CODE XREF: power_on__ignition_key_turned_+838↑j
                 mov     DPTR, #0F6B3h
@@ -9402,7 +9464,15 @@ code_2BF3:                              ; CODE XREF: power_on__ignition_key_turn
                                         ; power_on__ignition_key_turned_+852↑j ...
                 mov     A, RAM_49
                 mov     DPTR, #0F6A8h
-                lcall   code_6498
+                lcall   add_byte_in_xram_word ; INPUT:
+                                        ;  - DPTR - address of low byte of word, DPTR+1 - address of high byte
+                                        ;  - Acc - byte to add
+                                        ;
+                                        ; word V = COMPOSE_WORD(XRAM[DPTR+1], XRAM[DPTR]);
+                                        ; V += Acc
+                                        ; XRAM[DPTR] = LOW(V);
+                                        ; XRAM[DPTR+1] = HIGH(V);
+                                        ;
                 mov     DPTR, #0F69Dh
                 movx    A, @DPTR
                 inc     A
@@ -10401,12 +10471,12 @@ code_3084:                              ; CODE XREF: power_on__ignition_key_turn
                 clr     A
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     DPTR, #807Eh
                 clr     A
                 movc    A, @A+DPTR
@@ -10574,12 +10644,12 @@ code_3124:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    A, @DPTR
                 mov     R1, A
                 mov     B, RAM_49       ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   code_60BA
                 mov     DPTR, #0F6E4h
                 mov     A, R0
@@ -10691,12 +10761,12 @@ code_3203:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     PSW.5, C        ; Program Status Word
                 lcall   code_6060
                 mov     B, #25h ; '%'   ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 clr     RAM_27.2
 
 code_3237:                              ; CODE XREF: power_on__ignition_key_turned_+EC7↓j
@@ -10962,12 +11032,12 @@ code_3366:                              ; CODE XREF: power_on__ignition_key_turn
                 pop     RAM_1
                 pop     RAM_0
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 clr     RAM_27.2
 
 code_3388:                              ; CODE XREF: power_on__ignition_key_turned_+1019↓j
@@ -11028,12 +11098,12 @@ code_33D7:                              ; CODE XREF: power_on__ignition_key_turn
                 movc    A, @A+DPTR
                 jz      code_3434
                 mov     B, RAM_49       ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   code_60BA
                 mov     DPTR, #0F6EEh
                 movx    A, @DPTR
@@ -13817,12 +13887,12 @@ code_4334:                              ; CODE XREF: power_on__ignition_key_turn
                 inc     DPTR
                 movx    A, @DPTR
                 mov     R1, A
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 clr     IEN0.7          ; Interrupt Enable Register 0
                 mov     DPTR, #0F76Ah
                 mov     A, R0
@@ -14880,12 +14950,12 @@ code_491E:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     B, A            ; B-Register
                 mov     R0, #41h ; 'A'
                 mov     R1, #3
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     R2, RAM_0
                 mov     R3, RAM_1
                 mov     R0, #41h ; 'A'
@@ -14973,12 +15043,12 @@ code_499D:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    A, @DPTR
                 mov     R1, A
                 mov     B, RAM_49       ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     A, RAM_58
                 add     A, #80h
                 mov     R2, A
@@ -15008,12 +15078,12 @@ code_499D:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     R2, RAM_0
                 mov     R3, RAM_1
                 cpl     B.7             ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     A, RAM_67
                 jnb     ACC.7, code_49EC ; Accumulator
                 lcall   add_word        ; Add words
@@ -15031,12 +15101,12 @@ code_499D:                              ; CODE XREF: power_on__ignition_key_turn
 
 code_49EC:                              ; CODE XREF: power_on__ignition_key_turned_+2654↑j
                 mov     B, #2Fh ; '/'   ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
 
 code_49F2:                              ; CODE XREF: power_on__ignition_key_turned_+2607↑j
                 mov     DPTR, #0F79Eh
@@ -15046,12 +15116,12 @@ code_49F2:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     A, R1
                 movx    @DPTR, A
                 mov     B, #0CDh        ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 clr     RAM_27.2
 
 code_4A02:                              ; CODE XREF: power_on__ignition_key_turned_+2692↓j
@@ -17101,12 +17171,12 @@ code_5305:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     A, R3
                 movx    @DPTR, A
                 mov     B, #17h         ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     A, R0
                 mov     DPTR, #0F971h
                 movx    @DPTR, A
@@ -17664,12 +17734,12 @@ code_5555:                              ; CODE XREF: code_55DE↓p
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     DPTR, #0B80Dh
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -17679,12 +17749,12 @@ code_5555:                              ; CODE XREF: code_55DE↓p
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   code_60CB
                 pop     B               ; B-Register
                 mov     A, R0
@@ -17704,12 +17774,12 @@ code_5555:                              ; CODE XREF: code_55DE↓p
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     DPTR, #0B80Dh
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -17719,12 +17789,12 @@ code_5555:                              ; CODE XREF: code_55DE↓p
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   code_60CB
                 pop     ACC             ; Accumulator
                 mov     R3, A
@@ -17795,12 +17865,12 @@ code_55DE:                              ; CODE XREF: IE0_0+2BD↑p
 
 code_55F7:                              ; CODE XREF: code_55DE+14↑j
                                         ; code_55DE+25↓j
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   add_word        ; Add words
                                         ;
                                         ; INPUT:
@@ -17826,12 +17896,12 @@ code_5605:                              ; CODE XREF: code_55DE:code_55FF↑j
                 cpl     A
                 inc     A
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   subtract_word   ; INPUT - R1:R0
                                         ;         R3:R2
                                         ;
@@ -17892,12 +17962,12 @@ code_5620:                              ; CODE XREF: IE0_0+2E6↑p
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
                 lcall   code_60DF
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     A, R1
                 jnz     code_5646
                 mov     A, R0
@@ -17936,12 +18006,12 @@ code_5649:                              ; CODE XREF: power_on__ignition_key_turn
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     DPTR, #0B80Dh
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -17951,12 +18021,12 @@ code_5649:                              ; CODE XREF: power_on__ignition_key_turn
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   code_60CB
                 lcall   code_55BA
                 lcall   add_word_R3_R2
@@ -17965,12 +18035,12 @@ code_5649:                              ; CODE XREF: power_on__ignition_key_turn
                 pop     ACC             ; Accumulator
                 mov     R0, A
                 mov     B, #0F0h        ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 clr     RAM_27.2
 
 code_5688:                              ; CODE XREF: code_5649+61↓j
@@ -18042,12 +18112,12 @@ code_56C7:                              ; CODE XREF: IE0_0:code_1651↑p
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   code_60EB
                 ret
 ; End of function code_56C7
@@ -18362,12 +18432,12 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     DPTR, #0B80Dh
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -18377,12 +18447,12 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   code_60CB
                 pop     ACC             ; Accumulator
                 mov     R3, A
@@ -18404,12 +18474,12 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     DPTR, #0B80Dh
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -18419,12 +18489,12 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   code_60CB
                 pop     ACC             ; Accumulator
                 mov     R3, A
@@ -18439,12 +18509,12 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   add_word        ; Add words
                                         ;
                                         ; INPUT:
@@ -18539,12 +18609,12 @@ code_58E4:                              ; CODE XREF: code_58D1+8↑j
                 mov     A, R1
                 mov     R3, A
                 cpl     B.7             ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 pop     ACC             ; Accumulator
                 jnb     ACC.7, code_5913 ; Accumulator
                 lcall   code_615A
@@ -18570,12 +18640,12 @@ code_5926:                              ; CODE XREF: code_58D1+4E↑j
                 mov     R3, A
                 mov     B, RAM_67       ; B-Register
                 cpl     B.7             ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     A, RAM_67
                 jnb     ACC.7, code_593A ; Accumulator
                 lcall   code_615A
@@ -18585,12 +18655,12 @@ code_593A:                              ; CODE XREF: code_58D1+63↑j
                 clr     A
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 jb      RAM_29.4, code_594A
                 lcall   code_60CB
 
@@ -18639,12 +18709,12 @@ code_597A:                              ; CODE XREF: code_58D1+DA↓j
                 movx    A, @DPTR
                 mov     R1, A
                 mov     B, #80h         ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     MD0, B          ; Multiplication/Division Register 0
                 mov     MD1, R0         ; Multiplication/Division Register 1
                 mov     MD2, R1         ; Multiplication/Division Register 2
@@ -19616,12 +19686,12 @@ code_5EA8:                              ; CODE XREF: code_5D9F+103↑j
                 clr     C
                 rlc     A
                 mov     B, A            ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 clr     C
                 mov     DPTR, #0F78Ch
                 movx    A, @DPTR
@@ -19962,17 +20032,17 @@ code_5FF4:                              ; CODE XREF: multiply_signed+A↑j
 ;  - B - factor
 ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
 ;
-;
-; TODO - formulate result
+; OUTPUT:
+;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
 
-code_5FFB:                              ; CODE XREF: IE0_0+AA↑p
+scale_ADC_10bit_value:                  ; CODE XREF: IE0_0+AA↑p
                                         ; IE0_0+2FF↑p ...
                 mov     A, B            ; A = B
                 xch     A, R1           ; Store value of B in R1
                 mul     AB              ; Prod_MSB = B * R1
                 xch     A, R0
                 xch     A, B            ; B-Register
-                xch     A, R1
+                xch     A, R1           ; R0 = LOW(Prod_MSB), R1 = HIGH(Prod_MSB)
                 mul     AB              ; Prod_LSB = R0 * B
                 xch     A, B            ; B-Register
                 add     A, R0
@@ -19981,7 +20051,7 @@ code_5FFB:                              ; CODE XREF: IE0_0+AA↑p
                 addc    A, #0
                 mov     R1, A           ; R1:R0 = Prod_MSB + HIGH(Prod_LSB)
                 ret
-; End of function code_5FFB
+; End of function scale_ADC_10bit_value
 
 
 ; =============== S U B R O U T I N E =======================================
@@ -21374,12 +21444,12 @@ code_63A5:                              ; CODE XREF: code_638E+D↑j
                 movc    A, @A+DPTR
                 mov     R1, A
                 mov     B, R2           ; B-Register
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 mov     A, R2
                 cpl     A
                 inc     A
@@ -21395,12 +21465,12 @@ code_63A5:                              ; CODE XREF: code_638E+D↑j
                 inc     A
                 movc    A, @A+DPTR
                 mov     R1, A
-                lcall   code_5FFB       ; INPUT:
+                lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
-                                        ;
-                                        ; TODO - formulate result
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 lcall   add_word        ; Add words
                                         ;
                                         ; INPUT:
@@ -21700,8 +21770,17 @@ code_6497:                              ; CODE XREF: code_6473+1E↑j
 
 ; =============== S U B R O U T I N E =======================================
 
+; INPUT:
+;  - DPTR - address of low byte of word, DPTR+1 - address of high byte
+;  - Acc - byte to add
+;
+; word V = COMPOSE_WORD(XRAM[DPTR+1], XRAM[DPTR]);
+; V += Acc
+; XRAM[DPTR] = LOW(V);
+; XRAM[DPTR+1] = HIGH(V);
+;
 
-code_6498:                              ; CODE XREF: power_on__ignition_key_turned_+7E5↑p
+add_byte_in_xram_word:                  ; CODE XREF: power_on__ignition_key_turned_+7E5↑p
                                         ; power_on__ignition_key_turned_+7F6↑p ...
                 mov     B, A            ; B-Register
                 movx    A, @DPTR
@@ -21712,13 +21791,23 @@ code_6498:                              ; CODE XREF: power_on__ignition_key_turn
                 addc    A, #0
                 movx    @DPTR, A
                 ret
-; End of function code_6498
+; End of function add_byte_in_xram_word
 
 
 ; =============== S U B R O U T I N E =======================================
 
+; INPUT:
+;  - DPTR - address of low byte of word, DPTR+1 - address of high byte
+;  - R1:R0 - word to add
+;
+; word V = COMPOSE_WORD(XRAM[DPTR+1], XRAM[DPTR]);
+; V += R1:R0
+; XRAM[DPTR] = LOW(V);
+; XRAM[DPTR+1] = HIGH(V);
+;
+; A = HIGH(V)
 
-code_64A4:                              ; CODE XREF: power_on__ignition_key_turned_+7BE↑p
+add_word_in_xram_word:                  ; CODE XREF: power_on__ignition_key_turned_+7BE↑p
                                         ; power_on__ignition_key_turned_+7D5↑p ...
                 movx    A, @DPTR
                 add     A, R0
@@ -21728,7 +21817,7 @@ code_64A4:                              ; CODE XREF: power_on__ignition_key_turn
                 addc    A, R1
                 movx    @DPTR, A
                 ret
-; End of function code_64A4
+; End of function add_word_in_xram_word
 
 
 ; =============== S U B R O U T I N E =======================================
