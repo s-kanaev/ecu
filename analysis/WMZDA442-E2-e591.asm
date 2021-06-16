@@ -9262,6 +9262,8 @@ query_inputs:                           ; CODE XREF: power_on__ignition_key_turn
                                         ; XRAM[DPTR+1] = HIGH(V);
                                         ;
                                         ; A = HIGH(V)
+                                        ;
+                                        ; R1:R0 - left unchanged
 
 
 INTAKE AIR TEMPERATURE SENSOR
@@ -9297,6 +9299,8 @@ INTAKE AIR TEMPERATURE SENSOR
                                         ; XRAM[DPTR+1] = HIGH(V);
                                         ;
                                         ; A = HIGH(V)
+                                        ;
+                                        ; R1:R0 - left unchanged
 
 
 CO POTENTIOMETER
@@ -9322,6 +9326,7 @@ CO POTENTIOMETER
                                         ; XRAM[DPTR] = LOW(V);
                                         ; XRAM[DPTR+1] = HIGH(V);
                                         ;
+                                        ; A = HIGH(V)
 
 
 IGNITION SWITCH
@@ -9348,6 +9353,7 @@ IGNITION SWITCH
                                         ; XRAM[DPTR] = LOW(V);
                                         ; XRAM[DPTR+1] = HIGH(V);
                                         ;
+                                        ; A = HIGH(V)
                 mov     DPTR, #8096h
                 clr     A
                 movc    A, @A+DPTR
@@ -9420,50 +9426,52 @@ THROTTLE POSITION SENSOR
                                         ; XRAM[DPTR+1] = HIGH(V);
                                         ;
                                         ; A = HIGH(V)
-                mov     DPTR, #0F69Dh
+                                        ;
+                                        ; R1:R0 - left unchanged
+                mov     DPTR, #0F69Dh   ; some status byte?
                 movx    A, @DPTR
-                jnz     code_2BD7       ; if (XRAM[0xF69D]) jump ...
+                jnz     xram_f69d_not_zero ; if (XRAM[0xF69D]) jump ...
                 mov     A, R1
                 mov     DPTR, #0F6B3h
                 movx    @DPTR, A        ; XRAM[0xF6B3] = HIGH(ScaledThrottlePositionSensor)
                 mov     DPTR, #0F6B4h
-                movx    @DPTR, A        ; XRAM[0xF6B4] = LOW(ScaledThrottlePositionSensor)
+                movx    @DPTR, A        ; XRAM[0xF6B4] = HIGH(ScaledThrottlePositionSensor)
                 sjmp    code_2BF3
 ; ---------------------------------------------------------------------------
 
-
-
-!!!!!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!!!!!
-
-
-
-
-code_2BD7:                              ; CODE XREF: power_on__ignition_key_turned_+838↑j
+xram_f69d_not_zero:                     ; CODE XREF: power_on__ignition_key_turned_+838↑j
                 mov     DPTR, #0F6B3h
-                movx    A, @DPTR
+                movx    A, @DPTR        ; A = XRAM[0xF6B3]
                 clr     C
-                subb    A, R1
-                jc      code_2BE6
+                subb    A, R1           ; A -= HIGH(ScaledThrottlePositionSensor)
+                jc      code_2BE6       ; if (A < 0) jump ...
+                                        ; if (XRAM[0xF6B3] < HIGH(ScaledThrottlePositionSensor)) jump ...
                 mov     A, R1
                 mov     DPTR, #0F6B3h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6B3] = HIGH(ScaledThrottlePositionSensor)
                 sjmp    code_2BF3
 ; ---------------------------------------------------------------------------
 
 code_2BE6:                              ; CODE XREF: power_on__ignition_key_turned_+84B↑j
                 mov     DPTR, #0F6B4h
-                movx    A, @DPTR
+                movx    A, @DPTR        ; A = XRAM[0xF6B4]
                 clr     C
-                subb    A, R1
-                jnc     code_2BF3
+                subb    A, R1           ; A -= HIGH(ScaledThrottlePositionSensor)
+                jnc     code_2BF3       ; if (A >= 0) jump ...
+                                        ; if (XRAM[0xF6B4] >= HIGH(ScaledThrottlePositionSensor)) jump ...
                 mov     A, R1
                 mov     DPTR, #0F6B4h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6B4] = HIGH(ScaledThrottlePositionSensor)
 
 code_2BF3:                              ; CODE XREF: power_on__ignition_key_turned_+843↑j
                                         ; power_on__ignition_key_turned_+852↑j ...
                 mov     A, RAM_49
-                mov     DPTR, #0F6A8h
+                mov     DPTR, #0F6A8h   ; word V = COMPOSE_WORD(XRAM[0xF6A8+1], XRAM[0xF6A8]);
+                                        ; V += RAM[0x49]
+                                        ; XRAM[0xF6A8] = LOW(V);
+                                        ; XRAM[0xF6A8+1] = HIGH(V);
+                                        ;
+                                        ; A = HIGH(V)
                 lcall   add_byte_in_xram_word ; INPUT:
                                         ;  - DPTR - address of low byte of word, DPTR+1 - address of high byte
                                         ;  - Acc - byte to add
@@ -9473,28 +9481,39 @@ code_2BF3:                              ; CODE XREF: power_on__ignition_key_turn
                                         ; XRAM[DPTR] = LOW(V);
                                         ; XRAM[DPTR+1] = HIGH(V);
                                         ;
+                                        ; A = HIGH(V)
                 mov     DPTR, #0F69Dh
                 movx    A, @DPTR
                 inc     A
-                movx    @DPTR, A
-                cjne    A, #20h, code_2C06 ; ' '
+                movx    @DPTR, A        ; ++XRAM[0xF69D]
+                                        ; A = XRAM[0xF69D]
+                cjne    A, #20h, code_2C06 ; ' ' ; if (++XRAM[0xF69D] != 0x20) jump ...
                 sjmp    code_2C09
 ; ---------------------------------------------------------------------------
+
+
+
+!!!!!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!!!!!
+
+
+
 
 code_2C06:                              ; CODE XREF: power_on__ignition_key_turned_+86F↑j
                 ljmp    code_2ED3
 ; ---------------------------------------------------------------------------
+PREREQUISITES: DPTR = 0xF6D9
+Got here iff (XRAM[0xF69D] == 0x20)
 
 code_2C09:                              ; CODE XREF: power_on__ignition_key_turned_+872↑j
                 clr     A
-                movx    @DPTR, A
-                mov     A, RAM_72
-                jnb     ACC.7, code_2C15 ; Accumulator
-                mov     R0, #0
+                movx    @DPTR, A        ; XRAM[0xF69D] = 0
+                mov     A, RAM_72       ; A = RAM[0x72]
+                jnb     ACC.7, ram_72_bit_7_clear ; if (!(RAM[0x72] & (1 << 7))) jump ...
+                mov     R0, #0          ; R0 = 0
                 ljmp    code_2CC4
 ; ---------------------------------------------------------------------------
 
-code_2C15:                              ; CODE XREF: power_on__ignition_key_turned_+87B↑j
+ram_72_bit_7_clear:                     ; CODE XREF: power_on__ignition_key_turned_+87B↑j
                 mov     DPTR, #0F69Eh
                 movx    A, @DPTR
                 mov     R0, A
@@ -21779,6 +21798,7 @@ code_6497:                              ; CODE XREF: code_6473+1E↑j
 ; XRAM[DPTR] = LOW(V);
 ; XRAM[DPTR+1] = HIGH(V);
 ;
+; A = HIGH(V)
 
 add_byte_in_xram_word:                  ; CODE XREF: power_on__ignition_key_turned_+7E5↑p
                                         ; power_on__ignition_key_turned_+7F6↑p ...
@@ -21806,6 +21826,8 @@ add_byte_in_xram_word:                  ; CODE XREF: power_on__ignition_key_turn
 ; XRAM[DPTR+1] = HIGH(V);
 ;
 ; A = HIGH(V)
+;
+; R1:R0 - left unchanged
 
 add_word_in_xram_word:                  ; CODE XREF: power_on__ignition_key_turned_+7BE↑p
                                         ; power_on__ignition_key_turned_+7D5↑p ...
