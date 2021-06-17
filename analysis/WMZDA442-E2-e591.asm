@@ -9492,11 +9492,7 @@ code_2BF3:                              ; CODE XREF: power_on__ignition_key_turn
 ; ---------------------------------------------------------------------------
 
 
-
-!!!!!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!!!!!
-
-
-
+!!!!!!!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!!!!!!
 
 code_2C06:                              ; CODE XREF: power_on__ignition_key_turned_+86F↑j
                 ljmp    code_2ED3
@@ -9510,36 +9506,39 @@ code_2C09:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     A, RAM_72       ; A = RAM[0x72]
                 jnb     ACC.7, ram_72_bit_7_clear ; if (!(RAM[0x72] & (1 << 7))) jump ...
                 mov     R0, #0          ; R0 = 0
-                ljmp    code_2CC4
+                ljmp    temperature_init_done
 ; ---------------------------------------------------------------------------
 
 ram_72_bit_7_clear:                     ; CODE XREF: power_on__ignition_key_turned_+87B↑j
                 mov     DPTR, #0F69Eh
                 movx    A, @DPTR
-                mov     R0, A
+                mov     R0, A           ; R0 = A = XRAM[0xF69E] // low byte of scaled ADC Coolant Temperature
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
-                jb      RAM_26.6, code_2C5F
+                mov     R1, A           ; R1 = A = XRAM[0xF69F] // high byte of scaled ADC Coolant Temperature
+                jb      RAM_26.6, ram_26_bit_6_set ; if (RAM[0x26] & (1 << 6)) jump ...
                 mov     DPTR, #805Dh
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = A = FLASH[0x805D]
                 mov     DPTR, #0F6BFh
-                movx    A, @DPTR
+                movx    A, @DPTR        ; A = XRAM[0xF6BF]
                 cjne    A, B, code_2C2E ; B-Register
 
 code_2C2E:                              ; CODE XREF: power_on__ignition_key_turned_+899↑j
-                jc      code_2C4A
+                jc      xram_F6BF_less_than_flash_805D_or_coolant_temperature_OK ; if (A < B) jump ...
+                                        ; if (XRAM[0xF6BF] < FLASH[0x805D]) jump ...
                 mov     DPTR, #8057h
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
-                mov     A, R1
+                mov     B, A            ; B = FLASH[0x8057]
+                mov     A, R1           ; A = R1
                 cjne    A, B, code_2C3B ; B-Register
 
 code_2C3B:                              ; CODE XREF: power_on__ignition_key_turned_+8A6↑j
-                jc      code_2CA7
+                jc      xram_F69F_less_than_MinimumADCCoolantTemp ; if (A < B) jump ...
+                                        ; if (XRAM[0xF69F] < FLASH[0x8057]) jump ...
+                                        ; if (XRAM[0xF69F] < MinimumADCCoolantTemp) jump ...
                 mov     DPTR, #8058h
                 clr     A
                 movc    A, @A+DPTR
@@ -9548,12 +9547,15 @@ code_2C3B:                              ; CODE XREF: power_on__ignition_key_turn
                 cjne    A, B, code_2C48 ; B-Register
 
 code_2C48:                              ; CODE XREF: power_on__ignition_key_turned_+8B3↑j
-                jnc     code_2CAD
+                jnc     xram_F69F_not_less_than_MaximumADCCoolantTemp ; if (A >= B) jump ...
+                                        ; if (XRAM[0xF69F] >= FLASH[0x8058]) jump ...
+                                        ; if (XRAM[0xF69F] >= MaximumADCCoolantTemp) jump ...
 
-code_2C4A:                              ; CODE XREF: power_on__ignition_key_turned_:code_2C2E↑j
+xram_F6BF_less_than_flash_805D_or_coolant_temperature_OK:
+                                        ; CODE XREF: power_on__ignition_key_turned_:code_2C2E↑j
                 clr     RAM_23.2
-                clr     RAM_23.3
-                mov     DPTR, #831Fh
+                clr     RAM_23.3        ; clear error
+                mov     DPTR, #831Fh    ; coolant temperature table
                 lcall   get_adc_value_from_table_and_adjust_for_calculus ; Find ADC value in table and adjust for calculus
                                         ;
                                         ; INPUT
@@ -9567,25 +9569,25 @@ code_2C4A:                              ; CODE XREF: power_on__ignition_key_turn
                                         ; OUTPUT
                                         ;   R1:R0 - adjusted table value
                                         ;   Acc = R1
-                mov     RAM_3A, A
+                mov     RAM_3A, A       ; Store adjusted coolant temperature
                 mov     DPTR, #805Ch
                 clr     A
-                movc    A, @A+DPTR
+                movc    A, @A+DPTR      ; A = FLASH[0x805C] // threshold of coolant temperature
                 mov     B, A            ; B-Register
                 sjmp    code_2C99
 ; ---------------------------------------------------------------------------
 
-code_2C5F:                              ; CODE XREF: power_on__ignition_key_turned_+88B↑j
+ram_26_bit_6_set:                       ; CODE XREF: power_on__ignition_key_turned_+88B↑j
                 mov     DPTR, #805Dh
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = A = FLASH[0x805D]
                 mov     DPTR, #0F6BFh
-                movx    A, @DPTR
+                movx    A, @DPTR        ; A = XRAM[0xF6BF]
                 cjne    A, B, code_2C6D ; B-Register
 
 code_2C6D:                              ; CODE XREF: power_on__ignition_key_turned_+8D8↑j
-                jc      code_2C86
+                jc      xram_F6BF_less_than_flash_805D_or_coolant_temperature_OK_2 ; if (XRAM[0xF6BF] < FLASH[0x805D]) jump ...
                 mov     DPTR, #8059h
                 clr     A
                 movc    A, @A+DPTR
@@ -9594,16 +9596,17 @@ code_2C6D:                              ; CODE XREF: power_on__ignition_key_turn
                 cjne    A, B, code_2C7A ; B-Register
 
 code_2C7A:                              ; CODE XREF: power_on__ignition_key_turned_+8E5↑j
-                jc      code_2CA7
+                jc      xram_F69F_less_than_MinimumADCCoolantTemp ; if (XRAM[0xF69F] < FLASH[0x8059]) jump ...
                 mov     DPTR, #805Ah
                 clr     A
                 movc    A, @A+DPTR
                 cjne    A, RAM_1, code_2C84
 
 code_2C84:                              ; CODE XREF: power_on__ignition_key_turned_+8EF↑j
-                jc      code_2CAD
+                jc      xram_F69F_not_less_than_MaximumADCCoolantTemp ; if (XRAM[0xF69F] >= FLASH[0x805A]) jump ...
 
-code_2C86:                              ; CODE XREF: power_on__ignition_key_turned_:code_2C6D↑j
+xram_F6BF_less_than_flash_805D_or_coolant_temperature_OK_2:
+                                        ; CODE XREF: power_on__ignition_key_turned_:code_2C6D↑j
                 clr     RAM_23.2
                 clr     RAM_23.3
                 mov     DPTR, #8330h
@@ -9620,52 +9623,59 @@ code_2C86:                              ; CODE XREF: power_on__ignition_key_turn
                                         ; OUTPUT
                                         ;   R1:R0 - adjusted table value
                                         ;   Acc = R1
-                mov     RAM_3A, A
+                mov     RAM_3A, A       ; Store adjusted coolant temperature
                 mov     DPTR, #805Bh
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = A = FLASH[0x805B] // threshold coolant of coolant temperature ?
 
 code_2C99:                              ; CODE XREF: power_on__ignition_key_turned_+8CB↑j
-                mov     A, RAM_3A
+                mov     A, RAM_3A       ; A = RAM[0x3A] // adjusted coolant temperature
                 cjne    A, B, code_2C9E ; B-Register
 
 code_2C9E:                              ; CODE XREF: power_on__ignition_key_turned_+909↑j
                 cpl     C
-                mov     RAM_26.6, C
+                mov     RAM_26.6, C     ; RAM[0x26] |= ((RAM[0x30] >= B) << 6) // B - is either FLASH[0x805B] or FLASH[0x805C], the threashold of coolant temperature value.
                 jc      code_2CA5
-                sjmp    code_2CC4
+                sjmp    temperature_init_done
 ; ---------------------------------------------------------------------------
 
 code_2CA5:                              ; CODE XREF: power_on__ignition_key_turned_+90F↑j
-                sjmp    code_2CC4
+                sjmp    temperature_init_done
 ; ---------------------------------------------------------------------------
 
-code_2CA7:                              ; CODE XREF: power_on__ignition_key_turned_:code_2C3B↑j
+xram_F69F_less_than_MinimumADCCoolantTemp:
+                                        ; CODE XREF: power_on__ignition_key_turned_:code_2C3B↑j
                                         ; power_on__ignition_key_turned_:code_2C7A↑j
-                setb    RAM_23.2
+                setb    RAM_23.2        ; set error flag
                 clr     RAM_23.3
-                sjmp    code_2CB1
+                sjmp    coolant_error_condition_common
 ; ---------------------------------------------------------------------------
 
-code_2CAD:                              ; CODE XREF: power_on__ignition_key_turned_:code_2C48↑j
+xram_F69F_not_less_than_MaximumADCCoolantTemp:
+                                        ; CODE XREF: power_on__ignition_key_turned_:code_2C48↑j
                                         ; power_on__ignition_key_turned_:code_2C84↑j
-                clr     RAM_23.2
+                clr     RAM_23.2        ; set error flag
                 setb    RAM_23.3
 
-code_2CB1:                              ; CODE XREF: power_on__ignition_key_turned_+919↑j
+coolant_error_condition_common:         ; CODE XREF: power_on__ignition_key_turned_+919↑j
                 mov     DPTR, #0F6BFh
                 movx    A, @DPTR
                 anl     A, #0F0h
                 swap    A
                 mov     B, A            ; B-Register
-                mov     DPTR, #8A4Bh
+                mov     DPTR, #8A4Bh    ; fallback coolant temperature
                 mov     A, B            ; B-Register
                 movc    A, @A+DPTR
-                mov     RAM_3A, A
-                mov     R0, #0
+                mov     RAM_3A, A       ; RAM[0x3A] = A = FLASH[0x8A4B + ((XRAM[0xF6BF] >> 4) & 0x0F)]
+                mov     R0, #0          ; R0 = 0
+PREREQUISITE:
+ - RAM[0x3A] - contains adjusted coolant temperature
+ - R0 - low byte of scaled coolant temperature
 
-code_2CC4:                              ; CODE XREF: power_on__ignition_key_turned_+880↑j
+!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!
+
+temperature_init_done:                  ; CODE XREF: power_on__ignition_key_turned_+880↑j
                                         ; power_on__ignition_key_turned_+911↑j ...
                 mov     R1, RAM_3A
                 lcall   adjust_temperature ; INPUT
@@ -9680,7 +9690,7 @@ code_2CC4:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ;   Result returned in Acc
                                         ;
-                mov     RAM_3D, A
+                mov     RAM_3D, A       ; RAM[0x3D] = adjusted coolant temperature
                 mov     DPTR, #873Fh
                 clr     A
                 movc    A, @A+DPTR

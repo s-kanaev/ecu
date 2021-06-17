@@ -573,19 +573,19 @@
  00000000:00002C2E       code_2C2E
  00000000:00002C3B       code_2C3B
  00000000:00002C48       code_2C48
- 00000000:00002C4A       code_2C4A
- 00000000:00002C5F       code_2C5F
+ 00000000:00002C4A       xram_F6BF_less_than_flash_805D_or_coolant_temperature_OK
+ 00000000:00002C5F       ram_26_bit_6_set
  00000000:00002C6D       code_2C6D
  00000000:00002C7A       code_2C7A
  00000000:00002C84       code_2C84
- 00000000:00002C86       code_2C86
+ 00000000:00002C86       xram_F6BF_less_than_flash_805D_or_coolant_temperature_OK_2
  00000000:00002C99       code_2C99
  00000000:00002C9E       code_2C9E
  00000000:00002CA5       code_2CA5
- 00000000:00002CA7       code_2CA7
- 00000000:00002CAD       code_2CAD
- 00000000:00002CB1       code_2CB1
- 00000000:00002CC4       code_2CC4
+ 00000000:00002CA7       xram_F69F_less_than_MinimumADCCoolantTemp
+ 00000000:00002CAD       xram_F69F_not_less_than_MaximumADCCoolantTemp
+ 00000000:00002CB1       coolant_error_condition_common
+ 00000000:00002CC4       temperature_init_done
  00000000:00002CF0       code_2CF0
  00000000:00002CFD       code_2CFD
  00000000:00002D07       code_2D07
