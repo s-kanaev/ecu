@@ -592,8 +592,8 @@
  00000000:00002D09       code_2D09
  00000000:00002D17       code_2D17
  00000000:00002D1D       code_2D1D
- 00000000:00002D21       code_2D21
- 00000000:00002D2A       code_2D2A
+ 00000000:00002D21       no_intake_air_temperature_sensor
+ 00000000:00002D2A       ram_73_bit_0_set
  00000000:00002D47       code_2D47
  00000000:00002D5D       code_2D5D
  00000000:00002D65       code_2D65

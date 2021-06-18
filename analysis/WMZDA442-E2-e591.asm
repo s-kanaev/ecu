@@ -9221,8 +9221,8 @@ code_2B19:                              ; CODE XREF: power_on__ignition_key_turn
                 subb    A, B            ; A = RAM[0x49] - FLASH[0x809A]
                 jc      query_inputs    ; if (A < 0) jump ...
                 setb    RAM_28.6        ; if (!(RAM[0x28] & (1 << 6)) &&
-                                        ;     ((XRAM[0xF679] - FLASH[0x809B] < 0) ||
-                                        ;      (RAM[0x49] - FLASH[0x809A] > 0))
+                                        ;     ((XRAM[0xF679] - FLASH[0x809B] >= 0) &&
+                                        ;      (RAM[0x49] - FLASH[0x809A] >= 0))
                                         ;   RAM[0x28] |= (1 << 6);
 
 
@@ -9242,7 +9242,7 @@ query_inputs:                           ; CODE XREF: power_on__ignition_key_turn
                                         ;    R1 - high (bits 7..0)
                                         ;    R0 - low (bits 7..6), bits 5..0 - not used
                 mov     A, R1
-                mov     DPTR, #0F686h   ; XRAM[0xF686] = HIGH(ADC(CoolantTemp))
+                mov     DPTR, #0F686h
                 movx    @DPTR, A        ; XRAM[0xF686] = HIGH(ADC(CoolantTemperatureSensor))
                 mov     B, #8           ; B-Register
                 lcall   scale_ADC_10bit_value ; INPUT:
@@ -9694,22 +9694,22 @@ temperature_init_done:                  ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #873Fh
                 clr     A
                 movc    A, @A+DPTR
-                jnb     ACC.3, code_2D21 ; Accumulator
-                mov     R0, #0
-                mov     A, RAM_73
-                jb      ACC.0, code_2D2A ; Accumulator
+                jnb     ACC.3, no_intake_air_temperature_sensor ; if (!(is there air temperature sensor)) jump ...
+                mov     R0, #0          ; R0 = 0
+                mov     A, RAM_73       ; A = RAM[0x73]
+                jb      ACC.0, ram_73_bit_0_set ; if (RAM[0x73] & (1 << 0)) jump ...
                 mov     DPTR, #0F6A0h
                 movx    A, @DPTR
-                mov     R0, A
+                mov     R0, A           ; R0 = XRAM[0xF6A0]
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
+                mov     R1, A           ; R1 = XRAM[0xF6A1]
                 mov     DPTR, #8060h
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = FLASH[0x8060]
                 mov     DPTR, #0F6BFh
-                movx    A, @DPTR
+                movx    A, @DPTR        ; A = XRAM[0xF6BF]
                 cjne    A, B, code_2CF0 ; B-Register
 
 code_2CF0:                              ; CODE XREF: power_on__ignition_key_turned_+95B↑j
@@ -9749,20 +9749,20 @@ code_2D09:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;   R1:R0 - adjusted table value
                                         ;   Acc = R1
                 mov     RAM_3B, A
-                sjmp    code_2D2A
+                sjmp    ram_73_bit_0_set
 ; ---------------------------------------------------------------------------
 
 code_2D17:                              ; CODE XREF: power_on__ignition_key_turned_:code_2CFD↑j
                 setb    RAM_24.4
                 clr     RAM_24.5
-                sjmp    code_2D21
+                sjmp    no_intake_air_temperature_sensor
 ; ---------------------------------------------------------------------------
 
 code_2D1D:                              ; CODE XREF: power_on__ignition_key_turned_:code_2D07↑j
                 clr     RAM_24.4
                 setb    RAM_24.5
 
-code_2D21:                              ; CODE XREF: power_on__ignition_key_turned_+93E↑j
+no_intake_air_temperature_sensor:       ; CODE XREF: power_on__ignition_key_turned_+93E↑j
                                         ; power_on__ignition_key_turned_+989↑j
                 mov     DPTR, #8061h
                 clr     A
@@ -9770,7 +9770,7 @@ code_2D21:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     RAM_3B, A
                 mov     R0, #0
 
-code_2D2A:                              ; CODE XREF: power_on__ignition_key_turned_+945↑j
+ram_73_bit_0_set:                       ; CODE XREF: power_on__ignition_key_turned_+945↑j
                                         ; power_on__ignition_key_turned_+983↑j
                 mov     R1, RAM_3B
                 lcall   adjust_temperature ; INPUT
