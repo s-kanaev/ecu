@@ -2155,6 +2155,7 @@ byte InterpolateTableValue(word FlashPtr, byte TableIdx, byte DiffFactor) {
   return FLASH[FlashPtr + TableIdx] + HIGH(WORD(DiffFactor) * (FLASH[FlashPtr + TableIdx + 1] - FLASH[FlashPtr + TableIdx]));
 }
 
+// TODO memory map for memory locations used here
 // _2B19 should be called after this sub-proc
 void init_xram_f6bb_f6bc_and_ram_48_49_4b_4c_49_4b_4c_49_4b_4c(bool SkipIntro) {
   if (!SkipIntro) {
@@ -2256,8 +2257,56 @@ _2A32:
   // continue in _2B19
 }
 
+// _5FFB:
+word scale10bitADCValue(word V, byte Factor) {
+  // calculus: (WORD(HIGH(V)) * Factor) + LOW(WORD(LOW(V)) * Factor)
+  return HIGH_W(QUAD(V) * Factor);
+}
+
+// _64A4:
+void addWordInXRAMWord(word V, word XramPtr) {
+  V += COMPOSE_WORD(XRAM[XramPtr + 1], XRAM[XramPtr]);
+
+  XRAM[XramPtr] = LOW(V);
+  XRAM[XramPtr + 1] = HIGH(V);
+}
+
+// _6498:
+void addByteInXRAMWord(byte _V, word XramPtr) {
+  word V = COMPOSE_WORD(XRAM[XramPtr + 1], XRAM[XramPtr]);
+  V += _V;
+
+  XRAM[XramPtr] = LOW(V);
+  XRAM[XramPtr + 1] = HIGH(V);
+}
+
 _2B19:
 {
+  if (!CHECK_BIT_AT(RAM[0x28], 6) &&
+      (XRAM[0xF679] >= FLASH[0x809B] && RAM[0x49] >= FLASH[0x809A])) {
+    // _2B3A
+    SET_BIT_IN(RAM[0x28], 6);
+  }
+
+  // query_inputs:
+  // _2B3C:
+  // Coolant temperature sensor
+  {
+    word CoolantTemp = ADC_10bit(COOLANT_TEMP_PIN);
+    XRAM[0xF686] = HIGH(CoolantTemp);
+
+    CoolantTemp = scale10bitADCValue(CoolantTemp, 8);
+
+    addWordInXRAMWord(CoolantTemp, 0xF69E);
+  }
+
+  // _2B53:
+  // Intake air temperature sensor
+  {
+    // TODO
+  }
+
+
   // TODO
 }
 
