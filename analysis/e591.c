@@ -1,97 +1,13 @@
-/*
-TYPES:
- - byte - a byte
- - pin - a pin
-*/
-
-typedef uint8_t byte;
-typedef uint16_t word;
-typedef uint32_t quad;
-typedef int8_t sbyte;
-typedef int16_t sword;
-typedef int32_t squad;
-typedef int pin;
-
-#define PACKED __attribute__((__packed__))
-struct PACKED TableEntryS {
-  byte TableIdx : 4;
-  byte InterpolationFraction : 4; // Used for interpolation / profiling.
-};
-
-union TableEntryU {
-  TableEntryS TE;
-  byte ByteVal;
-};
-
-typedef union TableEntryU TableEntryT;
+#include "include/types.h"
+#include "include/ram.h"
+#include "include/flash.h"
+#include "include/xram.h"
+#include "include/eeprom.h"
+#include "include/binary_ops.h"
+#include "include/undefined.h"
 
 //////////////////////////////// FUNCTIONS:
-/* Send DATA byte over SPI interface described by
-   MOSI (output), MISO (input) and CLK pins.
-   Sends data over MOSI pin.
-   Returns byte fetched on MISO pin.
-   0 for MISO - no input. */
-byte SendOverSPI(byte DATA, pin MOSI, pin MISO, pin CLK);
-
-/* Send DATA byte over I2C bus described by
-   SDA (I/O), SCL (output).
-   Returns if byte was ACK'ed */
-bool SendOverI2C(byte DATA, pin SDA, pin SCL);
-/* Read single byte over I2C bus described by
-   SDA (I/O), SCL (output).
-   Returns byte read */
-byte ReadOnI2C(pin SDA, pin SCL);
-
-/* A/D Convert voltage at the specified pin.
-   Result is 10-bit integer value which is set at the highest 10 bits of a word.
- */
-word ADC_10bit(pin Pin);
-/* A/D Convert voltage at the specified pin.
-   Result is 8-bit integer value.
- */
-byte ADC_8bit(pin Pin);
-
-void enable_access_to_xram();
-void disable_access_to_xram();
-
-#define BYTE(x) (byte)(x)
-#define WORD(x) (word)(x)
-#define QUAD(x) (quad)(x)
-
 #define WAIT_MACHINE_CYCLES_BY_2(x) /* waits for x*2 machine cycles, x = 0 is 0x100 */
-/* SET_BIT(3) = 0x08*/
-#define SET_BIT(bit) ((1) << (bit))
-#define SET_BIT_V(v, bit) ((!!(v)) << (bit))
-
-#define SET_BIT_IN(v, bit)  \
-do {                        \
-  v |= SET_BIT(bit);        \
-} while (0)
-
-#define CLEAR_BIT_IN(v, bit)  \
-do {                          \
-  v &= ~(SET_BIT(bit));       \
-} while (0)
-
-/* CHECK_BIT_AT(0x10, 4) is true */
-#define CHECK_BIT_AT(val, bit) ((val) & SET_BIT(bit))
-
-#define SWAP_NIBBLES(b) ((((BYTE((b))) & 0x0F) << 4) | (((BYTE((b))) & 0xF0) >> 4))
-
-// get low byte
-#define LOW(w) BYTE(WORD(w) & 0x00FF)
-// get high byte
-#define HIGH(w) BYTE((WORD(w) & 0xFF00) >> 8)
-
-#define SET_HIGH(b) (WORD(BYTE(b)) << 8)
-#define SET_LOW(b) (BYTE(b))
-#define COMPOSE_WORD(h, l) (SET_HIGH((h)) | SET_LOW((l)))
-
-#define LOW_W(q) WORD(QUAD(q) & 0x0000FFFF)
-#define HIGH_W(q) WORD((QUAD(q) & 0xFFFF0000) >> 16)
-#define QUAD_BYTE(q, b) BYTE((QUAD(q) >> (b * 8)) && 0xFF)
-
-#define IS_NEGATIVE(x) ((x) & (1 << (8 * sizeof(x) - 1))) /* x < 0 */
 
 //////////////////////////////// CONSTANTS
 #define KNOCK_SENSOR_TEST_CONFIG_WORD ((byte)(0x00))
@@ -112,6 +28,9 @@ do {                          \
 #define INTAKE_AIR_TEMP_PIN ((pin)0x0E)
 #define CO_POT_PIN ((pin)0x08)
 #define IGNITION_VOLTAGE_PIN ((pin)0x09)
+#define THROTTLE_POSITION_PIN ((pin)0x0C)
+
+#define IGNITION_VOLTAGE_FACTOR BYTE(0x75)
 
 //////////////////////////////// General purpose flags:
 /*
@@ -119,404 +38,6 @@ PSW.5 (F0) - was previously working?
   0 = ignition was turned on for the first time.
 PSW.1 (F1) - general purpose flag, boolean parameter employed in trampoline functions
 */
-
-//////////////////////////////// MEMORY SECTIONS
-
-
-////////////// RAM MAP
-byte RAM[0x100] = {
-  [0x00..0x07] = 0, // R0..R7 @ register bank 0
-  [0x08..0x0F] = 0, // R0..R7 @ register bank 1
-  [0x10..0x17] = 0, // R0..R7 @ register bank 2
-  [0x18..0x1F] = 0, // R0..R7 @ register bank 3
-
-  // the rest (up to 0x7B, incl.) is initialized with nil
-  [0x20] = 0x00, // bit 6 (bit address 0x06) = copy of PSW.F1 // watchdog triggered?
-                 // bit 7 (bit address 0x07) = if xram check sum was not valid
-
-  [0x21] = 0x00, // bit 0 (bit address 0x08) = 1 if failed to read first 0x42 bytes from eeprom
-  [0x22] = 0x00, // error codes ?
-                 // bit 4 - ignition switch voltage less than low limit
-                 // bit 5 - ignition switch voltage higher than high limit
-  [0x23] = 0x00, // error codes?
-                 // bit 2 - coolant temperature less than low limit
-                 // bit 3 - coolant temperature higher than high limit
-                 // bit 4 - CO potentiometer less than low limit
-                 // bit 5 - CO potentiometer temperature higher than high limit
-  [0x24] = 0x00, // error codes?
-                 // bit 4 - intake air temperature less than low limit
-                 // bit 5 - intake air temperature higher than high limit
-  [0x25] = 0x00,
-
-  [0x26] = 0,     // status byte:
-                  // bit 6 - ??
-
-  [0x27] = 0x00,  // ???
-                  // bit 2 (bit address 0x3A)
-                  // bit 3 (bit address 0x3B) = copy of PSW.F0
-
-  [0x28..0x29] = 0x00,
-  [0x2A] = 0x00,  // some status word
-                  // bit 3 ???
-  [0x2B..0x2C] = 0x00,
-  [0x2D] = 0x00,  // bit 7 = FLASH[0x873F] bit 4, is there camshaft position sensor
-  [0x2E] = 0x00,  // bit 0 = FLASH[0x873F] bit 5, camshaft position sensor cross-section is aligned with TDC
-                  // bit 1 = FLASH[0x873F] bit 2, is there knock sensor
-
-  [0x2F] = 0,     // bit 0 - ???
-                  // bit 1 - ???
-
-  [0x3A] = 0,     // Adjusted coolant temperature
-
-  [0x3B] = 0,     // Adjusted intake air temperature
-  [0x3C] = 0,     // Adjusted ignition switch voltage
-  
-  [0x3D] = 0,     // Adjusted coolant temperature
-                  // packed offset and factor for FLASH[0xA2FD]
-                  // factor - least significant three bits, will be SHL 5 = xxx0 0000
-                  // offset - most significant five bits, will be SHR 3, max value = 0x1F
-
-  [0x3E] = 0,     // Adjusted intake air temperature
-  [0x3F] = 0,     // Adjusted ignition switch voltage
-  [0x40..0x43] = 0,
-  [0x44] = 0,     // These two can be changed by some interrupts
-  [0x45] = 0,
-  [0x46..0x4B] = 0,
-  [0x4C] = 0,     // offset div 0x11 for tabel at FLASH[0x8AFB]
-  [0x4D..0x5C] = 0,
-  [0x5D] = 0,     // ???
-  [0x5E] = 0x00,
-
-  [0x5F] = 0x20,  // ???
-  [0x60] = 0x03,  // ???
-  [0x61] = 0x21,  // ???
-  [0x62] = 0x00,  // ???
-
-  [0x63] = 0x00,  // Some derivative from Coolant Temperature
-
-  [0x64..0x71] = 0,
-  [0x72] = 0,     // some status word ?
-                  // bit 7
-                  // bit 6
-                  // bit 5  - ???
-                  // bit 4
-                  // bit 3
-                  // bit 2
-                  // bit 1
-                  // bit 0
-  [0x73..0x7B] = 0x00,
-
-  [0x7C..0x7D] = 0x00,
-
-  [0x7E..0x7F] = 0x40, // HIP0045 configuration words
-  
-#define STACK = 0x00
-  [0xB4..0xFF] = STACK
-#undef STACK
-};
-
-////////////// FLASH MAP
-byte FLASH[0x10000] = {
-  /* knock_sensor_balance_control_gain_ratio_table configuration words (bytes), lengts = 0x40 bytes  */
-  [0x24EF] = 0x3F,
-  [0x24F0] = {0x3F, 0x3F, 0x3F, 0x39, 0x34, 0x31, 0x2F, 0x2D, 0x2A, 0x28, 0x27, 0x25, 0x24, 0x23, 0x22, 0x21},
-  [0x2500] = {0x20, 0x1F, 0x1E, 0x1D, 0x1D, 0x1D, 0x1C, 0x1C, 0x1B, 0x1B, 0x1A, 0x19, 0x19, 0x18, 0x18, 0x18},
-  [0x2510] = {0x17, 0x16, 0x16, 0x16, 0x15, 0x15, 0x15, 0x14, 0x14, 0x14, 0x14, 0x13, 0x13, 0x13, 0x13, 0x13},
-  [0x2520] = {0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11},
-
-  [0x8057] = 0x64,  // minimum A/D Converted Coolant Temperature
-  [0x8058] = 0xF0,  // maximum A/D Converted Coolant Temperature
-  [0x805D] = 0x00,  // somehow used in processing of A/D Converted Coolant Temperature ?
-  [0x805E] = 0x64,  // minimum A/D Converted Intake Air Temperature
-  [0x805F] = 0xF0,  // maximum A/D Converted Intake Air Temperature
-
-  [0x8060] = 0x05,  // ???, somehow used for intake air temperature
-  [0x8061] = 0x50,  // fallback adjusted intake air temperature
-  [0x8062] = 0x3C,  // minimum adjusted value of ignition switch voltage
-  [0x8063] = 0xA0,  // maximum adjusted value of ignition switch voltage
-  [0x8067] = 0x00,  // minimum ADC value of CO potentiometer
-  [0x8068] = 0x64,  // maximum ADC value of CO potentiometer
-  [0x8069] = 0x00,  // fallback data for XRAM[0xFF74], Adjusted CO Potentiometer
-  [0x806A] = 0x00,  // fallback data for XRAM[0xFF75]
-  [0x807C] = 0x24,  // ???, copied to XRAM[0xF6B6] and XRAM[0xF6B8]
-  [0x808C] = 0x80,  // ???, copied to RAM[0x67]
-  [0x8093] = 0x00,  // fallback data for XRAM[0xF770]
-
-  // Table for Coolant Temperature
-  // Temp, decimal, C: -54   -54   -54   -54   -54   -54   -54   -54   -23     8    39    71   102   133   164   164   164
-  // Global formula: Real temperature = -60 (decimal) + Table value
-  // ADC voltage:        0  .311  .622  .934  1.245 1.556 1.867 2.179 2.49  2.801 3.112 3.424 3.735 4.046 4.357 4.669 4.99
-  // ADC Voltage = 10mV * Temperature (Kelvin)
-  //                    0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f     10
-  [0x831F..0x832F] = {0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x25, 0x44, 0x63, 0x83, 0xA2, 0xC1, 0xE0, 0xE0, 0xE0},
-  // Table #2 for Coolant Temperature - usage unknown
-  [0x8330..0x8340] = {0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x25, 0x44, 0x63, 0x83, 0xA2, 0xC1, 0xE0, 0xE0, 0xE0},
-  // Table for Intake Air Temperature
-  [0x8341..0x8351] = {0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x25, 0x44, 0x63, 0x83, 0xA2, 0xC1, 0xE0, 0xE0, 0xE0},
-
-  [0x873F] = 0x3F,  // kitting bits: 0011 1111
-                    // bit 0 - is there constant power for ECU; default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 1 - is there EGO (exhaust gas oxygen) sensor; default = 1; 0 => FLASH[0xFFFF] = 0x01, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 2 - is there knock sensor; default = 1; 0 => FLASH[0xFFFF] = 0x03, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 3 - is there air temperature sensor; default = 1; 0 => FLASH[0xFFFF] = 0x07, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 4 - is there camshaft position sensor; default = 1; 0 => FLASH[0xFFFF] = 0x0F, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 5 - camshaft position sensor cross-section is aligned with TDC; default = 1; 0 => FLASH[0xFFFF] = 0x1F, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 6 - is there speed sensor; default = 0; 1 => FLASH[0xFFFF] = 0xBF, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 7 - is there CO potentiometer; default = 0; 1 => FLASH[0xFFFF] = 0x7F, 0 => FLASH[0xFFFF] = 0xFF
-  [0x8740] = 0xC0,  // kitting bits: 1100 0000
-                    // bit 0 - is there ABS; default = 0; 1 => FLASH[0xFFFE] = 0xFE, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 1 - is there EGR valve position sensor; default = 0; 1 => FLASH[0xFFFE] = 0xFD, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 2 - is there adsorber valve position; default = 0; 1 => FLASH[0xFFFE] = 0xFB, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 3 - is there power steering pressure sensor; default = 0; 1 => FLASH[0xFFFE] = 0xF7, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 4 - is there additional oxygen sensor (at absorber?); default = 0; 1 => FLASH[0xFFFE] = 0xEF, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 5 - does MAF have burnout function; default = 0; 1 = FLASH[0xFFFE] = 0xDF, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 6 - is there throttle position sensor; default = 1; 0 => FLASH[0xFFFE] = 0x3F, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
-                    // bit 7 - is there coolant temperature sensor; default = 1; 0 => FLASH[0xFFFE] = 0x7F, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
-  [0x8741] = 0x23,  // kitting bits: 0010 0011
-                    // bit 0 - is there IROM; default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 1 - should DAC be corrected from IROM; default = 1; 0 => FLASH[0xFFFF] = 0x01, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 2 - is there immobilizer; default = 0; 1 => FLASH[0xFFFF] = 0xFB, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 3 - should RCO be corrected from IROM; default = 0; 1 => FLASH[0xFFFF] = 0xF7, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 4 - should fuel be blocked; default = 0; 1 => FLASH[0xFFFF] = 0xEF, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 5 - should fuel intake be asynchronous on second launch attempt; default = 1; 0 => FLASH[0xFFFF] = 0x1F, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 6 - should throttle position sensor adaptation be done; default = 0; 1 => FLASH[0xFFFF] = 0xBF, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 7 - should idle speed be adapted; default = 0; 1 => FLASH[0xFFFF] = 0x7F, 0 => FLASH[0xFFFF] = 0xFF
-  [0x8742] = 0xC0,  // kitting bits: 1100 0000
-                    // bit 0 - should bypass valve be adapted at idle; default = 0; 1 => FLASH[0xFFFE] = 0xFE, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 1 - is EGO with heating control; default = 0; 1 => FLASH[0xFFFE] = 0xFD, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 2 - reserved?
-                    // bit 3 - reserved?
-                    // bit 4 - reserved?
-                    // bit 5 - reserved?
-                    // bit 6 - are there injectors; default = 1; 0 => FLASH[0xFFFE] = 0x3F, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
-                    // bit 7 - are there ignition coils; default = 1; 0 => FLASH[0xFFFE] = 0x7F, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
-
-  [0x8743] = 0x13,  // kitting bits: 0001 0011
-                    // bit 0 - is there check-engine lamp; default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 1 - is there fuel pump; default = 1; 0 => FLASH[0xFFFF] = 0x01, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 2 - is there start injector; default = 0; 1 => FLASH[0xFFFF] = 0xFB, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 3 - is there EGR valve; default = 0; 1 => FLASH[0xFFFF] = 0xF7, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 4 - is there adsorber; default = 1; 0 => FLASH[0xFFFF] = 0x0F, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 5 - is there tachometer; default = 0; 1 => FLASH[0xFFFF] = 0xDF, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 6 - is there fuel meter display; default = 0; 1 => FLASH[0xFFFF] = 0xBF, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 7 - is there AirConditioner; default = 0; 1 => FLASH[0xFFFF] = 0x7F, 0 => FLASH[0xFFFF] = 0xFF
-
-  [0x8744] = 0x05,  // kitting bits: 0000 0101
-                    // bit 0 - is there fan; default = 1; 0 => FLASH[0xFFFE] = 0x00, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
-                    // bit 1 - reserved?
-                    // bit 2 - is there bypass valve; default = 1; 0 => FLASH[0xFFFE] = 0x03, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
-                    // bit 3 - is there idle economizer valve (carb); default = 0; 1 => FLASH[0xFFFE] = 0xF7, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 4 - is there secondary air compressor; default = 0; 1 => FLASH[0xFFFE] = 0xEF, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 5 - is intake controlled; default = 0; 1 => FLASH[0xFFFE] = 0xDF, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 6 - is there VVT; default = 0; 1 => FLASH[0xFFFE] = 0xBF, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 7 - reserved?
-
-  [0x8753] = 0x1B,  // ???, copied to RAM[0x59]
-  [0x8755] = 0x5A,  // ???, copied to RAM[0x57] and RAM[0x58]
-
-  [0x8761] = 0x00,  // ???
-
-  [0x8788] = 0x55,  // some limit for adjusted coolant temperature
-  [0x8789] = 0x08,  // value of XRAM[0xF7A4]
-  [0x878A] = 0x01,  // value of XRAM[0xF7A4]
-
-  /* knock sensor knock filter frequency configuration word */
-  [0x87A7] = 0x2C,
-
-  /* offset for knock sensor balance control gain ratio table @ 0x24EF */
-  [0x87A9] = 0x30,
-  
-  [0x87B7] = 0x69,  // some adjusted coolant temperature limit for filling in XRAM[0xF8CD]..XRAM[0xF8CD+0x7F] (0x80 bytes)
-  
-  [0x8A4B] = 0x28,  // Fallback table value of coolant temperature
-  
-  /* ?????????????????????? */
-  //                  0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f     10
-  [0x8AFB..0x8C0A] = 0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBD,
-  //                  11    12    13    14    15    16    17    18    19    1a    1b    1c    1d    1e    1f    20    21
-                     0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBD,
-  //                  22    23    24    25    26    27    28    29    2a    2b    2c    2d    2e    2f    30    31    32
-                     0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBD,
-  //                  33    .     .     .     .     .     .     .     .     .     .     .     .     .     .     .     43
-                     0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9D, 0xBB,
-  //                  44    .     .     .     .     .     .     .     .     .     .     .     .     .     .     .     54
-                     0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBB,
-  //                  55    .     .     .     .     .     .     .     .     .     .     .     .     .     .     .     65
-                     0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBB,
-  //                  66    .     .     .     .     .     .     .     .     .     .     .     .     .     .     .     76
-                     0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBB,
-  //                  77    .     .     .     .     .     .     .     .     .     .     .     .     .     .     .     87
-                     0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBB,
-  //                  88    .     .     .     .     .     .     .     .     .     .     .     .     .     .     .     98
-                     0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBB,
-  //                  99    .     .     .     .     .     .     .     .     .     .     .     .     .     .     .     a9
-                     0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBB,
-  //                  aa    .     .     .     .     .     .     .     .     .     .     .     .     .     .     .     ba
-                     0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBB,
-  //                  bb    .     .     .     .     .     .     .     .     .     .     .     .     .     .     .     cb
-                     0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBB,
-  //                  cc    .     .     .     .     .     .     .     .     .     .     .     .     .     .     .     dc
-                     0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBB,
-  //                  dd    .     .     .     .     .     .     .     .     .     .     .     .     .     .     .     ed
-                     0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBB,
-  //                  ee    .     .     .     .     .     .     .     .     .     .     .     .     .     .     .     fe
-                     0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBB,
-  //                  ff    .     .     .     .     .     .     .     .     .     .     .     .     .     .     .     10f
-                     0x05, 0x17, 0x26, 0x31, 0x3B, 0x43, 0x4A, 0x4F, 0x54, 0x5B, 0x64, 0x69, 0x72, 0x7B, 0x8A, 0x9C, 0xBB,
-
-  /* EGO sensor calibration */
-  [0x991C..0x99AB] = { 0x59, 0x59, 0x5A, 0x5A, 0x5B, 0x5C, 0x5E, 0x5F,
-                       0x60, 0x60, 0x5F, 0x5E, 0x5E, 0x5F, 0x60, 0x61,
-                       0x5B, 0x5B, 0x5B, 0x5B, 0x5C, 0x5D, 0x5D, 0x5E,
-                       0x5F, 0x5E, 0x5F, 0x5F, 0x5F, 0x60, 0x61, 0x62,
-                       0x5C, 0x5C, 0x5C, 0x5C, 0x5D, 0x5E, 0x61, 0x61,
-                       0x60, 0x60, 0x61, 0x60, 0x60, 0x61, 0x62, 0x63,
-                       0x65, 0x64, 0x63, 0x63, 0x65, 0x66, 0x66, 0x66,
-                       0x66, 0x64, 0x65, 0x64, 0x65, 0x66, 0x67, 0x68,
-                       0x6B, 0x6B, 0x6B, 0x6A, 0x69, 0x69, 0x68, 0x67,
-                       0x68, 0x67, 0x69, 0x69, 0x69, 0x68, 0x68, 0x69,
-                       0x70, 0x6E, 0x6C, 0x6B, 0x6B, 0x6B, 0x6B, 0x6B,
-                       0x69, 0x6A, 0x6A, 0x6B, 0x6A, 0x69, 0x69, 0x69,
-                       0x73, 0x72, 0x71, 0x6F, 0x6D, 0x6C, 0x6B, 0x6B,
-                       0x6B, 0x6B, 0x6C, 0x6B, 0x6A, 0x6A, 0x6A, 0x69,
-                       0x78, 0x76, 0x74, 0x70, 0x6E, 0x6D, 0x6C, 0x6C,
-                       0x6B, 0x6B, 0x6B, 0x6B, 0x6B, 0x6B, 0x6B, 0x6A,
-                       0x77, 0x77, 0x77, 0x75, 0x73, 0x6F, 0x6E, 0x6E,
-                       0x6C, 0x6C, 0x6D, 0x6C, 0x6C, 0x6C, 0x6C, 0x6B,
-                       0x77, 0x76, 0x75, 0x74, 0x72, 0x70, 0x6F, 0x6E,
-                       0x6D, 0x6D, 0x6D, 0x6D, 0x6D, 0x6C, 0x6C, 0x6B,
-                       0x7A, 0x79, 0x77, 0x76, 0x74, 0x72, 0x71, 0x6F,
-                       0x6E, 0x6E, 0x6E, 0x6E, 0x6E, 0x6E, 0x6E, 0x6D,
-                       0x7C, 0x7B, 0x7A, 0x78, 0x76, 0x74, 0x73, 0x72,
-                       0x71, 0x70, 0x6F, 0x6F, 0x6F, 0x6E, 0x6F, 0x6E,
-                       0x79, 0x78, 0x77, 0x76, 0x75, 0x73, 0x72, 0x70,
-                       0x70, 0x70, 0x6F, 0x70, 0x6F, 0x6E, 0x71, 0x70,
-                       0x7B, 0x7A, 0x77, 0x74, 0x74, 0x74, 0x75, 0x72,
-                       0x71, 0x73, 0x70, 0x71, 0x6F, 0x71, 0x73, 0x72,
-                       0x7C, 0x7B, 0x78, 0x76, 0x77, 0x75, 0x75, 0x71,
-                       0x71, 0x73, 0x71, 0x73, 0x74, 0x76, 0x73, 0x72,
-                       0x7A, 0x79, 0x78, 0x77, 0x78, 0x75, 0x75, 0x72,
-                       0x71, 0x72, 0x72, 0x74, 0x74, 0x74, 0x73, 0x72 },
-
-  [0x9A1C..9B1B] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                     0,0,0,0,2,4,4,3,4,4,3,2,2,0,0,0,
-                     0,0,0,2,4,5,5,6,6,6,5,4,2,0,0,0,
-                     0,0,0,2,3,4,5,6,7,7,6,4,2,0,0,0,
-                     0,0,0,2,2,3,4,5,5,5,5,4,2,0,0,0,
-                     0,0,0,1,1,2,2,2,3,3,4,3,1,0,0,0,
-                     0,0,0,1,1,2,2,1,2,2,3,1,1,0,0,0,
-                     0,0,0,1,0,1,1,0,1,1,1,0,1,0,0,0,
-                     0,0,0,0,1,2,0,0,0,0,1,0,1,0,0,0,
-                     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 },
-
-  // ????????????????
-  [0xA2FD..0xA31D] = 0xFB, 0xFB, 0xFB, 0xFB, 0xFB, 0xFB, 0xFB, 0xFB,
-                     0xFB, 0xFB, 0xF9, 0xF7, 0xF5, 0xF0, 0xE6, 0xD7,
-                     0xC8, 0xB9, 0xAD, 0xA6, 0xA0, 0x9D, 0x9A, 0x9A,
-                     0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A,
-                     0x9A,
-
-  // ????????????????
-  [0xABF1..0xACE8] = 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x02,
-                     0x02, 0x02, 0x02, 0x03, 0x04, 0x05, 0x05, 0x06,
-                     0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
-                     0x0F, 0x10, 0x12, 0x15, 0x18, 0x1B, 0x1E, 0x00,
-                     0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x02, 0x02,
-                     0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A,
-                     0x0B, 0x0C, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11,
-                     0x12, 0x14, 0x17, 0x1B, 0x1E, 0x22, 0x00, 0x00,
-                     0x00, 0x00, 0x00, 0x02, 0x03, 0x04, 0x05, 0x06,
-                     0x07, 0x09, 0x0B, 0x0C, 0x0E, 0x0F, 0x10, 0x11,
-                     0x12, 0x13, 0x14, 0x14, 0x14, 0x14, 0x15, 0x16,
-                     0x17, 0x18, 0x1A, 0x1F, 0x26, 0x00, 0x00, 0x00,
-                     0x00, 0x00, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
-                     0x0B, 0x0E, 0x11, 0x14, 0x17, 0x1B, 0x1F, 0x22,
-                     0x24, 0x25, 0x26, 0x26, 0x26, 0x26, 0x25, 0x24,
-                     0x23, 0x23, 0x23, 0x23, 0x00, 0x00, 0x00, 0x00,
-                     0x00, 0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x02,
-                     0x03, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
-                     0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x11, 0x13,
-                     0x15, 0x17, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00,
-                     0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x02, 0x03,
-                     0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A,
-                     0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x11, 0x13, 0x15,
-                     0x17, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                     0x01, 0x01, 0x01, 0x01, 0x01, 0x02, 0x03, 0x03,
-                     0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,
-                     0x0C, 0x0D, 0x0E, 0x0F, 0x11, 0x13, 0x15, 0x17,
-                     0x19, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-                     0x01, 0x01, 0x01, 0x01, 0x02, 0x03, 0x03, 0x04,
-                     0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C,
-                     0x0D, 0x0E, 0x0F, 0x11, 0x13, 0x15, 0x17, 0x19,
-
-  /* some table for knock sensor or when coolant temperature above limit in FLASH[0x87B7] */
-  [0xADF1..0xADE0] = {9, 9, 9, 9, 9, 9, 9, 8, 6, 3, 0, 0, 0, 0, 0, 0},
-
-  /* knock sensor integration time constant configuration word */
-  [0xAE01] = 0x00,
-
-  [0xFFFE] = 0xFF,
-  [0xFFFF] = 0xFF
-};
-
-////////////// XRAM MAP
-byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
-  [0xF400..0xF4FF] = 0,                       // Sum of XRAM[0xF5xx] + FLASH[0x9A1C + xx]
-  [0xF500..0xF5FF] = 0,                       // EGO calibration
-  [0xF600] = 0,
-  [0xF602] = FLASH[0x8761],                   // Set to FLASH[0x8761] if and only if watchdog triggered or xram checksum failed (power-on?)
-                                              // Signed byte value.
-                                              // Differentiated versus RAM[0x63].
-  [0xF603] = 0x01,                            // Set to 0x01 if and only if watchdog triggered or xram checksum failed (power-on?)
-  [0xF605..0xF657] = 0,
-
-  [0xF658] = 0,                               // checksum low byte (for 0xFx00..0xF657)
-  [0xF659] = 0                                // checksum high byte (for 0xFx00..0xF657)
-  
-  [0xF681] = 0,                               // Adjusted CO potentiometer
-  [0xF683] = 0,                               // Adjusted coolant temperature, copy of RAM[0x3A]
-  [0xF686] = 0,                               // ADC Coolant temperature
-  [0xF687] = 0,                               // ADC Intake air temperature
-  [0xF688] = 0,                               // ADC Ignition switch voltage
-  [0xF689] = 0,                               // ADC CO Potentiometer
-  
-  [0xF675..0xF7D4] = 0x00,                    // 0x160 bytes
-  [0xF7A4] = 0x00,                            // Filled in with FLASH[0x8789] or FLASH[0x878A] depending
-                                              // on adjusted coolant temperature less than some limit,
-                                              // i.e. RAM[0x3A] < FLASH[0x8788
-
-  [0xF7BE] = 0x00,                            // Current operationg mode:
-                                              // 0 - normal
-                                              // 3 - diagnostic (has smth on L-line)
-  [0xF7D5..0xF8CC] = FLASH[0xABF1..0xACE8]    // 0xF8 bytes
-
-  [0xF8CD..0xF94C] = 0,                       // 0x80 bytes,
-                                              // Eight copies of FLASH[0xADF1..0xADE0] or all zeros depending
-                                              // on whether there is a knock sensor or coolant temperature
-                                              // below some limit i.e. RAM[0x3A] < FLASH[0x87B7]
-
-  [0xF97E] = 0x00,
-  [0xF972] = 0x00,
-  [0xF973] = 0x00,
-  [0xF974] = 0x00,
-  
-  [0xFF00..0xFF41] = EEPROM[0x00..0x41],
-  [0xFF42..0xFF73] = EEPROM[0x41..0x73],
-  [0xFF74..0xFF7F] = EEPROM[0x74..0x7F]
-};
-
-////////////// EEPROM MAP
-byte EEPROM[0x200] = {
-  [0x00..0x41] = 0x00, // oh, rly?
-  [0x41..0x73] = 0x00, // oh, rly?
-  [0x74..0x7F] = 0x00, // oh, rly?
-};
 
 //////////////////////////////// Pins
 
@@ -1464,7 +985,7 @@ void Inputs_Part1() {
     byte IgnVoltage = ADC_8bit(IGNITION_VOLTAGE_PIN);
     XRAM[0xF688] = IgnVoltage;
 
-    word MultipliedIgnVoltage = IgnVoltage * 0x75;
+    word MultipliedIgnVoltage = WORD(IgnVoltage) * IGNITION_VOLTAGE_FACTOR;
     byte AdjustedIgnVoltage;
 
     if (CHECK_BIT_AT(MultipliedIgnVoltage, 0x0F)) // not possible as minimum IgnVoltage for it is 0x0119 which doesn't fit a byte
@@ -2152,7 +1673,10 @@ void MAIN_LOOP() {
 // Returns FLASH[FlashPtr + TableIdx] + HIGH(DiffFactor * (FLASH[FlashPtr + TableIdx + 1] - FLASH[FlashPtr + TableIdx]))
 // _62CE:
 byte InterpolateTableValue(word FlashPtr, byte TableIdx, byte DiffFactor) {
-  return FLASH[FlashPtr + TableIdx] + HIGH(WORD(DiffFactor) * (FLASH[FlashPtr + TableIdx + 1] - FLASH[FlashPtr + TableIdx]));
+  const byte Base = FLASH[FlashPtr + TableIdx];
+  const byte Diff = FLASH[FlashPtr + TableIdx + 1] - Base;
+  const word Offset = WORD(DiffFactor) * Diff;
+  return Base + HIGH(Offset);
 }
 
 // TODO memory map for memory locations used here
@@ -2209,7 +1733,7 @@ _2A32:
       SET_BIT_IN(RAM[0x27], 2);
     }
   }
-  
+
   if (!DivisionSkipped) {
     A = QUAD_BYTE(Quot, 3) | QUAD_BYTE(Quot, 2);
     if (!A) {
@@ -2303,9 +1827,56 @@ _2B19:
   // _2B53:
   // Intake air temperature sensor
   {
-    // TODO
+    word IntakeAirTemp = ADC_10bit(INTAKE_AIR_TEMP_PIN);
+    XRAM[0xF687] = HIGH(IntakeAirTemp);
+
+    IntakeAirTemp = scale10bitADCValue(IntakeAirTemp, 8);
+    addWordInXRAMWord(IntakeAirTemp, 0xF6A0);
   }
 
+  // _2B6A:
+  // CO Potentiometer sensor
+  {
+    byte COPot = ADC_8bit(CO_POT_PIN);
+    XRAM[0xF689] = COPot;
+
+    addByteInXRAMWord(COPot, 0xF6A4);
+  }
+
+  // _2B7A:
+  // Ignition switch
+  {
+    byte Voltage = ADC_8bit(IGNITION_VOLTAGE_PIN);
+    XRAM[0xF688] = Voltage;
+    addByteInXRAMWord(Voltage, 0xF69B);
+
+    const byte ThresholdVoltage = FLASH[0x8096];
+    Voltage = ADC_8bit(IGNITION_VOLTAGE_PIN);
+
+    if (Voltage < 0)
+      Voltage = 0;
+
+    // _2B9D:
+    word ScaledVoltage = WORD(Voltage) * IGNITION_VOLTAGE_FACTOR;
+
+    if (CHECK_BIT_AT(HIGH(ScaledVoltage), 7))
+      Voltage = 0xFF; // staurate
+    else
+      Voltage = HIGH(ScaledVoltage) << 1;
+
+    if (Voltage < ThresholdVoltage)
+      CLEAR_BIT_IN(RAM[0x28], 4);
+    else
+      SET_BIT_IN(RAM[0x28], 4);
+  }
+  
+  // _2BAF:
+  // Throttle Position Sensor
+  {
+    word Throttle = ADC_10bit(THROTTLE_POSITION_PIN);
+    XRAM[0xF685] = HIGH(Throttle);
+    // TODO
+  }
 
   // TODO
 }
