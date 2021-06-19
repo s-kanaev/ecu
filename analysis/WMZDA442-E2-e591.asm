@@ -8887,7 +8887,7 @@ MAIN_LOOP:                              ; CODE XREF: power_on__ignition_key_turn
                 jnc     MAIN_LOOP       ; if (!CY) jump ...
                 mov     DPTR, #0F96Dh
                 clr     A
-                movx    @DPTR, A        ; A = XRAM[0xF96D]
+                movx    @DPTR, A        ; XRAM[0xF96D] = 0
 
 wait_until_ram_28_0_set:                ; CODE XREF: power_on__ignition_key_turned_:wait_until_ram_28_0_set↓j
                 jnb     RAM_28.0, wait_until_ram_28_0_set ; while (!(RAM[0x28] & (1 << 0))) ;
