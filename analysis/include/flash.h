@@ -29,6 +29,8 @@ byte FLASH[0x10000] = {
   [0x808C] = 0x80,  // ???, copied to RAM[0x67]
   [0x8093] = 0x00,  // fallback data for XRAM[0xF770]
   [0x8096] = 0x1F,  // Threshold voltage for ignition switch to set RAM[0x28], bit 4
+  [0x809A] = 0x42,  // Threshold value for RAM[0x49]
+  [0x809B] = 0x1E,  // Threshold value for XRAM[0xF679]
 
   // Table for Coolant Temperature
   // Temp, decimal, C: -54   -54   -54   -54   -54   -54   -54   -54   -23     8    39    71   102   133   164   164   164
