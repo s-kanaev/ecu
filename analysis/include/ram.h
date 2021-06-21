@@ -43,6 +43,7 @@ byte RAM[0x100] = {
   [0x28] = 0x00,  // some status byte
                   // bit 0 - ???, bit which allows for main loop to continue
                   // bit 4 - ignition switch voltage above threshold @ FLASH[0x8096]
+                  // bit 6 - ???, set when XRAM[0xF679] >= FLASH[0x809B] && RAM[0x49] >= FLASH[0x809A]
   [0x29] = 0x00,
   [0x2A] = 0x00,  // some status word
                   // bit 0 ???
@@ -55,7 +56,7 @@ byte RAM[0x100] = {
   [0x2F] = 0,     // bit 0 - ???
                   // bit 1 - ???
 
-  [0x30] = 0,     // Some counter?, can be changed by some interrupt?
+  [0x30] = 0,     // Some counter?, can be changed by some interrupt along with 0x1C/0x1D?
 
   [0x3A] = 0,     // Adjusted coolant temperature
 
@@ -77,10 +78,10 @@ byte RAM[0x100] = {
 
   [0x46..0x47] = 0,
   [0x48] = 0,     // ???
-  [0x49] = 0,     // interpolated value of XRAM[0xF6BC/0xF6BB], table at FLASH[0x83B0], size unknown, TODO
-  [0x4A] = 0,
-  [0x4B] = 0,
-  [0x4C] = 0,     // offset div 0x11 for tabel at FLASH[0x8AFB]
+  [0x49] = 0,     // XRAM[0xF6BC] + 0x80, saturated at 0xFF
+  [0x4A] = 0,     // interpolated value of XRAM[0xF6BC/0xF6BB], table at FLASH[0x83B0], size unknown, TODO
+  [0x4B] = 0,     // ((RAM[0x4A] + 4) >> 3) & 0x1F
+  [0x4C] = 0,     // ((RAM[0x4A] + 8) >> 4) = offset div 0x11 for table at FLASH[0x8AFB]
   [0x4D..0x5C] = 0,
   [0x5D] = 0,     // ???
   [0x5E] = 0x00,

@@ -1766,9 +1766,10 @@ _2A32:
   // _ram_48_filled:
   {
     word XramData = COMPOSE_WORD(XRAM[0xF6BC], XRAM[0xF6BB]);
-    const word Diff = WORD(0x80);
+    const byte DiffByte = 0x80;
+    const word Diff = WORD(DiffByte);
 
-    byte Ram49 = COMPOSE_WORD(0xFF, 0xFF - 0x80) < XramData ? 0xFF : HIGH(XramData + Diff);
+    byte Ram49 = COMPOSE_WORD(0xFF, 0xFF - DiffByte) < XramData ? 0xFF : HIGH(XramData + Diff);
     RAM[0x49] = Ram49;
   }
   
@@ -1873,11 +1874,39 @@ _2B19:
   // _2BAF:
   // Throttle Position Sensor
   {
-    word Throttle = ADC_10bit(THROTTLE_POSITION_PIN);
-    XRAM[0xF685] = HIGH(Throttle);
-    // TODO
+    word ThrottlePosition = ADC_10bit(THROTTLE_POSITION_PIN);
+    XRAM[0xF685] = HIGH(ThrottlePosition);
+
+    ThrottlePosition = scale10bitADCValue(ThrottlePosition, 8);
+    addWordInXRAMWord(ThrottlePosition, 0xF6A6);
+
+    // _2BC6:
+    if (!XRAM[0xF69D]) {
+      // _2BCC:
+      XRAM[0xF6B3] = HIGH(ThrottlePosition);
+      XRAM[0xF6B4] = HIGH(ThrottlePosition);
+    } else {
+      // xram_f69d_not_zero:
+      // _2BD7:
+      if (XRAM[0xF6B3] < HIGH(ThrottlePosition)) {
+        // _2BE6:
+        if (XRAM[0xF6B4] < HIGH(ThrottlePosition))
+          XRAM[0xF6B4] = HIGH(ThrottlePosition)
+      } else {
+        // _2BDF:
+        XRAM[0xF6B3] = HIGH(ThrottlePosition);
+      }
+    }
   }
 
+  // _2BF3:
+  addByteInXRAMWord(RAM[0x49], 0xF6A8);
+
+  if (++XRAM[0xF69D] != 0x20) {
+    goto _2ED3;
+  }
+
+  // _2C09:
   // TODO
 }
 
