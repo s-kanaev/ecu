@@ -589,22 +589,22 @@
  00000000:00002CF0       code_2CF0
  00000000:00002CFD       code_2CFD
  00000000:00002D07       code_2D07
- 00000000:00002D09       code_2D09
- 00000000:00002D17       code_2D17
- 00000000:00002D1D       code_2D1D
+ 00000000:00002D09       xram_F6BF_less_than_flash_8060
+ 00000000:00002D17       scaled_intake_air_temperature_less_than_minimum_intake_air_temperature
+ 00000000:00002D1D       scaled_intake_air_temperature_larger_or_equal_than_maximum_intake_air_temperature
  00000000:00002D21       no_intake_air_temperature_sensor
  00000000:00002D2A       ram_73_bit_0_set
- 00000000:00002D47       code_2D47
+ 00000000:00002D47       process_CO_pot
  00000000:00002D5D       code_2D5D
- 00000000:00002D65       code_2D65
+ 00000000:00002D65       r1_not_less_than_minimum_co_pot
  00000000:00002D6D       code_2D6D
- 00000000:00002D75       code_2D75
+ 00000000:00002D75       r1_less_or_equal_than_maximum_co_pot
  00000000:00002D7F       code_2D7F
- 00000000:00002D8A       code_2D8A
+ 00000000:00002D8A       fallback_CO_pot
  00000000:00002D91       code_2D91
  00000000:00002D9C       code_2D9C
- 00000000:00002D9E       code_2D9E
- 00000000:00002DAF       code_2DAF
+ 00000000:00002D9E       process_IROM
+ 00000000:00002DAF       continue_operation
  00000000:00002DC7       code_2DC7
  00000000:00002DD4       code_2DD4
  00000000:00002E1F       code_2E1F
@@ -1278,7 +1278,7 @@
  00000000:0000608D       code_608D
  00000000:00006092       shl_word_twice
  00000000:00006096       code_6096
- 00000000:000060A0       code_60A0
+ 00000000:000060A0       shl_word_3_times
  00000000:000060A4       code_60A4
  00000000:000060AE       code_60AE
  00000000:000060B2       code_60B2
