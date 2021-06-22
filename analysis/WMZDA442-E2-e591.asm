@@ -9194,13 +9194,6 @@ code_2AF4:                              ; CODE XREF: power_on__ignition_key_turn
                 anl     A, #0Fh
                 mov     RAM_4C, A       ; RAM[0x4C] = ((RAM[0x4A] + 8) >> 4) // high nibble
 
-
-
-!!!!!!!!!! CONTINUE HIGH-LEVEL FROM HERE !!!!!!!!!!!
-
-
-
-
 code_2B19:                              ; CODE XREF: power_on__ignition_key_turned_+68A↑j
                 jb      RAM_28.6, query_inputs ; if (RAM[0x28] & (1 << 6)) jump ...
                 mov     DPTR, #809Bh
@@ -9494,10 +9487,17 @@ code_2BF3:                              ; CODE XREF: power_on__ignition_key_turn
 
 !!!!!!!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!!!!!!
 
+
+
+!!!!!!!!!! CONTINUE HIGH-LEVEL FROM HERE !!!!!!!!!!!
+
+
+
+
 code_2C06:                              ; CODE XREF: power_on__ignition_key_turned_+86F↑j
                 ljmp    code_2ED3
 ; ---------------------------------------------------------------------------
-PREREQUISITES: DPTR = 0xF6D9
+PREREQUISITES: DPTR = 0xF69D
 Got here iff (XRAM[0xF69D] == 0x20)
 
 code_2C09:                              ; CODE XREF: power_on__ignition_key_turned_+872↑j
@@ -9512,10 +9512,10 @@ code_2C09:                              ; CODE XREF: power_on__ignition_key_turn
 ram_72_bit_7_clear:                     ; CODE XREF: power_on__ignition_key_turned_+87B↑j
                 mov     DPTR, #0F69Eh
                 movx    A, @DPTR
-                mov     R0, A           ; R0 = A = XRAM[0xF69E] // low byte of scaled ADC Coolant Temperature
+                mov     R0, A           ; R0 = A = XRAM[0xF69E] // low byte of scaled ADC Coolant Temperature sum
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A           ; R1 = A = XRAM[0xF69F] // high byte of scaled ADC Coolant Temperature
+                mov     R1, A           ; R1 = A = XRAM[0xF69F] // high byte of scaled ADC Coolant Temperature sum
                 jb      RAM_26.6, ram_26_bit_6_set ; if (RAM[0x26] & (1 << 6)) jump ...
                 mov     DPTR, #805Dh
                 clr     A
@@ -9673,7 +9673,6 @@ PREREQUISITE:
  - RAM[0x3A] - contains adjusted coolant temperature
  - R0 - low byte of scaled coolant temperature
 
-!!!!!! CONTINUE REVERSING FROM HERE !!!!!!!
 
 temperature_init_done:                  ; CODE XREF: power_on__ignition_key_turned_+880↑j
                                         ; power_on__ignition_key_turned_+911↑j ...
@@ -9700,10 +9699,10 @@ temperature_init_done:                  ; CODE XREF: power_on__ignition_key_turn
                 jb      ACC.0, ram_73_bit_0_set ; if (RAM[0x73] & (1 << 0)) jump ...
                 mov     DPTR, #0F6A0h
                 movx    A, @DPTR
-                mov     R0, A           ; R0 = XRAM[0xF6A0]
+                mov     R0, A           ; R0 = XRAM[0xF6A0] // sum of scaled ADC Intake Air Temperature, low byte
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A           ; R1 = XRAM[0xF6A1]
+                mov     R1, A           ; R1 = XRAM[0xF6A1] // sum of scaled ADC Intake Air Temperature, low byte
                 mov     DPTR, #8060h
                 clr     A
                 movc    A, @A+DPTR
@@ -9713,28 +9712,29 @@ temperature_init_done:                  ; CODE XREF: power_on__ignition_key_turn
                 cjne    A, B, code_2CF0 ; B-Register
 
 code_2CF0:                              ; CODE XREF: power_on__ignition_key_turned_+95B↑j
-                jc      code_2D09
+                jc      xram_F6BF_less_than_flash_8060 ; if (A < B) jump ...
+                                        ; if (XRAM[0xF6BF] < FLASH[0x8060]) jump ...
                 mov     DPTR, #805Eh
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = FLASH[0x805E]
                 mov     A, R1
                 cjne    A, B, code_2CFD ; B-Register
 
 code_2CFD:                              ; CODE XREF: power_on__ignition_key_turned_+968↑j
-                jc      code_2D17
+                jc      scaled_intake_air_temperature_less_than_minimum_intake_air_temperature ; if (R1 < FLASH[0x805E]) jump ...
                 mov     DPTR, #805Fh
                 clr     A
                 movc    A, @A+DPTR
                 cjne    A, RAM_1, code_2D07
 
 code_2D07:                              ; CODE XREF: power_on__ignition_key_turned_+972↑j
-                jc      code_2D1D
+                jc      scaled_intake_air_temperature_larger_or_equal_than_maximum_intake_air_temperature ; if (FLASH[0x805F] < R1) jump ...
 
-code_2D09:                              ; CODE XREF: power_on__ignition_key_turned_:code_2CF0↑j
-                clr     RAM_24.4
+xram_F6BF_less_than_flash_8060:         ; CODE XREF: power_on__ignition_key_turned_:code_2CF0↑j
+                clr     RAM_24.4        ; clear error flag
                 clr     RAM_24.5
-                mov     DPTR, #8341h
+                mov     DPTR, #8341h    ; intake air temperature table
                 lcall   get_adc_value_from_table_and_adjust_for_calculus ; Find ADC value in table and adjust for calculus
                                         ;
                                         ; INPUT
@@ -9748,18 +9748,20 @@ code_2D09:                              ; CODE XREF: power_on__ignition_key_turn
                                         ; OUTPUT
                                         ;   R1:R0 - adjusted table value
                                         ;   Acc = R1
-                mov     RAM_3B, A
+                mov     RAM_3B, A       ; store adjusted intake air temperature
                 sjmp    ram_73_bit_0_set
 ; ---------------------------------------------------------------------------
 
-code_2D17:                              ; CODE XREF: power_on__ignition_key_turned_:code_2CFD↑j
-                setb    RAM_24.4
+scaled_intake_air_temperature_less_than_minimum_intake_air_temperature:
+                                        ; CODE XREF: power_on__ignition_key_turned_:code_2CFD↑j
+                setb    RAM_24.4        ; set error flags
                 clr     RAM_24.5
                 sjmp    no_intake_air_temperature_sensor
 ; ---------------------------------------------------------------------------
 
-code_2D1D:                              ; CODE XREF: power_on__ignition_key_turned_:code_2D07↑j
-                clr     RAM_24.4
+scaled_intake_air_temperature_larger_or_equal_than_maximum_intake_air_temperature:
+                                        ; CODE XREF: power_on__ignition_key_turned_:code_2D07↑j
+                clr     RAM_24.4        ; set error flags
                 setb    RAM_24.5
 
 no_intake_air_temperature_sensor:       ; CODE XREF: power_on__ignition_key_turned_+93E↑j
@@ -9767,8 +9769,9 @@ no_intake_air_temperature_sensor:       ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #8061h
                 clr     A
                 movc    A, @A+DPTR
-                mov     RAM_3B, A
+                mov     RAM_3B, A       ; RAM[0x3B] = FLASH[0x8061] // fallback intake air temperature
                 mov     R0, #0
+PREREQUISITE: RAM[0x3B] - set to adjusted intake air temperature
 
 ram_73_bit_0_set:                       ; CODE XREF: power_on__ignition_key_turned_+945↑j
                                         ; power_on__ignition_key_turned_+983↑j
@@ -9785,62 +9788,67 @@ ram_73_bit_0_set:                       ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ;   Result returned in Acc
                                         ;
-                mov     RAM_3E, A
+                mov     RAM_3E, A       ; Store adjusted intake air temperature
+FINISHED INTAKE AIR TEMPERATURE
                 mov     DPTR, #873Fh
                 clr     A
                 movc    A, @A+DPTR
-                jb      ACC.7, code_2D47 ; Accumulator
+                jb      ACC.7, process_CO_pot ; if there is CO potentiometer
                 mov     DPTR, #8741h
                 clr     A
                 movc    A, @A+DPTR
-                jb      ACC.0, code_2D9E ; Accumulator
-                clr     RAM_23.4
+                jb      ACC.0, process_IROM ; if there is IROM
+                clr     RAM_23.4        ; clear error flags
                 clr     RAM_23.5
-                sjmp    code_2D8A
+                sjmp    fallback_CO_pot
 ; ---------------------------------------------------------------------------
 
-code_2D47:                              ; CODE XREF: power_on__ignition_key_turned_+9A4↑j
+process_CO_pot:                         ; CODE XREF: power_on__ignition_key_turned_+9A4↑j
                 mov     DPTR, #0F6A4h
                 movx    A, @DPTR
-                mov     R0, A
+                mov     R0, A           ; R0 = XRAM[0xF6A4]
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
-                lcall   code_60A0
+                mov     R1, A           ; R1 = XRAM[0xF6A5]
+                lcall   shl_word_3_times ; INPUT:
+                                        ;   R1:R0
+                                        ; OUTPUT:
+                                        ;   R1:R0 = (R1:R0) << 3, or FF:FF (if overflow happens)
+                                        ;
                 mov     DPTR, #8067h
                 clr     A
-                movc    A, @A+DPTR
+                movc    A, @A+DPTR      ; A = FLASH[0x8067] // minimum ADC CO Pot
                 mov     B, A            ; B-Register
                 mov     A, R1
                 cjne    A, B, code_2D5D ; B-Register
 
 code_2D5D:                              ; CODE XREF: power_on__ignition_key_turned_+9C8↑j
-                jnc     code_2D65
-                setb    RAM_23.4
+                jnc     r1_not_less_than_minimum_co_pot
+                setb    RAM_23.4        ; set error flag
                 clr     RAM_23.5
-                sjmp    code_2D8A
+                sjmp    fallback_CO_pot
 ; ---------------------------------------------------------------------------
 
-code_2D65:                              ; CODE XREF: power_on__ignition_key_turned_:code_2D5D↑j
+r1_not_less_than_minimum_co_pot:        ; CODE XREF: power_on__ignition_key_turned_:code_2D5D↑j
                 mov     DPTR, #8068h
                 clr     A
-                movc    A, @A+DPTR
+                movc    A, @A+DPTR      ; A = FLASH[0x8068] // maximum value of ADC CO Pot
                 cjne    A, RAM_1, code_2D6D
 
 code_2D6D:                              ; CODE XREF: power_on__ignition_key_turned_+9D8↑j
-                jnc     code_2D75
-                clr     RAM_23.4
+                jnc     r1_less_or_equal_than_maximum_co_pot
+                clr     RAM_23.4        ; set error flag
                 setb    RAM_23.5
-                sjmp    code_2D8A
+                sjmp    fallback_CO_pot
 ; ---------------------------------------------------------------------------
 
-code_2D75:                              ; CODE XREF: power_on__ignition_key_turned_:code_2D6D↑j
-                clr     RAM_23.4
+r1_less_or_equal_than_maximum_co_pot:   ; CODE XREF: power_on__ignition_key_turned_:code_2D6D↑j
+                clr     RAM_23.4        ; clear error flag
                 clr     RAM_23.5
                 mov     A, R1
-                rlc     A
+                rlc     A               ; A *= 2 // A <<= 1
                 jnc     code_2D7F
-                mov     A, #0FFh
+                mov     A, #0FFh        ; saturate to 0xFF
 
 code_2D7F:                              ; CODE XREF: power_on__ignition_key_turned_+9E9↑j
                 clr     C
@@ -9858,7 +9866,7 @@ code_2D7F:                              ; CODE XREF: power_on__ignition_key_turn
                 sjmp    code_2D91
 ; ---------------------------------------------------------------------------
 
-code_2D8A:                              ; CODE XREF: power_on__ignition_key_turned_+9B3↑j
+fallback_CO_pot:                        ; CODE XREF: power_on__ignition_key_turned_+9B3↑j
                                         ; power_on__ignition_key_turned_+9D1↑j ...
                 mov     DPTR, #8069h
                 clr     A
@@ -9870,23 +9878,30 @@ code_2D91:                              ; CODE XREF: power_on__ignition_key_turn
                 jb      ACC.3, code_2D9C ; Accumulator
                 mov     A, B            ; B-Register
                 mov     DPTR, #0F681h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; store adjusted CO potentiometer value
 
 code_2D9C:                              ; CODE XREF: power_on__ignition_key_turned_+A01↑j
-                sjmp    code_2DAF
+                sjmp    continue_operation
 ; ---------------------------------------------------------------------------
 
-code_2D9E:                              ; CODE XREF: power_on__ignition_key_turned_+9AC↑j
+process_IROM:                           ; CODE XREF: power_on__ignition_key_turned_+9AC↑j
                 clr     RAM_23.4
                 clr     RAM_23.5
                 mov     A, RAM_73
-                jb      ACC.3, code_2DAF ; Accumulator
+                jb      ACC.3, continue_operation ; Accumulator
                 mov     DPTR, #0FF74h
                 movx    A, @DPTR
                 mov     DPTR, #0F681h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF681] = XRAM[0xFF74]
 
-code_2DAF:                              ; CODE XREF: power_on__ignition_key_turned_:code_2D9C↑j
+
+!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!
+
+
+
+
+
+continue_operation:                     ; CODE XREF: power_on__ignition_key_turned_:code_2D9C↑j
                                         ; power_on__ignition_key_turned_+A12↑j
                 mov     DPTR, #8741h
                 clr     A
@@ -11622,7 +11637,11 @@ code_364E:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     R1, A
                 inc     DPTR
                 djnz    B, code_364E    ; B-Register
-                lcall   code_60A0
+                lcall   shl_word_3_times ; INPUT:
+                                        ;   R1:R0
+                                        ; OUTPUT:
+                                        ;   R1:R0 = (R1:R0) << 3, or FF:FF (if overflow happens)
+                                        ;
                 mov     A, R1
                 mov     DPTR, #0F600h
                 movx    @DPTR, A
@@ -19739,7 +19758,11 @@ code_5EA8:                              ; CODE XREF: code_5D9F+103↑j
                 jnz     code_5ED0
                 mov     R1, RAM_0
                 mov     R0, B           ; B-Register
-                lcall   code_60A0
+                lcall   shl_word_3_times ; INPUT:
+                                        ;   R1:R0
+                                        ; OUTPUT:
+                                        ;   R1:R0 = (R1:R0) << 3, or FF:FF (if overflow happens)
+                                        ;
                 sjmp    code_5ED2
 ; ---------------------------------------------------------------------------
 
@@ -20291,15 +20314,20 @@ code_6096:                              ; CODE XREF: shl_word_twice+A↓j
 
 ; =============== S U B R O U T I N E =======================================
 
+; INPUT:
+;   R1:R0
+; OUTPUT:
+;   R1:R0 = (R1:R0) << 3, or FF:FF (if overflow happens)
+;
 
-code_60A0:                              ; CODE XREF: power_on__ignition_key_turned_+9BD↑p
+shl_word_3_times:                       ; CODE XREF: power_on__ignition_key_turned_+9BD↑p
                                         ; power_on__ignition_key_turned_+12C7↑p ...
-                mov     A, R0
-                mov     R0, #3
-                clr     C
+                mov     A, R0           ; A = R0
+                mov     R0, #3          ; R0 = 3
+                clr     C               ; CY = 0
 
-code_60A4:                              ; CODE XREF: code_60A0+A↓j
-                rlc     A
+code_60A4:                              ; CODE XREF: shl_word_3_times+A↓j
+                rlc     A               ; CY = !!(A & (1 << 7)), A = (A << 1) | CY_old
                 xch     A, R1
                 rlc     A
                 jc      saturate_r0_r1_to_ff_ff
@@ -20307,7 +20335,7 @@ code_60A4:                              ; CODE XREF: code_60A0+A↓j
                 djnz    R0, code_60A4
                 mov     R0, A
                 ret
-; End of function code_60A0
+; End of function shl_word_3_times
 
 
 ; =============== S U B R O U T I N E =======================================
