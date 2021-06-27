@@ -9793,23 +9793,23 @@ FINISHED INTAKE AIR TEMPERATURE
                 mov     DPTR, #873Fh
                 clr     A
                 movc    A, @A+DPTR
-                jb      ACC.7, process_CO_pot ; if there is CO potentiometer
+                jb      ACC.7, check_CO_pot ; if there is CO potentiometer
                 mov     DPTR, #8741h
                 clr     A
                 movc    A, @A+DPTR
-                jb      ACC.0, process_IROM ; if there is IROM
+                jb      ACC.0, pick_CO_pot_from_eeprom ; if there is IROM
                 clr     RAM_23.4        ; clear error flags
                 clr     RAM_23.5
                 sjmp    fallback_CO_pot
 ; ---------------------------------------------------------------------------
 
-process_CO_pot:                         ; CODE XREF: power_on__ignition_key_turned_+9A4↑j
+check_CO_pot:                           ; CODE XREF: power_on__ignition_key_turned_+9A4↑j
                 mov     DPTR, #0F6A4h
                 movx    A, @DPTR
-                mov     R0, A           ; R0 = XRAM[0xF6A4]
+                mov     R0, A           ; R0 = XRAM[0xF6A4] // sum of ADC CO Potentiometer, low byte
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A           ; R1 = XRAM[0xF6A5]
+                mov     R1, A           ; R1 = XRAM[0xF6A5] // sum of ADC CO Potentiometer, high byte
                 lcall   shl_word_3_times ; INPUT:
                                         ;   R1:R0
                                         ; OUTPUT:
@@ -9823,26 +9823,27 @@ process_CO_pot:                         ; CODE XREF: power_on__ignition_key_turn
                 cjne    A, B, code_2D5D ; B-Register
 
 code_2D5D:                              ; CODE XREF: power_on__ignition_key_turned_+9C8↑j
-                jnc     r1_not_less_than_minimum_co_pot
+                jnc     co_pot_not_less_than_minimum_co_pot
                 setb    RAM_23.4        ; set error flag
                 clr     RAM_23.5
                 sjmp    fallback_CO_pot
 ; ---------------------------------------------------------------------------
 
-r1_not_less_than_minimum_co_pot:        ; CODE XREF: power_on__ignition_key_turned_:code_2D5D↑j
+co_pot_not_less_than_minimum_co_pot:    ; CODE XREF: power_on__ignition_key_turned_:code_2D5D↑j
                 mov     DPTR, #8068h
                 clr     A
                 movc    A, @A+DPTR      ; A = FLASH[0x8068] // maximum value of ADC CO Pot
                 cjne    A, RAM_1, code_2D6D
 
 code_2D6D:                              ; CODE XREF: power_on__ignition_key_turned_+9D8↑j
-                jnc     r1_less_or_equal_than_maximum_co_pot
+                jnc     co_pot_less_or_equal_than_maximum_co_pot
                 clr     RAM_23.4        ; set error flag
                 setb    RAM_23.5
                 sjmp    fallback_CO_pot
 ; ---------------------------------------------------------------------------
 
-r1_less_or_equal_than_maximum_co_pot:   ; CODE XREF: power_on__ignition_key_turned_:code_2D6D↑j
+co_pot_less_or_equal_than_maximum_co_pot:
+                                        ; CODE XREF: power_on__ignition_key_turned_:code_2D6D↑j
                 clr     RAM_23.4        ; clear error flag
                 clr     RAM_23.5
                 mov     A, R1
@@ -9852,7 +9853,12 @@ r1_less_or_equal_than_maximum_co_pot:   ; CODE XREF: power_on__ignition_key_turn
 
 code_2D7F:                              ; CODE XREF: power_on__ignition_key_turned_+9E9↑j
                 clr     C
-                subb    A, #50h ; 'P'
+                subb    A, #50h ; 'P'   ; if (R1 & (1 << 7))
+                                        ;   A = 0xFF;
+                                        ; else
+                                        ;   A = R1 << 1;
+                                        ;
+                                        ; A -= 0x50;
                 mov     B, #0C0h        ; B-Register
                 lcall   multiply_signed ; Multiply signed bytes.
                                         ; Result - signed word.
@@ -9863,7 +9869,7 @@ code_2D7F:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT
                                         ;  - B:A - signed word B*A
-                sjmp    code_2D91
+                sjmp    calculate_xram_f681
 ; ---------------------------------------------------------------------------
 
 fallback_CO_pot:                        ; CODE XREF: power_on__ignition_key_turned_+9B3↑j
@@ -9873,7 +9879,7 @@ fallback_CO_pot:                        ; CODE XREF: power_on__ignition_key_turn
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
 
-code_2D91:                              ; CODE XREF: power_on__ignition_key_turned_+9F6↑j
+calculate_xram_f681:                    ; CODE XREF: power_on__ignition_key_turned_+9F6↑j
                 mov     A, RAM_73
                 jb      ACC.3, code_2D9C ; Accumulator
                 mov     A, B            ; B-Register
@@ -9881,18 +9887,60 @@ code_2D91:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    @DPTR, A        ; store adjusted CO potentiometer value
 
 code_2D9C:                              ; CODE XREF: power_on__ignition_key_turned_+A01↑j
-                sjmp    continue_operation
+                sjmp    xram_f681_initialized
 ; ---------------------------------------------------------------------------
 
-process_IROM:                           ; CODE XREF: power_on__ignition_key_turned_+9AC↑j
+pick_CO_pot_from_eeprom:                ; CODE XREF: power_on__ignition_key_turned_+9AC↑j
                 clr     RAM_23.4
                 clr     RAM_23.5
                 mov     A, RAM_73
-                jb      ACC.3, continue_operation ; Accumulator
+                jb      ACC.3, xram_f681_initialized ; Accumulator
                 mov     DPTR, #0FF74h
                 movx    A, @DPTR
                 mov     DPTR, #0F681h
                 movx    @DPTR, A        ; XRAM[0xF681] = XRAM[0xFF74]
+
+xram_f681_initialized:                  ; CODE XREF: power_on__ignition_key_turned_:code_2D9C↑j
+                                        ; power_on__ignition_key_turned_+A12↑j
+                mov     DPTR, #8741h
+                clr     A
+                movc    A, @A+DPTR
+                jb      ACC.0, code_2DC7 ; if there is IROM
+                mov     A, RAM_73
+                jb      ACC.4, xram_f682_initialized ; Accumulator
+                mov     DPTR, #806Ah
+                clr     A
+                movc    A, @A+DPTR
+                mov     DPTR, #0F682h
+                movx    @DPTR, A        ; XRAM[0xF682] = FLASH[0x806A] // fallback value
+                sjmp    xram_f682_initialized
+; ---------------------------------------------------------------------------
+
+code_2DC7:                              ; CODE XREF: power_on__ignition_key_turned_+A22↑j
+                mov     A, RAM_73
+                jb      ACC.4, xram_f682_initialized ; Accumulator
+                mov     DPTR, #0FF75h
+                movx    A, @DPTR
+                mov     DPTR, #0F682h   ; XRAM[0xF682] = XRAM[0xFF75] // setting value from eeprom
+                movx    @DPTR, A
+START THROTTLE POSITION
+
+xram_f682_initialized:                  ; CODE XREF: power_on__ignition_key_turned_+A27↑j
+                                        ; power_on__ignition_key_turned_+A33↑j ...
+                mov     DPTR, #0F6B3h
+                movx    A, @DPTR
+                mov     B, A            ; B = XRAM[0xF6B3] // high byte of scaled ADC Throttle Position
+                mov     DPTR, #0F6B4h
+                movx    A, @DPTR        ; A = XRAM[0xF6B4] // low byte of scaled ADC Throttle Position
+                clr     C
+                subb    A, B            ; B-Register
+                mov     B, A            ; B = A - B
+                mov     DPTR, #8080h
+                clr     A
+                movc    A, @A+DPTR      ; A = FLASH[0x8080]
+                clr     C
+                subb    A, B            ; B-Register
+                jc      code_2E1F       ; if (FLASH[0x8080] < B) jump ...
 
 
 !!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!
@@ -9900,59 +9948,18 @@ process_IROM:                           ; CODE XREF: power_on__ignition_key_turn
 
 
 
-
-continue_operation:                     ; CODE XREF: power_on__ignition_key_turned_:code_2D9C↑j
-                                        ; power_on__ignition_key_turned_+A12↑j
-                mov     DPTR, #8741h
-                clr     A
-                movc    A, @A+DPTR
-                jb      ACC.0, code_2DC7 ; Accumulator
-                mov     A, RAM_73
-                jb      ACC.4, code_2DD4 ; Accumulator
-                mov     DPTR, #806Ah
-                clr     A
-                movc    A, @A+DPTR
-                mov     DPTR, #0F682h
-                movx    @DPTR, A
-                sjmp    code_2DD4
-; ---------------------------------------------------------------------------
-
-code_2DC7:                              ; CODE XREF: power_on__ignition_key_turned_+A22↑j
-                mov     A, RAM_73
-                jb      ACC.4, code_2DD4 ; Accumulator
-                mov     DPTR, #0FF75h
-                movx    A, @DPTR
-                mov     DPTR, #0F682h
-                movx    @DPTR, A
-
-code_2DD4:                              ; CODE XREF: power_on__ignition_key_turned_+A27↑j
-                                        ; power_on__ignition_key_turned_+A33↑j ...
-                mov     DPTR, #0F6B3h
-                movx    A, @DPTR
-                mov     B, A            ; B-Register
-                mov     DPTR, #0F6B4h
-                movx    A, @DPTR
-                clr     C
-                subb    A, B            ; B-Register
-                mov     B, A            ; B-Register
-                mov     DPTR, #8080h
-                clr     A
-                movc    A, @A+DPTR
-                clr     C
-                subb    A, B            ; B-Register
-                jc      code_2E1F
                 mov     DPTR, #0F6B7h
                 movx    A, @DPTR
-                mov     R0, A
+                mov     R0, A           ; R0 = XRAM[0xF6B7]
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
+                mov     R1, A           ; R1 = XRAM[0xF6B8]
                 mov     DPTR, #0F6A6h
                 movx    A, @DPTR
-                mov     R2, A
+                mov     R2, A           ; R2 = XRAM[0xF6A6] // low byte of sum of scaled ADC Throrrle Position
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R3, A
+                mov     R3, A           ; R2 = XRAM[0xF6A7] // high byte of sum of scaled ADC Throrrle Position
                 lcall   subtract_word   ; INPUT - R1:R0
                                         ;         R3:R2
                                         ;
@@ -9961,7 +9968,7 @@ code_2DD4:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; R1 - high, R0 - low
                                         ; R3 - high, R2 - low
-                jc      code_2E1F
+                jc      code_2E1F       ; if (COMPOSE_WORD(XRAM[0xF6B8], XRAM[0xF6B7]) < COMPOSE_WORD(XRAM[0xF6A7], XRAM[0xF6A6])) jump ...
                 mov     A, R2
                 anl     A, #0C0h
                 mov     R2, A

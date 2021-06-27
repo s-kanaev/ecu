@@ -1805,6 +1805,7 @@ void addByteInXRAMWord(byte _V, word XramPtr) {
   XRAM[XramPtr + 1] = HIGH(V);
 }
 
+// TODO NAME
 _2B19:
 {
   if (!CHECK_BIT_AT(RAM[0x28], 6) &&
@@ -1906,7 +1907,20 @@ _2B19:
     goto _2ED3;
   }
 
-  // _2C09:
+  goto _2C09;
+}
+
+_2C09:
+{
+  // Prerequisites:
+  // DPTR = 0xF6D9
+  // XRAM[0xF69D] == 0x20
+
+  // TODO
+}
+
+_2ED3:
+{
   // TODO
 }
 

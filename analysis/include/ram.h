@@ -63,12 +63,12 @@ byte RAM[0x100] = {
   [0x3B] = 0,     // Adjusted intake air temperature
   [0x3C] = 0,     // Adjusted ignition switch voltage
   
-  [0x3D] = 0,     // Adjusted coolant temperature
+  [0x3D] = 0,     // Adjusted coolant temperature (output from adjusting RAM[0x3A] with AdjustTemperature proc)
                   // packed offset and factor for FLASH[0xA2FD]
                   // factor - least significant three bits, will be SHL 5 = xxx0 0000
                   // offset - most significant five bits, will be SHR 3, max value = 0x1F
 
-  [0x3E] = 0,     // Adjusted intake air temperature
+  [0x3E] = 0,     // Adjusted intake air temperature (after RAM[0x3B])
   [0x3F] = 0,     // Adjusted ignition switch voltage
   [0x40..0x43] = 0,
 
@@ -95,15 +95,17 @@ byte RAM[0x100] = {
 
   [0x64..0x71] = 0,
   [0x72] = 0,     // some status word ?
-                  // bit 7
+                  // bit 7 - ???
                   // bit 6
-                  // bit 5  - ???
+                  // bit 5 - ???
                   // bit 4
                   // bit 3
                   // bit 2
                   // bit 1
                   // bit 0
   [0x73] = 0,     // ???
+                  // bit 3 - XRAM[0xF681] initialized
+                  // bit 4 - XRAM[0xF682] initialized
                   // bit 5 - ???
   [0x74..0x7B] = 0x00,
 

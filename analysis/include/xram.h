@@ -16,7 +16,10 @@ byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
   [0xF658] = 0,                               // checksum low byte (for 0xFx00..0xF657)
   [0xF659] = 0                                // checksum high byte (for 0xFx00..0xF657)
   
+  [0xF679] = 0,                               // ??? TODO
+
   [0xF681] = 0,                               // Adjusted CO potentiometer
+  [0xF682] = 0,                               // ??? TODO
   [0xF683] = 0,                               // Adjusted coolant temperature, copy of RAM[0x3A]
   [0xF686] = 0,                               // ADC Coolant temperature
   [0xF685] = 0,                               // ADC Throttle position
@@ -33,6 +36,8 @@ byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
   [0xF69F] = 0,                               // sum of scaled ADC Coolant Temperature, high byte
   [0xF6A0] = 0,                               // sum of scaled ADC Intake Air Temperature, low byte
   [0xF6A1] = 0,                               // sum of scaled ADC Intake Air Temperature, high byte
+  [0xF6A4] = 0,                               // sum of ADC CO Potentiometer, low byte
+  [0xF6A5] = 0,                               // sum of ADC CO Potentiometer, high byte
   [0xF6A6] = 0,                               // sum of scaled ADC Throttle Position, low byte
   [0xF6A7] = 0,                               // sum of scaled ADC Throttle Position, high byte
   [0xF6A8] = 0,                               // sum of RAM[0x49], low byte
@@ -46,7 +51,8 @@ byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
   [0xF6BB] = 0,                               // quotient from dividng smth on RAM[0x44..0x45] or RA<[0x1C/0x1D], low byte
   [0xF6BC] = 0,                               // quotient from dividng smth on RAM[0x44..0x45] or RA<[0x1C/0x1D], high byte
 
-  [0xF679] = 0,                               // ??? TODO
+  [0xF6BF] = 0,                               // ??? TODO, compared to FLASH[0x805D]
+
   
   [0xF675..0xF7D4] = 0x00,                    // 0x160 bytes
   [0xF7A4] = 0x00,                            // Filled in with FLASH[0x8789] or FLASH[0x878A] depending
