@@ -594,19 +594,19 @@
  00000000:00002D1D       scaled_intake_air_temperature_larger_or_equal_than_maximum_intake_air_temperature
  00000000:00002D21       no_intake_air_temperature_sensor
  00000000:00002D2A       ram_73_bit_0_set
- 00000000:00002D47       process_CO_pot
+ 00000000:00002D47       check_CO_pot
  00000000:00002D5D       code_2D5D
- 00000000:00002D65       r1_not_less_than_minimum_co_pot
+ 00000000:00002D65       co_pot_not_less_than_minimum_co_pot
  00000000:00002D6D       code_2D6D
- 00000000:00002D75       r1_less_or_equal_than_maximum_co_pot
+ 00000000:00002D75       co_pot_less_or_equal_than_maximum_co_pot
  00000000:00002D7F       code_2D7F
  00000000:00002D8A       fallback_CO_pot
- 00000000:00002D91       code_2D91
+ 00000000:00002D91       calculate_xram_f681
  00000000:00002D9C       code_2D9C
- 00000000:00002D9E       process_IROM
- 00000000:00002DAF       continue_operation
+ 00000000:00002D9E       pick_CO_pot_from_eeprom
+ 00000000:00002DAF       xram_f681_initialized
  00000000:00002DC7       code_2DC7
- 00000000:00002DD4       code_2DD4
+ 00000000:00002DD4       xram_f682_initialized
  00000000:00002E1F       code_2E1F
  00000000:00002E30       code_2E30
  00000000:00002E35       code_2E35

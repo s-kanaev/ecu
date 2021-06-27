@@ -13,7 +13,7 @@ byte FLASH[0x10000] = {
 
   [0x8057] = 0x64,  // minimum A/D Converted Coolant Temperature
   [0x8058] = 0xF0,  // maximum A/D Converted Coolant Temperature
-  [0x805D] = 0x00,  // somehow used in processing of A/D Converted Coolant Temperature ?
+  [0x805D] = 0x00,  // somehow used in processing of A/D Converted Coolant Temperature, compared to RAM[0xF6BF] ?
   [0x805E] = 0x64,  // minimum A/D Converted Intake Air Temperature
   [0x805F] = 0xF0,  // maximum A/D Converted Intake Air Temperature
 
@@ -45,60 +45,108 @@ byte FLASH[0x10000] = {
   [0x8341..0x8351] = {0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x25, 0x44, 0x63, 0x83, 0xA2, 0xC1, 0xE0, 0xE0, 0xE0},
 
   [0x873F] = 0x3F,  // kitting bits: 0011 1111
-                    // bit 0 - is there constant power for ECU; default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 1 - is there EGO (exhaust gas oxygen) sensor; default = 1; 0 => FLASH[0xFFFF] = 0x01, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 2 - is there knock sensor; default = 1; 0 => FLASH[0xFFFF] = 0x03, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 3 - is there air temperature sensor; default = 1; 0 => FLASH[0xFFFF] = 0x07, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 4 - is there camshaft position sensor; default = 1; 0 => FLASH[0xFFFF] = 0x0F, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 5 - camshaft position sensor cross-section is aligned with TDC; default = 1; 0 => FLASH[0xFFFF] = 0x1F, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 6 - is there speed sensor; default = 0; 1 => FLASH[0xFFFF] = 0xBF, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 7 - is there CO potentiometer; default = 0; 1 => FLASH[0xFFFF] = 0x7F, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 0 - is there constant power for ECU;
+                    //         default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 1 - is there EGO (exhaust gas oxygen) sensor;
+                    //         default = 1; 0 => FLASH[0xFFFF] = 0x01, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 2 - is there knock sensor;
+                    //         default = 1; 0 => FLASH[0xFFFF] = 0x03, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 3 - is there air temperature sensor;
+                    //         default = 1; 0 => FLASH[0xFFFF] = 0x07, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 4 - is there camshaft position sensor;
+                    //         default = 1; 0 => FLASH[0xFFFF] = 0x0F, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 5 - camshaft position sensor cross-section is aligned with TDC;
+                    //         default = 1; 0 => FLASH[0xFFFF] = 0x1F, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 6 - is there speed sensor;
+                    //         default = 0; 1 => FLASH[0xFFFF] = 0xBF, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 7 - is there CO potentiometer;
+                    //         default = 0; 1 => FLASH[0xFFFF] = 0x7F, 0 => FLASH[0xFFFF] = 0xFF
   [0x8740] = 0xC0,  // kitting bits: 1100 0000
-                    // bit 0 - is there ABS; default = 0; 1 => FLASH[0xFFFE] = 0xFE, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 1 - is there EGR valve position sensor; default = 0; 1 => FLASH[0xFFFE] = 0xFD, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 2 - is there adsorber valve position; default = 0; 1 => FLASH[0xFFFE] = 0xFB, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 3 - is there power steering pressure sensor; default = 0; 1 => FLASH[0xFFFE] = 0xF7, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 4 - is there additional oxygen sensor (at absorber?); default = 0; 1 => FLASH[0xFFFE] = 0xEF, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 5 - does MAF have burnout function; default = 0; 1 = FLASH[0xFFFE] = 0xDF, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 6 - is there throttle position sensor; default = 1; 0 => FLASH[0xFFFE] = 0x3F, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
-                    // bit 7 - is there coolant temperature sensor; default = 1; 0 => FLASH[0xFFFE] = 0x7F, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
+                    // bit 0 - is there ABS;
+                    //         default = 0; 1 => FLASH[0xFFFE] = 0xFE, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 1 - is there EGR valve position sensor;
+                    //         default = 0; 1 => FLASH[0xFFFE] = 0xFD, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 2 - is there adsorber valve position;
+                    //         default = 0; 1 => FLASH[0xFFFE] = 0xFB, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 3 - is there power steering pressure sensor;
+                    //         default = 0; 1 => FLASH[0xFFFE] = 0xF7, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 4 - is there additional oxygen sensor (at absorber?);
+                    //         default = 0; 1 => FLASH[0xFFFE] = 0xEF, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 5 - does MAF have burnout function;
+                    //         default = 0; 1 = FLASH[0xFFFE] = 0xDF, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 6 - is there throttle position sensor;
+                    //         default = 1; 0 => FLASH[0xFFFE] = 0x3F, FLASH[0xFFFF] = 0x00,
+                    //                      1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
+                    // bit 7 - is there coolant temperature sensor;
+                    //         default = 1; 0 => FLASH[0xFFFE] = 0x7F, FLASH[0xFFFF] = 0x00,
+                    //                      1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
   [0x8741] = 0x23,  // kitting bits: 0010 0011
-                    // bit 0 - is there IROM; default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 1 - should DAC be corrected from IROM; default = 1; 0 => FLASH[0xFFFF] = 0x01, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 2 - is there immobilizer; default = 0; 1 => FLASH[0xFFFF] = 0xFB, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 3 - should RCO be corrected from IROM; default = 0; 1 => FLASH[0xFFFF] = 0xF7, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 4 - should fuel be blocked; default = 0; 1 => FLASH[0xFFFF] = 0xEF, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 5 - should fuel intake be asynchronous on second launch attempt; default = 1; 0 => FLASH[0xFFFF] = 0x1F, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 6 - should throttle position sensor adaptation be done; default = 0; 1 => FLASH[0xFFFF] = 0xBF, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 7 - should idle speed be adapted; default = 0; 1 => FLASH[0xFFFF] = 0x7F, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 0 - is there IROM;
+                    //         default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 1 - should DAC be corrected from IROM;
+                    //         default = 1; 0 => FLASH[0xFFFF] = 0x01, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 2 - is there immobilizer;
+                    //         default = 0; 1 => FLASH[0xFFFF] = 0xFB, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 3 - should RCO be corrected from IROM;
+                    //         default = 0; 1 => FLASH[0xFFFF] = 0xF7, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 4 - should fuel be blocked;
+                    //         default = 0; 1 => FLASH[0xFFFF] = 0xEF, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 5 - should fuel intake be asynchronous on second launch attempt;
+                    //         default = 1; 0 => FLASH[0xFFFF] = 0x1F, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 6 - should throttle position sensor adaptation be done;
+                    //         default = 0; 1 => FLASH[0xFFFF] = 0xBF, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 7 - should idle speed be adapted;
+                    //         default = 0; 1 => FLASH[0xFFFF] = 0x7F, 0 => FLASH[0xFFFF] = 0xFF
   [0x8742] = 0xC0,  // kitting bits: 1100 0000
-                    // bit 0 - should bypass valve be adapted at idle; default = 0; 1 => FLASH[0xFFFE] = 0xFE, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 1 - is EGO with heating control; default = 0; 1 => FLASH[0xFFFE] = 0xFD, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 0 - should bypass valve be adapted at idle;
+                    //         default = 0; 1 => FLASH[0xFFFE] = 0xFE, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 1 - is EGO with heating control;
+                    //         default = 0; 1 => FLASH[0xFFFE] = 0xFD, 0 => FLASH[0xFFFE] = 0xFF
                     // bit 2 - reserved?
                     // bit 3 - reserved?
                     // bit 4 - reserved?
                     // bit 5 - reserved?
-                    // bit 6 - are there injectors; default = 1; 0 => FLASH[0xFFFE] = 0x3F, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
-                    // bit 7 - are there ignition coils; default = 1; 0 => FLASH[0xFFFE] = 0x7F, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
+                    // bit 6 - are there injectors;
+                    //         default = 1; 0 => FLASH[0xFFFE] = 0x3F, FLASH[0xFFFF] = 0x00,
+                    //                      1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
+                    // bit 7 - are there ignition coils;
+                    //         default = 1; 0 => FLASH[0xFFFE] = 0x7F, FLASH[0xFFFF] = 0x00,
+                    //                      1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
 
   [0x8743] = 0x13,  // kitting bits: 0001 0011
-                    // bit 0 - is there check-engine lamp; default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 1 - is there fuel pump; default = 1; 0 => FLASH[0xFFFF] = 0x01, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 2 - is there start injector; default = 0; 1 => FLASH[0xFFFF] = 0xFB, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 3 - is there EGR valve; default = 0; 1 => FLASH[0xFFFF] = 0xF7, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 4 - is there adsorber; default = 1; 0 => FLASH[0xFFFF] = 0x0F, 1 => FLASH[0xFFFF] = 0xFF
-                    // bit 5 - is there tachometer; default = 0; 1 => FLASH[0xFFFF] = 0xDF, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 6 - is there fuel meter display; default = 0; 1 => FLASH[0xFFFF] = 0xBF, 0 => FLASH[0xFFFF] = 0xFF
-                    // bit 7 - is there AirConditioner; default = 0; 1 => FLASH[0xFFFF] = 0x7F, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 0 - is there check-engine lamp;
+                    //         default = 1; 0 => FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 1 - is there fuel pump;
+                    //         default = 1; 0 => FLASH[0xFFFF] = 0x01, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 2 - is there start injector;
+                    //         default = 0; 1 => FLASH[0xFFFF] = 0xFB, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 3 - is there EGR valve;
+                    //         default = 0; 1 => FLASH[0xFFFF] = 0xF7, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 4 - is there adsorber;
+                    //         default = 1; 0 => FLASH[0xFFFF] = 0x0F, 1 => FLASH[0xFFFF] = 0xFF
+                    // bit 5 - is there tachometer;
+                    //         default = 0; 1 => FLASH[0xFFFF] = 0xDF, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 6 - is there fuel meter display;
+                    //         default = 0; 1 => FLASH[0xFFFF] = 0xBF, 0 => FLASH[0xFFFF] = 0xFF
+                    // bit 7 - is there AirConditioner;
+                    //         default = 0; 1 => FLASH[0xFFFF] = 0x7F, 0 => FLASH[0xFFFF] = 0xFF
 
   [0x8744] = 0x05,  // kitting bits: 0000 0101
-                    // bit 0 - is there fan; default = 1; 0 => FLASH[0xFFFE] = 0x00, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
+                    // bit 0 - is there fan;
+                    //         default = 1; 0 => FLASH[0xFFFE] = 0x00, FLASH[0xFFFF] = 0x00,
+                    //                      1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
                     // bit 1 - reserved?
-                    // bit 2 - is there bypass valve; default = 1; 0 => FLASH[0xFFFE] = 0x03, FLASH[0xFFFF] = 0x00, 1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
-                    // bit 3 - is there idle economizer valve (carb); default = 0; 1 => FLASH[0xFFFE] = 0xF7, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 4 - is there secondary air compressor; default = 0; 1 => FLASH[0xFFFE] = 0xEF, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 5 - is intake controlled; default = 0; 1 => FLASH[0xFFFE] = 0xDF, 0 => FLASH[0xFFFE] = 0xFF
-                    // bit 6 - is there VVT; default = 0; 1 => FLASH[0xFFFE] = 0xBF, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 2 - is there bypass valve;
+                    //         default = 1; 0 => FLASH[0xFFFE] = 0x03, FLASH[0xFFFF] = 0x00,
+                    //                      1 => FLASH[0xFFFE] = 0xFF, FLASH[0xFFFF] = 0xFF
+                    // bit 3 - is there idle economizer valve (carb);
+                    //         default = 0; 1 => FLASH[0xFFFE] = 0xF7, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 4 - is there secondary air compressor;
+                    //         default = 0; 1 => FLASH[0xFFFE] = 0xEF, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 5 - is intake controlled;
+                    //         default = 0; 1 => FLASH[0xFFFE] = 0xDF, 0 => FLASH[0xFFFE] = 0xFF
+                    // bit 6 - is there VVT;
+                    //         default = 0; 1 => FLASH[0xFFFE] = 0xBF, 0 => FLASH[0xFFFE] = 0xFF
                     // bit 7 - reserved?
 
   [0x8753] = 0x1B,  // ???, copied to RAM[0x59]
