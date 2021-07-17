@@ -9480,7 +9480,7 @@ code_2BF3:                              ; CODE XREF: power_on__ignition_key_turn
                 inc     A
                 movx    @DPTR, A        ; ++XRAM[0xF69D]
                                         ; A = XRAM[0xF69D]
-                cjne    A, #20h, code_2C06 ; ' ' ; if (++XRAM[0xF69D] != 0x20) jump ...
+                cjne    A, #20h, _2ED3_trampoline ; ' ' ; if (++XRAM[0xF69D] != 0x20) jump ...
                 sjmp    code_2C09
 ; ---------------------------------------------------------------------------
 
@@ -9494,7 +9494,7 @@ code_2BF3:                              ; CODE XREF: power_on__ignition_key_turn
 
 
 
-code_2C06:                              ; CODE XREF: power_on__ignition_key_turned_+86F↑j
+_2ED3_trampoline:                       ; CODE XREF: power_on__ignition_key_turned_+86F↑j
                 ljmp    code_2ED3
 ; ---------------------------------------------------------------------------
 PREREQUISITES: DPTR = 0xF69D
@@ -9941,13 +9941,6 @@ xram_f682_initialized:                  ; CODE XREF: power_on__ignition_key_turn
                 clr     C
                 subb    A, B            ; B-Register
                 jc      code_2E1F       ; if (FLASH[0x8080] < B) jump ...
-
-
-!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!
-
-
-
-
                 mov     DPTR, #0F6B7h
                 movx    A, @DPTR
                 mov     R0, A           ; R0 = XRAM[0xF6B7]
@@ -9971,7 +9964,9 @@ xram_f682_initialized:                  ; CODE XREF: power_on__ignition_key_turn
                 jc      code_2E1F       ; if (COMPOSE_WORD(XRAM[0xF6B8], XRAM[0xF6B7]) < COMPOSE_WORD(XRAM[0xF6A7], XRAM[0xF6A6])) jump ...
                 mov     A, R2
                 anl     A, #0C0h
-                mov     R2, A
+                mov     R2, A           ; R2 &= 0xC0 // 1100 0000
+                                        ;
+                                        ; // align sum with ADC result
                 mov     R0, #40h ; '@'
                 mov     R1, #0
                 lcall   add_word        ; Add words
@@ -9996,9 +9991,11 @@ xram_f682_initialized:                  ; CODE XREF: power_on__ignition_key_turn
                 mov     A, R0
                 movx    @DPTR, A
                 inc     DPTR
-                mov     A, R1
+                mov     A, R1           ; XRAM[0xF6B6]:XRAM[0xF6B5] = (XRAM[0xF6A7]:XRAM[0xF6A6] & 0x00:0xC0) + 0x00:0x40
+                                        ;
+                                        ; XRAM[0xF6B8]:XRAM[0xF6B7] = (XRAM[0xF6A7]:XRAM[0xF6A6] & 0x00:0xC0) + 0x00:0x40
                 movx    @DPTR, A
-                sjmp    code_2E75
+                sjmp    no_need_to_adapt_throttle_position_sensor
 ; ---------------------------------------------------------------------------
 
 code_2E1F:                              ; CODE XREF: power_on__ignition_key_turned_+A59↑j
@@ -10006,59 +10003,72 @@ code_2E1F:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #8741h
                 clr     A
                 movc    A, @A+DPTR
-                jnb     ACC.6, code_2E75 ; Accumulator
+                jnb     ACC.6, no_need_to_adapt_throttle_position_sensor ; if (NOT should throttle position sensor adaptation be done) jump ...
                 mov     DPTR, #0F7BCh
-                movx    A, @DPTR
+                movx    A, @DPTR        ; A = XRAM[0xF7BC]
                 cjne    A, #0Bh, code_2E30
-                sjmp    code_2E75
+                sjmp    no_need_to_adapt_throttle_position_sensor ; if ((0x0B == XRAM[0xF7BC]) || (0x15 == XRAM[0xF7BC]) ||
+                                        ;     (0x16 == XRAM[0xF7BC]) || (0x17 == XRAM[0xF7BC]) ||
+                                        ;     (0x1F == XRAM[0xF7BC]) || (0x20 == XRAM[0xF7BC]) ||
+                                        ;     (0x29 == XRAM[0xF7BC]))
+                                        ;   jump _2E75 (no_need_to_adapt_throttle_position_sensor)
+                                        ; else
+                                        ;   jump _2E4E (adapt_throttle_position_sensor_input)
 ; ---------------------------------------------------------------------------
 
 code_2E30:                              ; CODE XREF: power_on__ignition_key_turned_+A99↑j
                 cjne    A, #15h, code_2E35
-                sjmp    code_2E75
+                sjmp    no_need_to_adapt_throttle_position_sensor
 ; ---------------------------------------------------------------------------
 
 code_2E35:                              ; CODE XREF: power_on__ignition_key_turned_:code_2E30↑j
                 cjne    A, #16h, code_2E3A
-                sjmp    code_2E75
+                sjmp    no_need_to_adapt_throttle_position_sensor
 ; ---------------------------------------------------------------------------
 
 code_2E3A:                              ; CODE XREF: power_on__ignition_key_turned_:code_2E35↑j
                 cjne    A, #17h, code_2E3F
-                sjmp    code_2E75
+                sjmp    no_need_to_adapt_throttle_position_sensor
 ; ---------------------------------------------------------------------------
 
 code_2E3F:                              ; CODE XREF: power_on__ignition_key_turned_:code_2E3A↑j
                 cjne    A, #1Fh, code_2E44
-                sjmp    code_2E75
+                sjmp    no_need_to_adapt_throttle_position_sensor
 ; ---------------------------------------------------------------------------
 
 code_2E44:                              ; CODE XREF: power_on__ignition_key_turned_:code_2E3F↑j
                 cjne    A, #20h, code_2E49 ; ' '
-                sjmp    code_2E75
+                sjmp    no_need_to_adapt_throttle_position_sensor
 ; ---------------------------------------------------------------------------
 
 code_2E49:                              ; CODE XREF: power_on__ignition_key_turned_:code_2E44↑j
-                cjne    A, #29h, code_2E4E ; ')'
-                sjmp    code_2E75
+                cjne    A, #29h, adapt_throttle_position_sensor_input ; ')'
+                sjmp    no_need_to_adapt_throttle_position_sensor
 ; ---------------------------------------------------------------------------
 
-code_2E4E:                              ; CODE XREF: power_on__ignition_key_turned_:code_2E49↑j
+PREREQUISITE:
+(XRAM[0xF7BC] != 0x0B) && (XRAM[0xF7BC] != 0x15) &&
+(XRAM[0xF7BC] != 0x16) && (XRAM[0xF7BC] != 0x17) &&
+(XRAM[0xF7BC] != 0x1F) && (XRAM[0xF7BC] != 0x20) &&
+(XRAM[0xF7BC] != 0x29)
+
+adapt_throttle_position_sensor_input:   ; CODE XREF: power_on__ignition_key_turned_:code_2E49↑j
                 mov     DPTR, #807Ch
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = FLASH[0x807C]
                 mov     DPTR, #0F6B8h
-                movx    A, @DPTR
+                movx    A, @DPTR        ; A = XRAM[0xF6B8] // High byte of adjusted ADC Throttle Position
                 clr     C
                 subb    A, B            ; B-Register
-                jnc     code_2E75
+                jnc     no_need_to_adapt_throttle_position_sensor ; if (A >= B) jump ...
+                                        ; if (XRAM[0xF6B8] >= FLASH[0x807C]) jump ...
                 mov     DPTR, #0F6B7h
                 movx    A, @DPTR
-                mov     R0, A
+                mov     R0, A           ; R0 = XRAM[0xF6B7] // Low byte of adjusted ADC Throttle Position
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
+                mov     R1, A           ; R1 = XRAM[0xF6B8] // High byte of adjusted ADC Throttle Position
                 mov     R2, #2
                 mov     R3, #0
                 lcall   add_word        ; Add words
@@ -10078,90 +10088,98 @@ code_2E4E:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, R1
-                movx    @DPTR, A
+                movx    @DPTR, A        ; WORD(XRAM[0xF6B8]:XRAM[0xF8B7]) += 0x00:0x02
 
-code_2E75:                              ; CODE XREF: power_on__ignition_key_turned_+A8B↑j
+no_need_to_adapt_throttle_position_sensor:
+                                        ; CODE XREF: power_on__ignition_key_turned_+A8B↑j
                                         ; power_on__ignition_key_turned_+A92↑j ...
                 mov     DPTR, #0F6A6h
                 movx    A, @DPTR
                 mov     R0, A
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
+                mov     R1, A           ; R1:R0 = XRAM[0xF6A7]:XRAM[0xF6A6] // sum of scaled ADC Throttle Position
                 mov     DPTR, #807Ah
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = FLASH[0x807A] // low limit of XRAM[0xF6A7]
                 mov     A, R1
                 clr     C
                 subb    A, B            ; B-Register
-                jc      code_2E99
+                jc      xram_f6a7_less_low_limit ; if (A < B) jump ...
+                                        ; if (XRAM[0xF6A7] < FLASH[0x807A]) jump ...
                 mov     DPTR, #807Bh
                 clr     A
-                movc    A, @A+DPTR
+                movc    A, @A+DPTR      ; A = FLAS[0x807B] // high limit of XRAM[0xF6A7]
                 clr     C
                 subb    A, R1
-                jc      code_2E9F
+                jc      xram_f6a7_larger_upper_limit ; if (FLASH[0x807B] < XRAM[0xF6A7]) jump ...
                 clr     RAM_24.0
                 clr     RAM_24.1
-                sjmp    code_2EA3
+                sjmp    done_checking_xram_f6a7
 ; ---------------------------------------------------------------------------
 
-code_2E99:                              ; CODE XREF: power_on__ignition_key_turned_+AF6↑j
+xram_f6a7_less_low_limit:               ; CODE XREF: power_on__ignition_key_turned_+AF6↑j
                 setb    RAM_24.0
                 clr     RAM_24.1
-                sjmp    code_2EA3
+                sjmp    done_checking_xram_f6a7
 ; ---------------------------------------------------------------------------
 
-code_2E9F:                              ; CODE XREF: power_on__ignition_key_turned_+AFF↑j
+xram_f6a7_larger_upper_limit:           ; CODE XREF: power_on__ignition_key_turned_+AFF↑j
                 clr     RAM_24.0
                 setb    RAM_24.1
 
-code_2EA3:                              ; CODE XREF: power_on__ignition_key_turned_+B05↑j
+done_checking_xram_f6a7:                ; CODE XREF: power_on__ignition_key_turned_+B05↑j
                                         ; power_on__ignition_key_turned_+B0B↑j
                 mov     DPTR, #0F6A8h
                 movx    A, @DPTR
                 mov     R0, A
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
+                mov     R1, A           ; R1:R0 = XRAM[0xF6A9]:XRAM[0xF6A8] // sum of RAM[0x49]
                 mov     DPTR, #0F6AAh
                 movx    A, @DPTR
                 mov     R2, A
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R3, A
+                mov     R3, A           ; R3:R2 = XRAM[0xF6AB]:XRAM[0xF6AA]
                 mov     DPTR, #0F6AAh
                 mov     A, R0
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, R1
-                movx    @DPTR, A
-                lcall   subtract_word   ; INPUT - R1:R0
-                                        ;         R3:R2
-                                        ;
-                                        ; OUTPUT - R1:R0 = R1:R0 - R3:R2
-                                        ;          A = R1
-                                        ;
-                                        ; R1 - high, R0 - low
-                                        ; R3 - high, R2 - low
+                movx    @DPTR, A        ; XRAM[0xF6AB]:XRAM[0xF6AA] = XRAM[0xF6A9]:XRAM[0xF6A8] // sum of RAM[0x49]
+                lcall   subtract_word   ; R1:R0 = XRAM[0xF6A9]:XRAM[0xF6A8] - R3:R2
                 jnc     code_2EC4
-                mov     R0, #0
+                mov     R0, #0          ; saturate to 0 if XRAM[0xF6A9]:XRAM[0xF6A8] < XRAM[0xF6AB]:XRAM[0xF6AA]
+                                        ;
+                                        ; if (R1:R0 < 0) {
+                                        ;   R1 = 0
+                                        ;   R0 = 0
+                                        ; }
                 mov     R1, #0
 
 code_2EC4:                              ; CODE XREF: power_on__ignition_key_turned_+B2C↑j
                 mov     A, R1
-                jz      code_2EC9
-                mov     R0, #0FFh
+                jz      code_2EC9       ; if (!R1) jump ...
+                mov     R0, #0FFh       ; saturate low byte of difference to 0xFF when R1:R0 > 0x00:0xFF
 
 code_2EC9:                              ; CODE XREF: power_on__ignition_key_turned_+B33↑j
                 mov     A, R0
                 mov     DPTR, #0F6ACh
-                movx    @DPTR, A
-                lcall   code_695C
+                movx    @DPTR, A        ; XRAM[0xF6AC] = R0 // low byte of difference
+                lcall   clear_xram_f69e_0c_bytes
                 setb    RAM_28.3
 
-code_2ED3:                              ; CODE XREF: power_on__ignition_key_turned_:code_2C06↑j
+
+!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!
+
+
+
+
+
+
+code_2ED3:                              ; CODE XREF: power_on__ignition_key_turned_:_2ED3_trampoline↑j
                 mov     DPTR, #0F69Ah
                 movx    A, @DPTR
                 inc     A
@@ -10229,7 +10247,7 @@ code_2F28:                              ; CODE XREF: power_on__ignition_key_turn
 
 code_2F2C:                              ; CODE XREF: power_on__ignition_key_turned_:code_2F28↑j
                 mov     RAM_3F, A
-                lcall   code_696B
+                lcall   clear_xram_f69a_f69b
 
 code_2F31:                              ; CODE XREF: power_on__ignition_key_turned_+B47↑j
                 mov     A, P9           ; Port 9 (PDIR=0)
@@ -11767,8 +11785,8 @@ code_36E0:                              ; CODE XREF: power_on__ignition_key_turn
 
 code_36ED:                              ; CODE XREF: power_on__ignition_key_turned_+1353↑j
                 clr     RAM_28.3
-                lcall   code_695C
-                lcall   code_696B
+                lcall   clear_xram_f69e_0c_bytes
+                lcall   clear_xram_f69a_f69b
                 lcall   inputs_part1    ; Select operating mode.
                                         ;
                                         ; A/D Convert and prepare for calculus:
@@ -22913,26 +22931,27 @@ code_6957:                              ; CODE XREF: code_6783+171↑j
 ; =============== S U B R O U T I N E =======================================
 
 
-code_695C:                              ; CODE XREF: power_on__ignition_key_turned_+B3C↑p
+clear_xram_f69e_0c_bytes:               ; CODE XREF: power_on__ignition_key_turned_+B3C↑p
                                         ; power_on__ignition_key_turned_+135D↑p
                 clr     A
                 mov     DPTR, #0F69Eh
                 mov     R1, #0Ch
 
-code_6962:                              ; CODE XREF: code_695C+8↓j
-                movx    @DPTR, A
+code_6962:                              ; CODE XREF: clear_xram_f69e_0c_bytes+8↓j
+                movx    @DPTR, A        ; for (XramPtr = 0xF69E; XramPtr < 0xF69E + 0x0C; ++XramPtr)
+                                        ;   XRAM[XramPtr] = 0x00;
                 inc     DPTR
                 djnz    R1, code_6962
-                mov     DPTR, #0F69Dh
+                mov     DPTR, #0F69Dh   ; XRAM[0xF69D] = 0
                 movx    @DPTR, A
                 ret
-; End of function code_695C
+; End of function clear_xram_f69e_0c_bytes
 
 
 ; =============== S U B R O U T I N E =======================================
 
 
-code_696B:                              ; CODE XREF: power_on__ignition_key_turned_+B9C↑p
+clear_xram_f69a_f69b:                   ; CODE XREF: power_on__ignition_key_turned_+B9C↑p
                                         ; power_on__ignition_key_turned_+1360↑p
                 clr     A
                 mov     DPTR, #0F69Bh
@@ -22942,7 +22961,7 @@ code_696B:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #0F69Ah
                 movx    @DPTR, A
                 ret
-; End of function code_696B
+; End of function clear_xram_f69a_f69b
 
 
 ; =============== S U B R O U T I N E =======================================
