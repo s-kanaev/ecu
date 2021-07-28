@@ -5484,7 +5484,11 @@ code_1890:                              ; CODE XREF: IE0_0+4C6↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
-                lcall   code_60D3
+                lcall   shr_word_twice  ; INPUT:
+                                        ;   R1:R0
+                                        ;
+                                        ; OUTPUT:
+                                        ;   R1:R0 >>= 2
                 mov     B, #0D2h        ; B-Register
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
@@ -5863,7 +5867,11 @@ code_1AD5:                              ; CODE XREF: IE0_0+742↑j
                 mov     R2, RAM_3D
                 mov     DPTR, #0AE31h
                 lcall   code_638E
-                lcall   code_60D3
+                lcall   shr_word_twice  ; INPUT:
+                                        ;   R1:R0
+                                        ;
+                                        ; OUTPUT:
+                                        ;   R1:R0 >>= 2
                 mov     DPTR, #0AE73h
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -5954,7 +5962,11 @@ code_1B33:                              ; CODE XREF: IE0_0+7A0↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
-                lcall   code_60D3
+                lcall   shr_word_twice  ; INPUT:
+                                        ;   R1:R0
+                                        ;
+                                        ; OUTPUT:
+                                        ;   R1:R0 >>= 2
 
 code_1B56:                              ; CODE XREF: IE0_0+796↑j
                 mov     DPTR, #0F752h
@@ -6008,7 +6020,11 @@ code_1B78:                              ; CODE XREF: IE0_0+7E5↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
-                lcall   code_60D3
+                lcall   shr_word_twice  ; INPUT:
+                                        ;   R1:R0
+                                        ;
+                                        ; OUTPUT:
+                                        ;   R1:R0 >>= 2
 
 code_1B9B:                              ; CODE XREF: IE0_0+7DB↑j
                 mov     DPTR, #0F761h
@@ -10171,65 +10187,73 @@ code_2EC9:                              ; CODE XREF: power_on__ignition_key_turn
                 lcall   clear_xram_f69e_0c_bytes
                 setb    RAM_28.3
 
-
-!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!
-
-
-
-
-
-
 code_2ED3:                              ; CODE XREF: power_on__ignition_key_turned_:_2ED3_trampoline↑j
                 mov     DPTR, #0F69Ah
                 movx    A, @DPTR
                 inc     A
-                movx    @DPTR, A
-                cjne    A, #4, code_2F31
+                movx    @DPTR, A        ; A = ++XRAM[0xF69A]
+                cjne    A, #4, check_L_line ; if (XRAM[0xF69A] != 4) jump ... // last cylinder ?
                 clr     A
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF69A] = 0 // reset
                 mov     DPTR, #0F69Bh
                 movx    A, @DPTR
                 mov     R0, A
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
-                lcall   code_60D3
+                mov     R1, A           ; R1:R0 = XRAM[0xF69C:0xF69B] // sum of Ignition switch voltage
+                lcall   shr_word_twice  ; INPUT:
+                                        ;   R1:R0
+                                        ;
+                                        ; OUTPUT:
+                                        ;   R1:R0 >>= 2
                 mov     A, R0
                 clr     C
                 subb    A, #0
                 jnc     code_2EF0
-                clr     A
+                clr     A               ; skipped
 
 code_2EF0:                              ; CODE XREF: power_on__ignition_key_turned_+B5B↑j
                 mov     B, #75h ; 'u'   ; B-Register
-                mul     AB
+                mul     AB              ; B:A = A * 0x75 = LOW(IgnitionSwitchVoltage) * 0x75
                 rlc     A
                 mov     A, B            ; B-Register
-                rlc     A
+                rlc     A               ; if (B >= 0x80)
+                                        ;   A = 0xFF
+                                        ; else
+                                        ;   A = HIGH(COMPOSE_WORD(B, A) << 1)
+                                        ;
+                                        ; jump _2EFC
                 jnc     code_2EFC
                 mov     A, #0FFh
 
 code_2EFC:                              ; CODE XREF: power_on__ignition_key_turned_+B66↑j
-                mov     R1, A
+                mov     R1, A           ; R1 = A = Adjusted Ignition Switch Voltage
                 mov     DPTR, #8062h
                 clr     A
-                movc    A, @A+DPTR
-                mov     B, A            ; B-Register
-                mov     A, R1
+                movc    A, @A+DPTR      ; A = FLASH[0x8062] // minimum adjusted value for ignition switch voltage
+                mov     B, A            ; B = FLASH[0x8062] // minimum adjusted value for ignition switch voltage
+                mov     A, R1           ; A = R1 = Adjusted Ignition Switch Voltage
                 cjne    A, B, code_2F08 ; B-Register
 
 code_2F08:                              ; CODE XREF: power_on__ignition_key_turned_+B73↑j
-                mov     RAM_22.4, C
+                mov     RAM_22.4, C     ; RAM[0x22] |= (!!(Adjusted Ignition Switch Voltage < FLASH[0x8062])) << 4
                 mov     DPTR, #8063h
                 clr     A
-                movc    A, @A+DPTR
+                movc    A, @A+DPTR      ; A = FLASH[0x8063] // maximum adjusted value for ignition switch voltage
                 cjne    A, RAM_1, code_2F12
 
 code_2F12:                              ; CODE XREF: power_on__ignition_key_turned_+B7D↑j
-                mov     RAM_22.5, C
+                mov     RAM_22.5, C     ; RAM[0x22] |= (!!(Adjusted Ignition Switch Voltage >= FLASH[0x8063])) << 5
                 mov     A, R1
                 mov     RAM_3C, A
-                mov     A, RAM_3C
+                mov     A, RAM_3C       ; A = RAM[0x3C] = R1
+                                        ;
+                                        ; if (A < 0x36)
+                                        ;   A = 0
+                                        ; else
+                                        ;   A -= 0x36
+                                        ;
+                                        ; jump _2F1F
                 clr     C
                 subb    A, #36h ; '6'
                 jnc     code_2F1F
@@ -10237,7 +10261,14 @@ code_2F12:                              ; CODE XREF: power_on__ignition_key_turn
 
 code_2F1F:                              ; CODE XREF: power_on__ignition_key_turned_+B8A↑j
                 mov     B, #40h ; '@'   ; B-Register
-                mul     AB
+                mul     AB              ; B:A = A * 0x40 = WORD(A) << 6
+                                        ;
+                                        ; if (B < 0x1F)
+                                        ;   A = 0x1F
+                                        ; else
+                                        ;   A = B
+                                        ;
+                                        ; jump _2F2C
                 mov     A, B            ; B-Register
                 cjne    A, #1Fh, code_2F28
 
@@ -10246,13 +10277,21 @@ code_2F28:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     A, #1Fh
 
 code_2F2C:                              ; CODE XREF: power_on__ignition_key_turned_:code_2F28↑j
-                mov     RAM_3F, A
+                mov     RAM_3F, A       ; Store adjusted ignition switch voltage
                 lcall   clear_xram_f69a_f69b
 
-code_2F31:                              ; CODE XREF: power_on__ignition_key_turned_+B47↑j
+
+!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!
+
+
+
+
+
+
+check_L_line:                           ; CODE XREF: power_on__ignition_key_turned_+B47↑j
                 mov     A, P9           ; Port 9 (PDIR=0)
                 anl     A, #20h
-                jnz     code_2F3B
+                jnz     code_2F3B       ; if (L0 @ MC33199) jump ...
                 mov     A, #0
                 sjmp    code_2F3D
 ; ---------------------------------------------------------------------------
@@ -18034,7 +18073,11 @@ code_5620:                              ; CODE XREF: IE0_0+2E6↑p
                 clr     A
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
-                lcall   code_60DF
+                lcall   shr_word_3_times ; INPUT:
+                                        ;   R1:R0
+                                        ;
+                                        ; OUTPUT:
+                                        ;   R1:R0 >>= 3
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
@@ -18467,7 +18510,11 @@ code_57FA:                              ; CODE XREF: IE0_0+67B↑p
 code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ; code_57FA+1D↑j
                 mov     R0, #0
-                lcall   code_60D3
+                lcall   shr_word_twice  ; INPUT:
+                                        ;   R1:R0
+                                        ;
+                                        ; OUTPUT:
+                                        ;   R1:R0 >>= 2
                 mov     DPTR, #83B0h
                 lcall   interpolate_table_value ; INPUT:
                                         ;  - R1 - index in table
@@ -20421,13 +20468,18 @@ code_60CB:                              ; CODE XREF: code_5555+2B↑p
 
 ; =============== S U B R O U T I N E =======================================
 
+; INPUT:
+;   R1:R0
+;
+; OUTPUT:
+;   R1:R0 >>= 2
 
-code_60D3:                              ; CODE XREF: IE0_0+556↑p
+shr_word_twice:                         ; CODE XREF: IE0_0+556↑p
                                         ; IE0_0+75B↑p ...
-                mov     A, R1
-                mov     R1, #2
+                mov     A, R1           ; A = R1
+                mov     R1, #2          ; R1 = 2
 
-code_60D6:                              ; CODE XREF: code_60D3+8↓j
+code_60D6:                              ; CODE XREF: shr_word_twice+8↓j
                 clr     C
                 rrc     A
                 xch     A, R0
@@ -20436,17 +20488,22 @@ code_60D6:                              ; CODE XREF: code_60D3+8↓j
                 djnz    R1, code_60D6
                 mov     R1, A
                 ret
-; End of function code_60D3
+; End of function shr_word_twice
 
 
 ; =============== S U B R O U T I N E =======================================
 
+; INPUT:
+;   R1:R0
+;
+; OUTPUT:
+;   R1:R0 >>= 3
 
-code_60DF:                              ; CODE XREF: code_5620+17↑p
+shr_word_3_times:                       ; CODE XREF: code_5620+17↑p
                 mov     A, R1
                 mov     R1, #3
 
-code_60E2:                              ; CODE XREF: code_60DF+8↓j
+code_60E2:                              ; CODE XREF: shr_word_3_times+8↓j
                 clr     C
                 rrc     A
                 xch     A, R0
@@ -20455,7 +20512,7 @@ code_60E2:                              ; CODE XREF: code_60DF+8↓j
                 djnz    R1, code_60E2
                 mov     R1, A
                 ret
-; End of function code_60DF
+; End of function shr_word_3_times
 
 
 ; =============== S U B R O U T I N E =======================================
