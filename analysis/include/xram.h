@@ -27,10 +27,12 @@ byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
   [0xF688] = 0,                               // ADC Ignition switch voltage
   [0xF689] = 0,                               // ADC CO Potentiometer
 
+  [0xF69A] = 0,                               // some sort of counter, max value = 4 ??? TODO
+
   [0xF69B] = 0,                               // sum of Ignition switch voltage, low byte
   [0xF69C] = 0,                               // sum of Ignition switch voltage, high byte
 
-  [0xF69D] = 0,                               // some sort of counter ??? TODO
+  [0xF69D] = 0,                               // some sort of counter, max value = 0x20 ??? TODO
 
   [0xF69E] = 0,                               // sum of scaled ADC Coolant Temperature, low byte
   [0xF69F] = 0,                               // sum of scaled ADC Coolant Temperature, high byte
@@ -42,9 +44,17 @@ byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
   [0xF6A7] = 0,                               // sum of scaled ADC Throttle Position, high byte
   [0xF6A8] = 0,                               // sum of RAM[0x49], low byte
   [0xF6A9] = 0,                               // sum of RAM[0x49], high byte
+  [0xF6AA] = 0,                               // previous sum of RAM[0x49], low byte
+  [0xF6AB] = 0,                               // previous sum of RAM[0x49], high byte
+  [0xF6AC] = 0,                               // LOW(XRAM[0xF6A9:0xF6A8] - XRAM[0xF6AB:0xF6AA]), saturated to 0xFF
 
-  [0xF6B3] = 0,                               // High byte of scaled ADC Throttle Position
+  [0xF6B3] = 0,                               // Low byte of scaled ADC Throttle Position
   [0xF6B4] = 0,                               // High byte of scaled ADC Throttle Position
+  [0xF6B5] = 0,                               // Low byte of adjusted ADC Throttle Position
+  [0xF6B6] = 0,                               // High byte of adjusted ADC Throttle Position
+  [0xF6B7] = 0,                               // Low byte of adjusted ADC Throttle Position
+  [0xF6B8] = 0,                               // High byte of adjusted ADC Throttle Position
+
   [0xF6B9] = 0,                               // ??? TODO
 
   [0xF6BA] = 0,                               // RAM[0x49], but no less than 0x1F
@@ -59,7 +69,8 @@ byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
                                               // on adjusted coolant temperature less than some limit,
                                               // i.e. RAM[0x3A] < FLASH[0x8788
 
-  [0xF7BE] = 0x00,                            // Current operationg mode:
+  [0xF7BC] = 0,                               // ??? TODO
+  [0xF7BE] = 0x00,                            // Current operationg mode (?):
                                               // 0 - normal
                                               // 3 - diagnostic (has smth on L-line)
   [0xF7D5..0xF8CC] = FLASH[0xABF1..0xACE8]    // 0xF8 bytes

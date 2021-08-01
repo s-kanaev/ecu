@@ -10186,6 +10186,7 @@ code_2EC9:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    @DPTR, A        ; XRAM[0xF6AC] = R0 // low byte of difference
                 lcall   clear_xram_f69e_0c_bytes
                 setb    RAM_28.3
+finished some parts
 
 code_2ED3:                              ; CODE XREF: power_on__ignition_key_turned_:_2ED3_trampoline↑j
                 mov     DPTR, #0F69Ah
@@ -10301,7 +10302,8 @@ code_2F3B:                              ; CODE XREF: power_on__ignition_key_turn
 
 code_2F3D:                              ; CODE XREF: power_on__ignition_key_turned_+BA7↑j
                 mov     DPTR, #0F7BEh
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF7BE] = Acc
+START EGO SENSOR #1 (8bit ADC)
                 mov     B, #1           ; B-Register
                 lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
                                         ;
@@ -10319,10 +10321,15 @@ code_2F3D:                              ; CODE XREF: power_on__ignition_key_turn
 
 code_2F4D:                              ; CODE XREF: power_on__ignition_key_turned_+BB8↑j
                 mov     B, #0FFh        ; B-Register
-                mul     AB
+                mul     AB              ; B:A = 0xFF * ADC(EGO_1)
                 rlc     A
                 xch     A, B            ; B-Register
-                rlc     A
+                rlc     A               ; if (B >= 0x40)
+                                        ;   A = 0xFF // saturate
+                                        ; else
+                                        ;   A = HIGH(WORD(B:A) << 2)
+                                        ;
+                                        ; jump _2F61
                 jc      code_2F5F
                 xch     A, B            ; B-Register
                 rlc     A
@@ -10334,82 +10341,90 @@ code_2F5F:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     A, #0FFh
 
 code_2F61:                              ; CODE XREF: power_on__ignition_key_turned_+BCB↑j
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = A
                 mov     DPTR, #0F68Bh
-                movx    A, @DPTR
+                movx    A, @DPTR        ; A = XRAM[0xF68B] // ???
                 clr     C
                 subb    A, B            ; B-Register
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = A = XRAM[0xF68B] - ADC(EGO_1)
                 mov     DPTR, #8089h
                 clr     A
                 movc    A, @A+DPTR
-                xch     A, B            ; B-Register
-                jc      code_2F7E
+                xch     A, B            ; B = FLASH[0x8089]
+                                        ; A = XRAM[0xF68B] - ADC(EGO_1)
+                jc      code_2F7E       ; if (XRAM[0xF78B] < ADC(EGO_1)) jump ...
                 mul     AB
-                mov     A, B            ; B-Register
+                mov     A, B            ; A = HIGH(FLASH[0x8089] * (XRAM[0xF68B] - ADC(EGO_1)))
                 cpl     A
                 inc     A
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = - HIGH(FLASH[0x8089] * (XRAM[0xF68B] - ADC(EGO_1)))
                 sjmp    code_2F81
 ; ---------------------------------------------------------------------------
 
 code_2F7E:                              ; CODE XREF: power_on__ignition_key_turned_+BE1↑j
                 cpl     A
                 inc     A
-                mul     AB
+                mul     AB              ; B:A = B * (-A) = FLASH[0x8089] * (-(XRAM[0xF78B] - ADC(EGO_1)))
 
 code_2F81:                              ; CODE XREF: power_on__ignition_key_turned_+BEA↑j
                 mov     DPTR, #0F68Bh
                 movx    A, @DPTR
-                add     A, B            ; B-Register
-                mov     R0, A
+                add     A, B            ; A = XRAM[0xF68B] + B
+                mov     R0, A           ; R0 = A = XRAM[0xF68B] + B // processed EGO value
                 mov     DPTR, #0F68Bh
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF68B] = R0 = A = XRAM[0xF68B] + B
                 mov     DPTR, #808Ah
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
-                jb      RAM_2B.4, code_2F9D
+                mov     B, A            ; B = A = FLASH[0x808A]
+                jb      RAM_2B.4, code_2F9D ; if (RAM[0x2B] & (1 << 4)) jump ...
                 mov     DPTR, #808Bh
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = A = FLASH[0x808B]
 
 code_2F9D:                              ; CODE XREF: power_on__ignition_key_turned_+C01↑j
-                mov     A, R0
+                mov     A, R0           ; A = R0
                 clr     C
-                subb    A, B            ; B-Register
+                subb    A, B            ; A -= B
                 cpl     C
-                mov     RAM_2B.4, C
+                mov     RAM_2B.4, C     ; RAM[0x2B] |= (!(A < B)) << 4
                 mov     DPTR, #873Fh
                 clr     A
                 movc    A, @A+DPTR
-                jnb     ACC.1, code_2FD0 ; Accumulator
+                jnb     ACC.1, ego2_sensor_start ; if (!(is there EGO sensor)) jump ...
                 mov     DPTR, #8781h
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
-                mov     A, RAM_3A
+                mov     B, A            ; B = A = FLASH[0x8781]
+                mov     A, RAM_3A       ; A = RAM[0x3A] // adjusted coolant temperature
                 cjne    A, B, code_2FB8 ; B-Register
 
 code_2FB8:                              ; CODE XREF: power_on__ignition_key_turned_+C23↑j
-                jc      code_2FD0
+                jc      ego2_sensor_start ; if (RAM[0x3A] < FLASH[0x8781]) jump ... // coolant temperature is too low
                 mov     DPTR, #8087h
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
-                mov     A, R0
+                mov     B, A            ; B = A = FLASH[0x8087]
+                mov     A, R0           ; A = R0
                 clr     C
-                subb    A, B            ; B-Register
-                mov     RAM_22.6, C
+                subb    A, B            ; A -= FLASH[0x8087]
+                mov     RAM_22.6, C     ; if (R0 < FLASH[0x8087])
+                                        ;   RAM[0x22] |= 1 << 6
+                                        ; else
+                                        ;   RAM[0x22] &= !(1 << 6)
                 mov     DPTR, #8088h
                 clr     A
-                movc    A, @A+DPTR
+                movc    A, @A+DPTR      ; A = FLASH[0x8088]
                 clr     C
-                subb    A, R0
-                mov     RAM_22.7, C
+                subb    A, R0           ; A -= R0
+                mov     RAM_22.7, C     ; if (FLASH[0x8088] < R0)
+EGO #1 SENSOR FINISH                    ;   RAM[0x22] |= 1 << 7
+                                        ; else
+                                        ;   RAM[0x22] &= !(1 << 7)
+EGO #2 SENSOR START
 
-code_2FD0:                              ; CODE XREF: power_on__ignition_key_turned_+C17↑j
+ego2_sensor_start:                      ; CODE XREF: power_on__ignition_key_turned_+C17↑j
                                         ; power_on__ignition_key_turned_:code_2FB8↑j
                 mov     B, #2           ; B-Register
                 lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin

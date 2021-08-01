@@ -22,12 +22,16 @@ byte RAM[0x100] = {
   [0x22] = 0x00,  // error codes ?
                   // bit 4 - ignition switch voltage less than low limit
                   // bit 5 - ignition switch voltage higher than high limit
+                  // bit 6 - EGO #1 sensor processed value less than low limit
+                  // bit 7 - EGO #1 sensor processed value larger than high limit
   [0x23] = 0x00,  // error codes?
                   // bit 2 - coolant temperature less than low limit
                   // bit 3 - coolant temperature higher than high limit
                   // bit 4 - CO potentiometer less than low limit
                   // bit 5 - CO potentiometer temperature higher than high limit
   [0x24] = 0x00,  // error codes?
+                  // bit 0 - XRAM[0xF6A7] less than low limit
+                  // bit 1 - XRAM[0xF6A7] larger than upper limit
                   // bit 4 - intake air temperature less than low limit
                   // bit 5 - intake air temperature higher than high limit
   [0x25] = 0x00,  // ???
@@ -42,13 +46,16 @@ byte RAM[0x100] = {
 
   [0x28] = 0x00,  // some status byte
                   // bit 0 - ???, bit which allows for main loop to continue
+                  // bit 3 - ???
                   // bit 4 - ignition switch voltage above threshold @ FLASH[0x8096]
                   // bit 6 - ???, set when XRAM[0xF679] >= FLASH[0x809B] && RAM[0x49] >= FLASH[0x809A]
   [0x29] = 0x00,
   [0x2A] = 0x00,  // some status word
                   // bit 0 ???
                   // bit 3 ???
-  [0x2B..0x2C] = 0x00,
+  [0x2B] = 0x00,  // ???
+                  // bit 4 ???
+  [0x2C] = 0x00,
   [0x2D] = 0x00,  // bit 7 = FLASH[0x873F] bit 4, is there camshaft position sensor
   [0x2E] = 0x00,  // bit 0 = FLASH[0x873F] bit 5, camshaft position sensor cross-section is aligned with TDC
                   // bit 1 = FLASH[0x873F] bit 2, is there knock sensor

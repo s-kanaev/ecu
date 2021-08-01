@@ -25,7 +25,14 @@ byte FLASH[0x10000] = {
   [0x8068] = 0x64,  // maximum ADC value of CO potentiometer
   [0x8069] = 0x00,  // fallback data for XRAM[0xFF74], Adjusted CO Potentiometer
   [0x806A] = 0x00,  // fallback data for XRAM[0xFF75]
+  [0x807A] = 0x05,  // low limit of XRAM[0xF6A7]
+  [0x807B] = 0xF6,  // upper limit of XRAM[0xF6A7]
   [0x807C] = 0x24,  // ???, copied to XRAM[0xF6B6] and XRAM[0xF6B8]
+  [0x8087] = 0x00,  // low limit of EGO #1 sensor processed value
+  [0x8088] = 0xFF,  // high limit of EGO #1 sensor processed value
+  [0x8089] = 0x80,  // ???, somehow employed in EGO #1 processing
+  [0x808A] = 0x47,  // ???, somehow employed in EGO #1 processing
+  [0x808B] = 0x62,  // ???, somehow employed in EGO #1 processing
   [0x808C] = 0x80,  // ???, copied to RAM[0x67]
   [0x8093] = 0x00,  // fallback data for XRAM[0xF770]
   [0x8096] = 0x1F,  // Threshold voltage for ignition switch to set RAM[0x28], bit 4
@@ -154,6 +161,7 @@ byte FLASH[0x10000] = {
 
   [0x8761] = 0x00,  // ???
 
+  [0x8781] = 0x55,  // Lower boundary of RAM[0x3A] for EGO sensor processing
   [0x8788] = 0x55,  // some limit for adjusted coolant temperature
   [0x8789] = 0x08,  // value of XRAM[0xF7A4]
   [0x878A] = 0x01,  // value of XRAM[0xF7A4]
