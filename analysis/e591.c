@@ -1910,6 +1910,38 @@ _2B19:
   goto _2C09;
 }
 
+inline bool CheckCoolantTemperature(byte XramF6BF, byte Flash805D, byte CoolantTemperature, byte Min, byte Max) {
+  bool TemperatureOK = true;
+
+  if (XramF6BF >= Flash805D) {
+    if (CoolantTemperature < Min) {
+      TemperatureOK = false;
+      SET_BIT_IN(RAM[0x23], 2);
+      CLEAR_BIT_IN(RAM[0x23], 3);
+    } else if (CoolantTemperature > Max) {
+      TemperatureOK = false;
+      CLEAR_BIT_IN(RAM[0x23], 2);
+      SET_BIT_IN(RAM[0x23], 3);
+    }
+  }
+
+  return TemperatureOK;
+}
+
+inline word InitRam3ATemperature(byte *TableRangeStart, word CoolantTemperature, byte Threshold) {
+  CLEAR_BIT_IN(RAM[0x23], 2);
+  CLEAR_BIT_IN(RAM[0x23], 3);
+  word AdjustedCoolantTemp = GetAdcValueFromTableAndAdjustForCalculus(
+      RNG_START(FLASH, COOLANT_TEMPERATURE_2), ScaledADCCoolantTemp);
+  RAM[0x3A] = HIGH(AdjustedCoolantTemp);
+  if (RAM[0x30] >= Threshold)
+    SET_BIT_IN(RAM[0x26], 6);
+  else
+    CLEAR_BIT_IN(RAM[0x26], 6);
+
+  return AdjustedCoolantTemp;
+}
+
 _2C09:
 {
   // Prerequisites:
@@ -1917,6 +1949,54 @@ _2C09:
   // XRAM[0xF69D] == 0x20
 
   // TODO
+  XRAM[0xF69D] = 0;
+  word AdjustedCoolantTemp;
+
+  if (!CHECK_BIT_AT(RAM[0x72], 7)) {
+    _2C15:
+    ram_72_bit_7_clear:
+    word ScaledADCCoolantTemp = GET_MEM_WORD(XRAM, COOLANT_TEMP_SUM); // R1:R0
+    bool TemperatureOK = true;
+    bool Ram26Bit6Set = CHECK_BIT_AT(RAM[0x26], 6);
+
+    if (Ram26Bit6Set) {
+      _2C5F:
+      ram_26_bit_6_set:
+      if (TemperatureOK = CheckCoolantTemperature(
+          XRAM[0xF6BF], FLASH[0x805D], HIGH(ScaledADCCoolantTemp), FLASH[0x8059], FLASH[0x805A])) {
+        _2C86:
+        xram_F6BF_less_than_flash_805D_or_coolant_temperature_OK_2:
+        AdjustedCoolantTemp = InitRam3ATemperature(
+            RNG_START(XRAM, COOLANT_TEMPERATURE_2), ScaledADCCoolantTemp, FLASH[0x805B]);
+      }
+    } else {
+      _2C20:
+      if (TemperatureOK = CheckCoolantTemperature(
+          XRAM[0xF6BF], FLASH[0x805D], HIGH(ScaledADCCoolantTemp), FLASH[0x8057], FLASH[0x8058])) {
+        _2C4A:
+        xram_F6BF_less_than_flash_805D_or_coolant_temperature_OK:
+        AdjustedCoolantTemp = InitRam3ATemperature(
+            RNG_START(XRAM, COOLANT_TEMPERATURE_1), ScaledADCCoolantTemp, FLASH[0x805C]);
+      }
+    }
+
+    if (!TemperatureOK) {
+      _2CB1:
+      _coolant_error_condition_common:
+      RAM[0x3A] = FLASH[0x8A4B + ((XRAM[0xF6BF] >> 4) & 0x0F)];
+      AdjustedCoolantTemp = COMPOSE_WORD(RAM[0x3A], 0);
+    }
+  } else {
+    _2C10:
+    AdjustedCoolantTemp = COMPOSE_WORD(RAM[0x3A], 0);
+  }
+
+  _2CC4:
+  temperature_init_done:
+  {
+    RAM[0x3D] = AdjustTemperature(AdjustedCoolantTemp);
+    // TODO
+  }
 }
 
 _2ED3:

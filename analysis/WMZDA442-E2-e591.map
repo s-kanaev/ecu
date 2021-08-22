@@ -647,15 +647,15 @@
  00000000:00003010       code_3010
  00000000:0000302C       code_302C
  00000000:0000304F       code_304F
- 00000000:00003067       code_3067
+ 00000000:00003067       no_additional_ego_sensor
  00000000:00003079       code_3079
- 00000000:00003080       code_3080
- 00000000:00003084       code_3084
- 00000000:000030B4       code_30B4
- 00000000:000030B8       code_30B8
- 00000000:000030BC       code_30BC
+ 00000000:00003080       no_additional_ego_sensor_2
+ 00000000:00003084       start_egr_blow?
+ 00000000:000030B4       scaled_egr_valve_position_eq_flash_807e
+ 00000000:000030B8       egr_valve_position_less_than_threshold
+ 00000000:000030BC       scaled_egr_valve_position_less_flash_807e
  00000000:000030E5       code_30E5
- 00000000:000030EF       code_30EF
+ 00000000:000030EF       throttle_position_out_of_limits
  00000000:000030FA       code_30FA
  00000000:000030FB       code_30FB
  00000000:00003124       code_3124
@@ -1268,7 +1268,7 @@
  00000000:0000601F       code_601F
  00000000:0000602A       code_602A
  00000000:00006058       code_6058
- 00000000:00006060       code_6060
+ 00000000:00006060       abs_word_by_msb
  00000000:0000606B       code_606B
  00000000:0000606C       cast_signed_R2_to_R3R2
  00000000:00006073       code_6073

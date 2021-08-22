@@ -21,8 +21,8 @@ byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
   [0xF681] = 0,                               // Adjusted CO potentiometer
   [0xF682] = 0,                               // ??? TODO
   [0xF683] = 0,                               // Adjusted coolant temperature, copy of RAM[0x3A]
-  [0xF686] = 0,                               // ADC Coolant temperature
   [0xF685] = 0,                               // ADC Throttle position
+  [0xF686] = 0,                               // ADC Coolant temperature
   [0xF687] = 0,                               // ADC Intake air temperature
   [0xF688] = 0,                               // ADC Ignition switch voltage
   [0xF689] = 0,                               // ADC CO Potentiometer
@@ -47,6 +47,9 @@ byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
   [0xF6AA] = 0,                               // previous sum of RAM[0x49], low byte
   [0xF6AB] = 0,                               // previous sum of RAM[0x49], high byte
   [0xF6AC] = 0,                               // LOW(XRAM[0xF6A9:0xF6A8] - XRAM[0xF6AB:0xF6AA]), saturated to 0xFF
+
+  [0xF6AF] = 0,                               // ???
+  [0xF6B0] = 0,                               // ???
 
   [0xF6B3] = 0,                               // Low byte of scaled ADC Throttle Position
   [0xF6B4] = 0,                               // High byte of scaled ADC Throttle Position
