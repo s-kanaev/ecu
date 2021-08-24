@@ -31,3 +31,7 @@ typedef union TableEntryU TableEntryT;
 #define WORD(x) (word)(x)
 #define QUAD(x) (quad)(x)
 
+#define BYTE_PTR(x) (byte *)(x)
+#define WORD_PTR(x) (word *)(x)
+#define QUAD_PTR(x) (quad *)(x)
+

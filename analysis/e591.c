@@ -1932,7 +1932,7 @@ inline word InitRam3ATemperature(byte *TableRangeStart, word CoolantTemperature,
   CLEAR_BIT_IN(RAM[0x23], 2);
   CLEAR_BIT_IN(RAM[0x23], 3);
   word AdjustedCoolantTemp = GetAdcValueFromTableAndAdjustForCalculus(
-      RNG_START(FLASH, COOLANT_TEMPERATURE_2), ScaledADCCoolantTemp);
+      TableRangeStart - FLASH, ScaledADCCoolantTemp);
   RAM[0x3A] = HIGH(AdjustedCoolantTemp);
   if (RAM[0x30] >= Threshold)
     SET_BIT_IN(RAM[0x26], 6);
@@ -1940,6 +1940,28 @@ inline word InitRam3ATemperature(byte *TableRangeStart, word CoolantTemperature,
     CLEAR_BIT_IN(RAM[0x26], 6);
 
   return AdjustedCoolantTemp;
+}
+
+// _5FE2:
+// M1 is signed
+// M2 is unsigned
+word MultiplySigned(byte M1, byte M2) {
+  if (!CHECK_BIT_AT(M1, 7))
+    return M1 * M2;
+
+  M1 = -M1;
+  word P = M1 * M2;
+  
+  M1 = -LOW(P);
+  M2 = HIGH(P);
+
+  if (!M1) {
+    M2 = -M2;
+  } else {
+    M2 = ~M2;
+  }
+
+  return COMPOSE_WORD(M2, M1);
 }
 
 _2C09:
@@ -1950,51 +1972,202 @@ _2C09:
 
   // TODO
   XRAM[0xF69D] = 0;
-  word AdjustedCoolantTemp;
 
-  if (!CHECK_BIT_AT(RAM[0x72], 7)) {
-    _2C15:
-    ram_72_bit_7_clear:
-    word ScaledADCCoolantTemp = GET_MEM_WORD(XRAM, COOLANT_TEMP_SUM); // R1:R0
-    bool TemperatureOK = true;
-    bool Ram26Bit6Set = CHECK_BIT_AT(RAM[0x26], 6);
+  // Coolant Temperature
+  {
+    word AdjustedCoolantTemp;
 
-    if (Ram26Bit6Set) {
-      _2C5F:
-      ram_26_bit_6_set:
-      if (TemperatureOK = CheckCoolantTemperature(
-          XRAM[0xF6BF], FLASH[0x805D], HIGH(ScaledADCCoolantTemp), FLASH[0x8059], FLASH[0x805A])) {
-        _2C86:
-        xram_F6BF_less_than_flash_805D_or_coolant_temperature_OK_2:
-        AdjustedCoolantTemp = InitRam3ATemperature(
-            RNG_START(XRAM, COOLANT_TEMPERATURE_2), ScaledADCCoolantTemp, FLASH[0x805B]);
+    if (!CHECK_BIT_AT(RAM[0x72], 7)) {
+      _2C15:
+      ram_72_bit_7_clear:
+      word ScaledADCCoolantTemp = GET_MEM_WORD(XRAM, COOLANT_TEMP_SUM); // R1:R0
+      bool TemperatureOK = true;
+      bool Ram26Bit6Set = CHECK_BIT_AT(RAM[0x26], 6);
+
+      if (Ram26Bit6Set) {
+        _2C5F:
+        ram_26_bit_6_set:
+        if (TemperatureOK = CheckCoolantTemperature(
+            XRAM[0xF6BF], FLASH[0x805D], HIGH(ScaledADCCoolantTemp), FLASH[0x8059], FLASH[0x805A])) {
+          _2C86:
+          xram_F6BF_less_than_flash_805D_or_coolant_temperature_OK_2:
+          AdjustedCoolantTemp = InitRam3ATemperature(
+              RNG_START(XRAM, COOLANT_TEMPERATURE_TABLE_2), ScaledADCCoolantTemp, FLASH[0x805B]);
+        }
+      } else {
+        _2C20:
+        if (TemperatureOK = CheckCoolantTemperature(
+            XRAM[0xF6BF], FLASH[0x805D], HIGH(ScaledADCCoolantTemp), FLASH[0x8057], FLASH[0x8058])) {
+          _2C4A:
+          xram_F6BF_less_than_flash_805D_or_coolant_temperature_OK:
+          AdjustedCoolantTemp = InitRam3ATemperature(
+              RNG_START(XRAM, COOLANT_TEMPERATURE_TABLE_1), ScaledADCCoolantTemp, FLASH[0x805C]);
+        }
+      }
+
+      if (!TemperatureOK) {
+        _2CB1:
+        _coolant_error_condition_common:
+        RAM[0x3A] = FLASH[0x8A4B + ((XRAM[0xF6BF] >> 4) & 0x0F)];
+        AdjustedCoolantTemp = COMPOSE_WORD(RAM[0x3A], 0);
       }
     } else {
-      _2C20:
-      if (TemperatureOK = CheckCoolantTemperature(
-          XRAM[0xF6BF], FLASH[0x805D], HIGH(ScaledADCCoolantTemp), FLASH[0x8057], FLASH[0x8058])) {
-        _2C4A:
-        xram_F6BF_less_than_flash_805D_or_coolant_temperature_OK:
-        AdjustedCoolantTemp = InitRam3ATemperature(
-            RNG_START(XRAM, COOLANT_TEMPERATURE_1), ScaledADCCoolantTemp, FLASH[0x805C]);
+      _2C10:
+      AdjustedCoolantTemp = COMPOSE_WORD(RAM[0x3A], 0);
+    }
+
+    _2CC4:
+    temperature_init_done:
+    RAM[0x3D] = AdjustTemperature(AdjustedCoolantTemp);
+  }
+
+  // Intake Air Temperature
+  {
+    bool IntakeAirTempOK = true;
+    bool HasIntakeAirTemperatureSensor = kitting_has_intake_air_temperature_sensor();
+    word AdjustedIntakeAirTemp;
+
+    if (HasIntakeAirTemperatureSensor && !CHECK_BIT_AT(RAM[0x73], 0)) {
+      word IntakeAirTemp = GET_MEM_WORD(XRAM, INTAKE_AIR_SUM);
+
+      if (XRAM[0xF6BF] >= FLASH[0x8060]) {
+        _2CF2:
+        if (HIGH(IntakeAirTemp) < GET_MEM_BYTE(FLASH, MIMIMUM_INTAKE_AIR_TEMPERATURE)) {
+          IntakeAirTempOK = false;
+          _2D17:
+          scaled_intake_air_temperature_less_than_minimum_intake_air_temperature:
+          SET_BIT_IN(RAM[0x24], 4);
+          CLEAR_BIT_IN(RAM[0x24], 5);
+        } else if (GET_MEM_BYTE(FLASH, MAXIMUM_INTAKE_AIR_TEMPERATURE) < HIGH(IntakeAirTemp)) {
+          IntakeAirTempOK = false;
+          _2D1D:
+          scaled_intake_air_temperature_larger_or_equal_than_maximum_intake_air_temperature:
+          CLEAR_BIT_IN(RAM[0x24], 4);
+          SET_BIT_IN(RAM[0x24], 5);
+        }
+      }
+
+      if (IntakeAirTempOK) {
+        _2D09:
+        xram_F6BF_less_than_flash_8060:
+        CLEAR_BIT_IN(RAM[0x24], 4);
+        CLEAR_BIT_IN(RAM[0x24], 5);
+        // R1:R0
+        AdjustedIntakeAirTemp = GetAdcValueFromTableAndAdjustForCalculus(
+            RNG_START(FLASH, INTAKE_AIR_TEMPERATURE_TABLE) - FLASH, IntakeAirTemp);
+        RAM[0x3B] = HIGH(AdjustedIntakeAirTemp);
       }
     }
 
-    if (!TemperatureOK) {
-      _2CB1:
-      _coolant_error_condition_common:
-      RAM[0x3A] = FLASH[0x8A4B + ((XRAM[0xF6BF] >> 4) & 0x0F)];
-      AdjustedCoolantTemp = COMPOSE_WORD(RAM[0x3A], 0);
+    if (!IntakeAirTempOK || !HasIntakeAirTemperatureSensor) {
+      _2D21:
+      no_intake_air_temperature_sensor:
+      RAM[0x3B] = FLASH[0x8061];
+      AdjustedIntakeAirTemp = COMPOSE_WORD(RAM[0x3B], 0);
     }
-  } else {
-    _2C10:
-    AdjustedCoolantTemp = COMPOSE_WORD(RAM[0x3A], 0);
+
+    _2D2A:
+    ram_73_bit_0_set:
+    RAM[0x3E] = AdjustTemperature(AdjustedIntakeAirTemp);
   }
 
-  _2CC4:
-  temperature_init_done:
+  // CO Potentiometer
   {
-    RAM[0x3D] = AdjustTemperature(AdjustedCoolantTemp);
+    _2D31:
+    if (kitting_has_co_potentiometer_sensor()) {
+      goto _2D47;
+    } else if (kitting_has_irom()) {
+    } else {
+      CLEAR_BIT_IN(RAM[0x23], 4);
+      CLEAR_BIT_IN(RAM[0x23], 5);
+      goto fallback_CO_pot;
+    }
+
+    word Product;
+    bool HasCOPotSensor = kitting_has_co_potentiometer_sensor();
+    bool HasIROM = kitting_has_irom();
+
+    if (HasCOPotSensor) {
+      _2D47:
+      bool COPotNotInLimits = false;
+      word COPot = GET_MEM_WORD(XRAM, CO_POT_SUM);
+
+      if (COPot < 0x1FFF)
+        COPot = 0xFFFF;
+      else
+        COPot <<= 3;
+
+      if (HIGH(COPot) < FLASH[0x8067]) {
+        _2D5F:
+        SET_BIT_IN(RAM[0x23], 4);
+        CLEAR_BIT_IN(RAM[0x23], 5);
+        COPotNotInLimits = true;
+      }
+
+      _2D65:
+      co_pot_not_less_than_minimum_co_pot:
+
+      if (HIGH(COPot) > FLASH[0x8068]) {
+        _2D6F:
+        CLEAR_BIT_IN(RAM[0x23], 4);
+        SET_BIT_IN(RAM[0x23], 5);
+        COPotNotInLimits = true;
+      }
+
+      _2D75:
+      co_pot_less_or_equal_than_maximum_co_pot:
+
+      if (!COPotNotInLimits) {
+        _2D75:
+        CLEAR_BIT_IN(RAM[0x23], 4);
+        CLEAR_BIT_IN(RAM[0x23], 5);
+
+        byte High = HIGH(COPot);
+        if (CHECK_BIT_AT(High, 7))
+          High = 0xFF;
+        else
+          High *= 2;
+
+        High -= 0x50;
+
+        Product = MultiplySigned(High, 0xC0);
+      } else {
+        Product = COMPOSE_WORD(FLASH[0x8069], FLASH[0x8069]);
+      }
+    } else if (HasIROM) {
+      _2D9E:
+      pick_CO_pot_from_eeprom:
+      CLEAR_BIT_IN(RAM[0x23], 4);
+      CLEAR_BIT_IN(RAM[0x23], 5);
+
+      if (!CHECK_BIT_AT(RAM[0x73], 3))
+        XRAM[0xF681] = XRAM[0xFF74];
+    } else {
+      CLEAR_BIT_IN(RAM[0x23], 4);
+      CLEAR_BIT_IN(RAM[0x23], 5);
+      Product = COMPOSE_WORD(FLASH[0x8069], FLASH[0x8069]);
+    }
+
+    _2D91:
+    calculate_xram_f681:
+    if (HasCOPotSensor || !HasIROM) {
+      if (!CHECK_BIT_AT(RAM[0x73], 3))
+        XRAM[0xF681] = HIGH(Product);
+    }
+
+    _2DAF:
+    xram_f681_initialized:
+    if (!CHECK_BIT_AT(RAM[0x73], 4)) {
+      if (HasIROM)
+        XRAM[0xF682] = XRAM[0xFF75];
+      else
+        XRAM[0xF682] = FLASH[0x806A];
+    }
+  }
+
+  _2DD4:
+  // Throttle Position Sensor
+  {
     // TODO
   }
 }

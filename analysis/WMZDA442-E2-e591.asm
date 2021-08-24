@@ -9690,13 +9690,6 @@ PREREQUISITE:
  - R0 - low byte of scaled coolant temperature
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-CONTINUE HIGH-LEVEL FROM HERE
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
 temperature_init_done:                  ; CODE XREF: power_on__ignition_key_turned_+880↑j
                                         ; power_on__ignition_key_turned_+911↑j ...
                 mov     R1, RAM_3A
@@ -9725,7 +9718,7 @@ temperature_init_done:                  ; CODE XREF: power_on__ignition_key_turn
                 mov     R0, A           ; R0 = XRAM[0xF6A0] // sum of scaled ADC Intake Air Temperature, low byte
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A           ; R1 = XRAM[0xF6A1] // sum of scaled ADC Intake Air Temperature, low byte
+                mov     R1, A           ; R1 = XRAM[0xF6A1] // sum of scaled ADC Intake Air Temperature, high byte
                 mov     DPTR, #8060h
                 clr     A
                 movc    A, @A+DPTR
@@ -9947,6 +9940,13 @@ code_2DC7:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #0F682h   ; XRAM[0xF682] = XRAM[0xFF75] // setting value from eeprom
                 movx    @DPTR, A
 START THROTTLE POSITION
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+CONTINUE HIGH-LEVEL FROM HERE
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
 xram_f682_initialized:                  ; CODE XREF: power_on__ignition_key_turned_+A27↑j
                                         ; power_on__ignition_key_turned_+A33↑j ...
