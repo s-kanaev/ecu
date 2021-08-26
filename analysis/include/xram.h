@@ -51,7 +51,7 @@ byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
   [0xF6AF] = 0,                               // ???
   [0xF6B0] = 0,                               // ???
 
-  [0xF6B3] = 0,                               // Low byte of scaled ADC Throttle Position
+  [0xF6B3] = 0,                               // High byte of scaled ADC Throttle Position
   [0xF6B4] = 0,                               // High byte of scaled ADC Throttle Position
   [0xF6B5] = 0,                               // Low byte of adjusted ADC Throttle Position
   [0xF6B6] = 0,                               // High byte of adjusted ADC Throttle Position

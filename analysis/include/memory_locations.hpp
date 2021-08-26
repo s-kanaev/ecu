@@ -36,6 +36,10 @@
   &segment[_MEM_PTR(segment, name)]
 #define GET_MEM_BYTE(segment, name) \
   segment[_MEM_PTR(segment, name)]
+#define SET_MEM_BYTE(segment, name, value)    \
+do {                                          \
+  segment[_MEM_PTR(segment, name)] = (value); \
+} while (0)
 
 #define DEFINE_MEMORY_WORD(segment, name, loc) \
   static const int _MEM_PTR(segment, name) = (loc);
@@ -44,6 +48,11 @@
   WORD_PTR(&segment[_MEM_PTR(segment, name)])
 #define GET_MEM_WORD(segment, name) \
   COMPOSE_WORD(segment[_MEM_PTR(segment, name) + 1], segment[_MEM_PTR(segment, name)])
+#define SET_MEM_WORD(segment, name, value)            \
+do {                                                  \
+  segment[_MEM_PTR(segment, name) + 1] = HIGH(value); \
+  segment[_MEM_PTR(segment, name)] = LOW(value);      \
+} while(0);
 
 ////////////////////////////////////////////////////////////
 // XRAM
@@ -68,7 +77,13 @@ DEFINE_MEMORY_WORD(XRAM, INTAKE_AIR_SUM, 0xF6A0);
 DEFINE_MEMORY_WORD(XRAM, CO_POT_SUM, 0xF6A4);
 DEFINE_MEMORY_WORD(XRAM, THROTTLE_POSITION_SUM, 0xF6A6);
 DEFINE_MEMORY_WORD(XRAM, RAM_49_SUM, 0xF6A8);
-DEFINE_MEMORY_WORD(XRAM, RAM_49_SUM_STEP_1, 0xF6AA);
+DEFINE_MEMORY_WORD(XRAM, RAM_49_SUM_PREV, 0xF6AA);
+
+DEFINE_MEMORY_BYTE(XRAM, THROTTLE_POSITION_BYTE_1, 0xF6B3);
+DEFINE_MEMORY_BYTE(XRAM, THROTTLE_POSITION_BYTE_2, 0xF6B4);
+
+DEFINE_MEMORY_WORD(XRAM, THROTTLE_POSITION_1, 0xF6B5);
+DEFINE_MEMORY_WORD(XRAM, THROTTLE_POSITION_2, 0xF6B7);
 
 ////////////////////////////////////////////////////////////
 // FLASH

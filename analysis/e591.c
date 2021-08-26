@@ -92,6 +92,10 @@ inline bool kitting_has_knock_sensor() {
   return CHECK_BIT_AT(FLASH[0x873F], 2);
 }
 
+inline bool kitting_should_adapt_throttle_position_sensor() {
+  return CHECK_BIT_AT(FLASH[0x8741], 6);
+}
+
 void reset_init(void) {
   disable_interrupts();
   clear_stack();
@@ -1964,6 +1968,20 @@ word MultiplySigned(byte M1, byte M2) {
   return COMPOSE_WORD(M2, M1);
 }
 
+inline bool ShouldAdaptThrottlePositionSensorBasedOnXramValue(byte Value) {
+  return (0x0B != Value) && (0x15 != Value) &&
+         (0x16 != Value) && (0x17 != Value) &&
+         (0x1F != Value) && (0x20 != Value) &&
+         (0x29 != Value);
+}
+
+// _695C
+void ClearXramF69E_0C_Bytes() {
+  for (XramPtr = 0xF69E; XramPtr < 0xF69E + 0x0C; ++XramPtr)
+    XRAM[XramPtr] = 0x00;
+  XRAM[0xF69D] = 0;
+}
+
 _2C09:
 {
   // Prerequisites:
@@ -2166,10 +2184,68 @@ _2C09:
   }
 
   _2DD4:
+  xram_f682_initialized:
   // Throttle Position Sensor
   {
-    // TODO
+    bool ShouldAdaptThrottlePositionSensor = false;
+    word Throttle = GET_MEM_WORD(XRAM, THROTTLE_POSITION_2);
+
+    if ((FLASH[0x8080] < GET_MEM_BYTE(XRAM, THROTTLE_POSITION_BYTE_2) - GET_MEM_BYTE(XRAM, THROTTLE_POSITION_BYTE_1)) ||
+        (Throttle < GET_MEM_WORD(XRAM, THROTTLE_POSITION_SUM)) &&
+        kitting_should_adapt_throttle_position_sensor() &&
+        ShouldAdaptThrottlePositionSensorBasedOnXramValue(XRAM[0xF7BC]) &&
+        (HIGH(Throttle) > FLASH[0x807C])) {
+      _2E4E:
+      word Throttle = GET_MEM_WORD(XRAM, THROTTLE_POSITION_2) + COMPOSE_WORD(0, 0x02);
+      SET_MEM_WORD(XRAM, THROTTLE_POSITION_2, Throttle);
+    } else {
+      _2E02:
+      Throttle = (GET_MEM_WORD(XRAM, THROTTLE_POSITION_SUM) & 0xC0) + 0x40;
+      SET_MEM_WORD(XRAM, THROTTLE_POSITION_1, Throttle);
+      SET_MEM_WORD(XRAM, THROTTLE_POSITION_2, Throttle);
+    }
+
+    _2E75:
+    no_need_to_adapt_throttle_position_sensor:
+    Throttle = GET_MEM_WORD(XRAM, THROTTLE_POSITION_SUM);
+
+    if (HIGH(Throttle) < FLASH[0x807A]) {
+      _2E99:
+      xram_f6a7_less_low_limit:
+      SET_BIT_IN(RAM[0x24], 0);
+      CLEAR_BIT_IN(RAM[0x24], 0);
+    } else if (HIGH(Throttle) > FLASH[0x807B]) {
+      _2E9F:
+      xram_f6a7_larger_upper_limit:
+      CLEAR_BIT_IN(RAM[0x24], 0);
+      SET_BIT_IN(RAM[0x24], 0);
+    } else {
+      _2E93:
+      CLEAR_BIT_IN(RAM[0x24], 0);
+      CLEAR_BIT_IN(RAM[0x24], 0);
+    }
+
+    _2EA3:
+    done_checking_xram_f6a7:
+    word Ram49Sum = GET_MEM_WORD(XRAM, RAM_49_SUM);
+    word Ram49SumPrev = GET_MEM_WORD(XRAM, RAM_49_SUM_PREV);
+    SET_MEM_WORD(XRAM, RAM_49_SUM_PREV, Ram49Sum);
+
+    if (Ram49Sum < Ram49SumPrev)
+      Ram49Sum = 0;
+    else {
+      Ram49Sum -= Ram49SumPrev;
+
+      if (HIGH(Ram49Sum))
+        Ram49Sum = COMPOSE_WORD(HIGH(Ram49Sum), 0xFF);
+    }
+
+    XRAM[0xF6AC] = LOW(Ram49Sum);
+    ClearXramF69E_0C_Bytes();
+    SET_BIT_IN(RAM[0x28], 3);
   }
+
+  goto _2ED3;
 }
 
 _2ED3:

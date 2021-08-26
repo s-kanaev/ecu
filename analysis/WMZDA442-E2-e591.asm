@@ -9941,12 +9941,6 @@ code_2DC7:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    @DPTR, A
 START THROTTLE POSITION
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-CONTINUE HIGH-LEVEL FROM HERE
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
 xram_f682_initialized:                  ; CODE XREF: power_on__ignition_key_turned_+A27↑j
                                         ; power_on__ignition_key_turned_+A33↑j ...
@@ -10194,6 +10188,17 @@ code_2EC9:                              ; CODE XREF: power_on__ignition_key_turn
                 lcall   clear_xram_f69e_0c_bytes
                 setb    RAM_28.3
 finished some parts
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+CONTINUE HIGH-LEVEL FROM HERE
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
 
 code_2ED3:                              ; CODE XREF: power_on__ignition_key_turned_:_2ED3_trampoline↑j
                 mov     DPTR, #0F69Ah
