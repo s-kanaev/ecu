@@ -1907,11 +1907,11 @@ _2B19:
   // _2BF3:
   addByteInXRAMWord(RAM[0x49], 0xF6A8);
 
-  if (++XRAM[0xF69D] != 0x20) {
-    goto _2ED3;
+  if (++XRAM[0xF69D] == 0x20) {
+    Xram_F69D_eq_20();
   }
 
-  goto _2C09;
+  goto _2ED3;
 }
 
 inline bool CheckCoolantTemperature(byte XramF6BF, byte Flash805D, byte CoolantTemperature, byte Min, byte Max) {
@@ -1982,14 +1982,13 @@ void ClearXramF69E_0C_Bytes() {
   XRAM[0xF69D] = 0;
 }
 
-_2C09:
-{
+// _2C09
+void Xram_F69D_eq_20() {
   // Prerequisites:
-  // DPTR = 0xF6D9
+  // DPTR = 0xF69D
   // XRAM[0xF69D] == 0x20
 
-  // TODO
-  XRAM[0xF69D] = 0;
+  XRAM[0xF69D] = 0; // Reset counter
 
   // Coolant Temperature
   {
@@ -2244,12 +2243,74 @@ _2C09:
     ClearXramF69E_0C_Bytes();
     SET_BIT_IN(RAM[0x28], 3);
   }
+}
 
-  goto _2ED3;
+// _696B
+void ClearXram_F69A_F69B() {
+  XRAM[0xF69A] = XRAM[0xF69B] = 0;
 }
 
 _2ED3:
 {
+  if (++XRAM[0xF69A] == 4) {
+    _2EDC:
+    XRAM[0xF69A] = 0; // Reset counter
+    word IgnVoltage = GET_MEM_WORD(XROM, IGNITION_SW_VOLTAGE_SUM);
+    IgnVoltage >>= 2;
+    IgnVoltage = LOW(IgnVoltage) * 0x75;
+    byte IgnVoltageByte;
+
+    if (CHECK_BIT_AT(IgnVoltage, 15))
+      IgnVoltageByte = 0xFF;
+    else
+      IgnVoltageByte = HIGH(IgnVoltage) << 1;
+
+    _2EFC:
+    if (IgnVoltageByte < FLASH[0x8062])
+      SET_BIT_IN(RAM[0x22], 4);
+    else
+      CLEAR_BIT_IN(RAM[0x22], 4);
+
+    if (IgnVoltageByte > FLASH[0x8063])
+      SET_BIT_IN(RAM[0x22], 5);
+    else
+      CLEAR_BIT_IN(RAM[0x22], 5);
+
+    RAM[0x3C] = IgnVoltageByte;
+
+    if (IgnVoltageByte < 0x36)
+      IgnVoltageByte = 0;
+    else
+      IgnVoltageByte -= 0x36;
+
+    _2F1F:
+    IgnVoltage = IgnVoltageByte * 0x40;
+    IgnVoltageByte = HIGH(IgnVoltage);
+    if (IgnVoltageByte > 0x1F)
+      IgnVoltageByte = 0x1F;
+
+    _2F2C:
+    RAM[0x3F] = IgnVoltageByte;
+    ClearXram_F69A_F69B();
+  } // if (++XRAM[0xF69A] == 4)
+
+  _2F31:
+  check_L_line:
+  {
+    // MODE SELECTION
+    {
+      if (CHECK_BIT_AT(P9, 5))  // test LO @ MC33199 (ISO9141)
+        XRAM[0xF7BE] = 3;
+      else
+        XRAM[0xF7BE] = 0;
+    }
+  }
+
+  _2F41:
+  // EGO #1 Sensor (8bit ADC)
+  {
+    // TODO
+  }
   // TODO
 }
 

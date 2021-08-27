@@ -10190,16 +10190,6 @@ code_2EC9:                              ; CODE XREF: power_on__ignition_key_turn
 finished some parts
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-CONTINUE HIGH-LEVEL FROM HERE
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
 code_2ED3:                              ; CODE XREF: power_on__ignition_key_turned_:_2ED3_trampoline↑j
                 mov     DPTR, #0F69Ah
                 movx    A, @DPTR
@@ -10256,7 +10246,7 @@ code_2F08:                              ; CODE XREF: power_on__ignition_key_turn
                 cjne    A, RAM_1, code_2F12
 
 code_2F12:                              ; CODE XREF: power_on__ignition_key_turned_+B7D↑j
-                mov     RAM_22.5, C     ; RAM[0x22] |= (!!(Adjusted Ignition Switch Voltage >= FLASH[0x8063])) << 5
+                mov     RAM_22.5, C     ; RAM[0x22] |= (!!(Adjusted Ignition Switch Voltage > FLASH[0x8063])) << 5
                 mov     A, R1
                 mov     RAM_3C, A
                 mov     A, RAM_3C       ; A = RAM[0x3C] = R1
@@ -10276,7 +10266,7 @@ code_2F1F:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     B, #40h ; '@'   ; B-Register
                 mul     AB              ; B:A = A * 0x40 = WORD(A) << 6
                                         ;
-                                        ; if (B < 0x1F)
+                                        ; if (B > 0x1F)
                                         ;   A = 0x1F
                                         ; else
                                         ;   A = B
@@ -10308,6 +10298,19 @@ code_2F3D:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #0F7BEh
                 movx    @DPTR, A        ; XRAM[0xF7BE] = Acc
 START EGO SENSOR #1 (8bit ADC)
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+CONTINUE HIGH-LEVEL FROM HERE
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
                 mov     B, #1           ; B-Register
                 lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
                                         ;
