@@ -10299,18 +10299,6 @@ code_2F3D:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    @DPTR, A        ; XRAM[0xF7BE] = Acc
 START EGO SENSOR #1 (8bit ADC)
 
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-CONTINUE HIGH-LEVEL FROM HERE
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
                 mov     B, #1           ; B-Register
                 lcall   convert_analog_to_digital_8bit ; A/D convert value at requested pin
                                         ;
@@ -10359,7 +10347,7 @@ code_2F61:                              ; CODE XREF: power_on__ignition_key_turn
                 movc    A, @A+DPTR
                 xch     A, B            ; B = FLASH[0x8089]
                                         ; A = XRAM[0xF68B] - ADC(EGO_1)
-                jc      code_2F7E       ; if (XRAM[0xF78B] < ADC(EGO_1)) jump ...
+                jc      code_2F7E       ; if (XRAM[0xF68B] < ADC(EGO_1)) jump ...
                 mul     AB
                 mov     A, B            ; A = HIGH(FLASH[0x8089] * (XRAM[0xF68B] - ADC(EGO_1)))
                 cpl     A
@@ -10371,7 +10359,7 @@ code_2F61:                              ; CODE XREF: power_on__ignition_key_turn
 code_2F7E:                              ; CODE XREF: power_on__ignition_key_turned_+BE1↑j
                 cpl     A
                 inc     A
-                mul     AB              ; B:A = B * (-A) = FLASH[0x8089] * (-(XRAM[0xF78B] - ADC(EGO_1)))
+                mul     AB              ; B = HIGH(B * (-A)) = HIGH(FLASH[0x8089] * (-(XRAM[0xF78B] - ADC(EGO_1))))
 
 code_2F81:                              ; CODE XREF: power_on__ignition_key_turned_+BEA↑j
                 mov     DPTR, #0F68Bh
@@ -10563,7 +10551,6 @@ EGO #2 SENSOR FINISH                    ;   RAM[0x23] |= 1 << 0
 
 
 
-
 no_additional_ego_sensor:               ; CODE XREF: power_on__ignition_key_turned_+CA6↑j
                                         ; power_on__ignition_key_turned_+CAE↑j ...
                 mov     DPTR, #8740h
@@ -10585,6 +10572,20 @@ code_3079:                              ; CODE XREF: power_on__ignition_key_turn
 no_additional_ego_sensor_2:             ; CODE XREF: power_on__ignition_key_turned_+CDA↑j
                 mov     C, RAM_2B.4
                 mov     RAM_2E.2, C     ; copy bit RAM[0x2B].4 to RAM[0x2E].2
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+CONTINUE HIGH-LEVEL FROM HERE
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
 
 start_egr_blow?:                        ; CODE XREF: power_on__ignition_key_turned_+CE0↑j
                                         ; power_on__ignition_key_turned_+CE5↑j ...

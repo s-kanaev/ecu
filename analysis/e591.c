@@ -29,6 +29,8 @@
 #define CO_POT_PIN ((pin)0x08)
 #define IGNITION_VOLTAGE_PIN ((pin)0x09)
 #define THROTTLE_POSITION_PIN ((pin)0x0C)
+#define EGO1_PIN ((pin)0x01)
+#define EGO2_PIN ((pin)0x02)
 
 #define IGNITION_VOLTAGE_FACTOR BYTE(0x75)
 
@@ -62,6 +64,10 @@ inline bool status_xram_checksum_invalid() {
 
 inline bool kitting_has_ego_sensor() {
   return CHECK_BIT_AT(FLASH[0x873F], 1);
+}
+
+inline bool kitting_has_additional_ego_sensor() {
+  return CHECK_BIT_AT(FLASH[0x8740], 4)
 }
 
 inline bool kitting_has_absorber() {
@@ -1548,9 +1554,12 @@ inline bool CHECK_AND_CLEAR_BIT(byte RamPtr, bit Bit) {
   return Ret;
 }
 
-#define COPY_BIT(Dst, DstBit, Src, SrcBit)              \
-do {                                                    \
-  Dst |= SET_BIT_V(CHECK_BIT_AT(Src, SrcBit), DstBit);  \
+#define COPY_BIT(Dst, DstBit, Src, SrcBit)  \
+do {                                        \
+  if (CHECK_BIT_AT(Src, SrcBit))            \
+    SET_BIT_IN(Dst, DstBit);                \
+  else                                      \
+    CLEAR_BIT_IN(Dst, DstBit);              \
 } while (0)
 
 inline void TURN_OFF_IGNITION_COIL_1_4() {
@@ -2250,6 +2259,54 @@ void ClearXram_F69A_F69B() {
   XRAM[0xF69A] = XRAM[0xF69B] = 0;
 }
 
+inline void ProcessEGO(pin EGOPin, byte *XramDiffSum,
+                       byte *RamPtrFlashValFlag, byte RamPtrFlashValFlagBit,
+                       bool KittingHasEgoSensor,
+                       byte *RamPtrEgoLessLowLimit, byte RamPtrEgoLessLowLimitBit,
+                       byte *RamPtrEgoLargerUpperLimit, byte RamPtrEgoLargerUpperLimitBit) {
+  byte EGO = ADC_8bit(EGOPin);
+
+  word EgoW = EGO * 0xFF;
+
+  if (HIGH(EgoW) >= 0x40)
+    EGO = 0xFF;
+  else
+    EGO = HIGH(EgoW) << 2;
+
+  byte Diff;
+
+  if (*XramDiffSum < EGO)
+    Diff = - HIGH(FLASH[0x8089] * (EGO - *XramDiffSum));
+  else
+    Diff = HIGH(FLASH[0x8089] * (*XramDiffSum - EGO));
+
+  byte FlashValue;
+
+  if (CHECK_BIT_AT(*RamPtrFlashValFlag, RamPtrFlashValFlagBit))
+    FlashValue = FLASH[0x808B];
+  else
+    FlashValue = FLASH[0x808A];
+
+  if (EGO < FlashValue)
+    CLEAR_BIT_IN(*RamPtrFlashValFlag, RamPtrFlashValFlagBit);
+  else
+    SET_BIT_IN(*RamPtrFlashValFlag, RamPtrFlashValFlagBit);
+
+  if (KittingHasEgoSensor) {
+    if (RAM[0x3A] >= FLASH[0x8781]) {
+      if (EGO < FLASH[0x8087])
+        SET_BIT_IN(*RamPtrEgoLessLowLimit, RamPtrEgoLessLowLimitBit);
+      else
+        CLEAR_BIT_IN(*RamPtrEgoLessLowLimit, RamPtrEgoLessLowLimitBit);
+
+      if (FLASH[0x8088] < EGO)
+        SET_BIT_IN(*RamPtrEgoLargerUpperLimit, RamPtrEgoLargerUpperLimitBit);
+      else
+        CLEAR_BIT_IN(*RamPtrEgoLargerUpperLimit, RamPtrEgoLargerUpperLimitBit);
+    }
+  }
+}
+
 _2ED3:
 {
   if (++XRAM[0xF69A] == 4) {
@@ -2308,6 +2365,43 @@ _2ED3:
 
   _2F41:
   // EGO #1 Sensor (8bit ADC)
+  {
+    ProcessEGO(EGO1_PIN, &XRAM[0xF68B], &RAM[0x2B], 4, kitting_has_ego_sensor(),
+               &RAM[0x22], 6, &RAM[0x22], 7);
+  }
+
+  _2FD0:
+  ego2_sensor_start:
+  // EGO #2 Sensor (8bit ADC)
+  {
+    ProcessEGO(EGO2_PIN, &XRAM[0xF68C], &RAM[0x2B], 5,
+               kitting_has_ego_sensor() && kitting_has_additional_ego_sensor(),
+               &RAM[0x23], 0, &RAM[0x23], 1);
+  }
+
+  _3067:
+  no_additional_ego_sensor:
+  {
+    if (kitting_has_additional_ego_sensor()) {
+      _306F:
+      if (CHECK_BIT_AT(RAM[0x2B], 4)) {
+        _3079:
+        if (CHECK_BIT_AT(RAM[0x2B], 5))
+          CLEAR_BIT_IN(RAM[0x2E], 2);
+      } else {
+        _3072:
+        if (!CHECK_BIT_AT(RAM[0x2B], 5))
+          SET_BIT_IN(RAM[0x2E], 2);
+      }
+    } else {
+      _3080:
+      no_additional_ego_sensor_2:
+      COPY_BIT(RAM[0x2B], 4, RAM[0x2E], 2);
+    }
+  }
+
+  _3084:
+  start_egr_blow:
   {
     // TODO
   }

@@ -1,6 +1,6 @@
 #pragma once
 
-/* SET_BIT(3) = 0x08*/
+/* SET_BIT(3) = 0x08 */
 #define SET_BIT(bit) ((1) << (bit))
 #define SET_BIT_V(v, bit) ((!!(v)) << (bit))
 
