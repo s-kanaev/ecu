@@ -10544,13 +10544,6 @@ EGO #2 SENSOR FINISH                    ;   RAM[0x23] |= 1 << 0
                                         ; else
                                         ;   RAM[0x23] &= !(1 << 0)
 
-
-!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!
-
-
-
-
-
 no_additional_ego_sensor:               ; CODE XREF: power_on__ignition_key_turned_+CA6↑j
                                         ; power_on__ignition_key_turned_+CAE↑j ...
                 mov     DPTR, #8740h
@@ -10573,20 +10566,6 @@ no_additional_ego_sensor_2:             ; CODE XREF: power_on__ignition_key_turn
                 mov     C, RAM_2B.4
                 mov     RAM_2E.2, C     ; copy bit RAM[0x2B].4 to RAM[0x2E].2
 
-
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-CONTINUE HIGH-LEVEL FROM HERE
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
-
 start_egr_blow?:                        ; CODE XREF: power_on__ignition_key_turned_+CE0↑j
                                         ; power_on__ignition_key_turned_+CE5↑j ...
                 mov     C, RAM_24.0     ; // XRAM[F6A7] (sum of scaled ADC Throttle Position) < low limit
@@ -10595,9 +10574,9 @@ start_egr_blow?:                        ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; if (Throttle position below low limit || Throttle position above upper limit) jump ...
 
-EGR valve start
+Throttle Position Sensor start
 
-                mov     B, #0Ch         ; EGR valve
+                mov     B, #0Ch         ; Throttle position
                 lcall   convert_analog_to_digital_10bit ; A/D convert value at requested pin
                                         ;
                                         ; Input
@@ -10614,7 +10593,7 @@ EGR valve start
                 inc     DPTR
                 movx    A, @DPTR
                 mov     R3, A           ; R3 = A = XRAM[0xF6B6] // High byte of adjusted ADC Throttle Position
-R1:R0 = ADC_10bit(EGR Valve Position)
+R1:R0 = ADC_10bit(Throttle Position)
                 lcall   subtract_word   ; INPUT - R1:R0
                                         ;         R3:R2
                                         ;
@@ -10623,7 +10602,7 @@ R1:R0 = ADC_10bit(EGR Valve Position)
                                         ;
                                         ; R1 - high, R0 - low
                                         ; R3 - high, R2 - low
-                jc      egr_valve_position_less_than_threshold ; if (EGR Valve Position < XRAM[0xF6B6]:XRAM[0xF6B5]) jump ...
+                jc      throttle_position_less_than_threshold ; if (Throttle Position < XRAM[0xF6B6]:XRAM[0xF6B5]) jump ...
                 mov     DPTR, #807Dh
                 clr     A
                 movc    A, @A+DPTR
@@ -10638,23 +10617,22 @@ R1:R0 = ADC_10bit(EGR Valve Position)
                 clr     A
                 movc    A, @A+DPTR      ; A = FLASH[0x807E]
                 clr     C
-                subb    A, R1
-                jz      scaled_egr_valve_position_eq_flash_807e
-                jnc     scaled_egr_valve_position_less_flash_807e
+                subb    A, R1           ; A = FLASH[0x807E] - R1
+                jz      scaled_throttle_position_eq_flash_807e
+                jnc     scaled_throttle_position_less_flash_807e
                 add     A, R1
-                mov     R1, A
+                mov     R1, A           ; R1 = FLASH[0x807E] - R1 + R1 = FLASH[0x807E]
 
-scaled_egr_valve_position_eq_flash_807e:
-                                        ; CODE XREF: power_on__ignition_key_turned_+D1C↑j
+scaled_throttle_position_eq_flash_807e: ; CODE XREF: power_on__ignition_key_turned_+D1C↑j
                 mov     R0, #0
-                sjmp    scaled_egr_valve_position_less_flash_807e
+                sjmp    scaled_throttle_position_less_flash_807e
 ; ---------------------------------------------------------------------------
 
-egr_valve_position_less_than_threshold: ; CODE XREF: power_on__ignition_key_turned_+D09↑j
+throttle_position_less_than_threshold:  ; CODE XREF: power_on__ignition_key_turned_+D09↑j
                 mov     R0, #0
                 mov     R1, #0
 
-scaled_egr_valve_position_less_flash_807e:
+scaled_throttle_position_less_flash_807e:
                                         ; CODE XREF: power_on__ignition_key_turned_+D1E↑j
                                         ; power_on__ignition_key_turned_+D24↑j
                 mov     DPTR, #8081h
@@ -10690,8 +10668,8 @@ scaled_egr_valve_position_less_flash_807e:
                                         ;
                 mov     A, R1
                 clr     C
-                subb    A, B            ; A = R1 - B = XRAM[0xF6B0] - FLASH[0x8081]
-                jnc     code_30E5       ; if  (XRAM[0xF6B0] >= FLASH[0x8081]) jump ...
+                subb    A, B            ; A = R1 - B
+                jnc     code_30E5       ; if  (R1 >= FLASH[0x8081]) jump ...
                 mov     DPTR, #0F6ADh
                 mov     A, R2
                 movx    @DPTR, A
@@ -10744,6 +10722,26 @@ code_30FB:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    @DPTR, A
                 mov     DPTR, #0F6B8h   ; XRAM[0xF6B6] = XRAM[0xF6B8] = FLASH[0x807C]
                 movx    @DPTR, A
+
+
+!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!
+
+
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+CONTINUE HIGH-LEVEL FROM HERE
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
 
 code_3124:                              ; CODE XREF: power_on__ignition_key_turned_+D5B↑j
                 mov     DPTR, #0F6ADh

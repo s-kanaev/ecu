@@ -2221,16 +2221,16 @@ void Xram_F69D_eq_20() {
       _2E99:
       xram_f6a7_less_low_limit:
       SET_BIT_IN(RAM[0x24], 0);
-      CLEAR_BIT_IN(RAM[0x24], 0);
+      CLEAR_BIT_IN(RAM[0x24], 1);
     } else if (HIGH(Throttle) > FLASH[0x807B]) {
       _2E9F:
       xram_f6a7_larger_upper_limit:
       CLEAR_BIT_IN(RAM[0x24], 0);
-      SET_BIT_IN(RAM[0x24], 0);
+      SET_BIT_IN(RAM[0x24], 1);
     } else {
       _2E93:
       CLEAR_BIT_IN(RAM[0x24], 0);
-      CLEAR_BIT_IN(RAM[0x24], 0);
+      CLEAR_BIT_IN(RAM[0x24], 1);
     }
 
     _2EA3:
@@ -2305,6 +2305,14 @@ inline void ProcessEGO(pin EGOPin, byte *XramDiffSum,
         CLEAR_BIT_IN(*RamPtrEgoLargerUpperLimit, RamPtrEgoLargerUpperLimitBit);
     }
   }
+}
+
+// _6060:
+word AbsWordByMSB(word V) {
+  if (CHECK_BIT_AT(V, 15))
+    V = COMPOSE_WORD(0 - HIGH(V) - (!!(LOW(V) != 0)), 0 - LOW(V));
+
+  return V;
 }
 
 _2ED3:
@@ -2402,9 +2410,67 @@ _2ED3:
 
   _3084:
   start_egr_blow:
-  {
-    // TODO
+  if (CHECK_BIT_AT(RAM[0x24], 0) || CHECK_BIT_AT(RAM[0x24], 1)) {
+    _30EF:
+    throttle_position_out_of_limits:
+    byte Ram40Val;
+
+    if (CHECK_BIT_AT(RAM[0x2A], 1)) {
+      _30FA:
+      Ram40Val = 0;
+    } else {
+      _30F2:
+      Ram40Val = FLASH[0x931C + RAM[0x4B]];
+    }
+
+    _30FB:
+    XRAM[0xF6AE] = XRAM[0xF6B0] = RAM[0x40] = Ram40Val;
+    XRAM[0xF6AD] = XRAM[0xF6AF] = 0;
+    XRAM[0xF6B5] = XRAM[0xF6B7] = 0;
+    XRAM[0xF6B6] = XRAM[0xF6B8] = FLASH[0x807C];
+  } else {
+    _308A:
+    word Throttle = ADC_10bit(THROTTLE_POSITION_PIN);
+
+    if (Throttle < GET_MEM_WORD(XRAM, THROTTLE_POSITION_1))
+      goto throttle_position_less_than_threshold; // => _30B8
+
+    if (Throttle >= GET_MEM_WORD(XRAM, THROTTLE_POSITION_1)) {
+      _309D:
+      Throttle = scale10bitADCValue(Throttle, FLASH[0x807D]);
+
+      if (HIGH(Throttle) == FLASH[0x807E]) {
+        _30B4:
+        scaled_throttle_position_eq_flash_807e:
+        Throttle = COMPOSE_WORD(0, 0);
+      } else if (HIGH(Throttle) > FLASH[0x807E]) {
+        _30B2:
+        Throttle = COMPOSE_WORD(FLASH[0x807E], 0);
+      } /* else if (HIGH(Throttle) < FLASH[0x807E]) {
+        goto scaled_throttle_position_less_flash_807e; // => _30BC
+      } */
+    } else {
+      _30B8:
+      throttle_position_less_than_threshold:
+      Throttle = COMPOSE_WORD(0, 0);
+    }
+
+    _30BC:
+    scaled_throttle_position_less_flash_807e:
+    word Throttle2 = GET_MEM_WORD(XRAM, THROTTLE_POSITION_THRESHOLD) - Throttle;
+    Throttle2 = AbsWordByMSB(Throttle2);
+
+    if (HIGH(Throttle2) < FLASH[0x8081]) {
+      _30DB:
+      SET_MEM_WORD(XRAM, THROTTLE_POSITION_LESS_THRESHOLD, Throttle);
+      RAM[0x40] = HIGH(Throttle);
+    }
+
+    _30E5:
+    SET_MEM_WORD(XRAM, THROTTLE_POSITION_THRESHOLD, Throttle);
   }
+
+  _3124:
   // TODO
 }
 

@@ -651,9 +651,9 @@
  00000000:00003079       code_3079
  00000000:00003080       no_additional_ego_sensor_2
  00000000:00003084       start_egr_blow?
- 00000000:000030B4       scaled_egr_valve_position_eq_flash_807e
- 00000000:000030B8       egr_valve_position_less_than_threshold
- 00000000:000030BC       scaled_egr_valve_position_less_flash_807e
+ 00000000:000030B4       scaled_throttle_position_eq_flash_807e
+ 00000000:000030B8       throttle_position_less_than_threshold
+ 00000000:000030BC       scaled_throttle_position_less_flash_807e
  00000000:000030E5       code_30E5
  00000000:000030EF       throttle_position_out_of_limits
  00000000:000030FA       code_30FA
