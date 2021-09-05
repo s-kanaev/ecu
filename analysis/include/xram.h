@@ -48,6 +48,9 @@ byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
   [0xF6AB] = 0,                               // previous sum of RAM[0x49], high byte
   [0xF6AC] = 0,                               // LOW(XRAM[0xF6A9:0xF6A8] - XRAM[0xF6AB:0xF6AA]), saturated to 0xFF
 
+  [0xF6AD] = 0,                               // Last throttle position which is less than threshold in FLASH[0x8081], low byte
+  [0xF6AE] = 0,                               // Last throttle position which is less than threshold in FLASH[0x8081], high byte
+
   [0xF6AF] = 0,                               // ???
   [0xF6B0] = 0,                               // ???
 

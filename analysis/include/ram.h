@@ -43,6 +43,7 @@ byte RAM[0x100] = {
   [0x27] = 0x00,  // ???
                   // bit 2 (bit address 0x3A) ???
                   // bit 3 (bit address 0x3B) = copy of PSW.F0
+                  // bit 4 ???
 
   [0x28] = 0x00,  // some status byte
                   // bit 0 - ???, bit which allows for main loop to continue
@@ -77,7 +78,8 @@ byte RAM[0x100] = {
 
   [0x3E] = 0,     // Adjusted intake air temperature (after RAM[0x3B])
   [0x3F] = 0,     // Adjusted ignition switch voltage
-  [0x40..0x43] = 0,
+  [0x40] = 0,     // Initial value for XRAM[0xF6AD] and XRAM[0xF6AF]
+  [0x41..0x43] = 0,
 
   [0x44] = 0,     // Divisor (of what?), low byte, can be changed by some interrupt?
   [0x45] = 0,     // Divisor (of what?), high byte, can be changed by some interrupt?

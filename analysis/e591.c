@@ -63,43 +63,43 @@ inline bool status_xram_checksum_invalid() {
 
 
 inline bool kitting_has_ego_sensor() {
-  return CHECK_BIT_AT(FLASH[0x873F], 1);
+  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[0], 1);
 }
 
 inline bool kitting_has_additional_ego_sensor() {
-  return CHECK_BIT_AT(FLASH[0x8740], 4)
+  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[1], 4)
 }
 
 inline bool kitting_has_absorber() {
-  return CHECK_BIT_AT(FLASH[0x8743], 4);
+  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[4], 4);
 }
 
 inline bool kitting_has_intake_air_temperature_sensor() {
-  return CHECK_BIT_AT(FLASH[0x873F], 3);
+  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[0], 3);
 }
 
 inline bool kitting_has_co_potentiometer_sensor() {
-  return CHECK_BIT_AT(FLASH[0x873F], 7);
+  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[0], 7);
 }
 
 inline bool kitting_has_irom() {
-  return CHECK_BIT_AT(FLASH[0x8741, 0]);
+  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[2], 0);
 }
 
 inline bool kitting_has_camshaft_position_sensor() {
-  return CHECK_BIT_AT(FLASH[0x873F], 4);
+  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[0], 4);
 }
 
 inline bool kitting_camshaft_position_sensor_cross_section_aligned_with_TDC() {
-  return CHECK_BIT_AT(FLASH[0x873F], 5);
+  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[0], 5);
 }
 
 inline bool kitting_has_knock_sensor() {
-  return CHECK_BIT_AT(FLASH[0x873F], 2);
+  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[0], 2);
 }
 
 inline bool kitting_should_adapt_throttle_position_sensor() {
-  return CHECK_BIT_AT(FLASH[0x8741], 6);
+  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[2], 6);
 }
 
 void reset_init(void) {
@@ -269,16 +269,16 @@ IP0.OWDS and IP0.WDTS are cleared.
 // output: R1:R0 (R0 - low, R1 - high)
 word check_sum_xram_fx00_to_f657(void) {
   word Result = 0x0001;
-  word Ptr = 0xF400; // current case: both EGO and absorber are present
+  word Ptr = RNG_START_IDX(XRAM, SUM_OF_EGO_CALIBRATION) ; // current case: both EGO and absorber are present
   
   if (!kitting_has_ego_sensor()) // There is no EGO
     Ptr = 0xF600;
   else if (!kitting_has_absorber()) // There is no absorber
-    Ptr = 0xF500;
+    Ptr = RNG_START_IDX(XRAM, EGO_CALIBRATION);
 
   do {
     Result += XRAM[Ptr++];
-  } while (Ptr != 0xF658);
+  } while (Ptr != MEM_IDX(XRAM, CHECKSUM));
 }
 
 // INPUT - R1:R0
@@ -825,7 +825,7 @@ void Inputs_Part1() {
     // volatage = 3.424 V ~ 10mV * (273 + 71) = 10mV * 344 = 3440 mV = 3.44 V
     // CoolantTemp should be (10-bit value): 2^10 * 3.424 / 5 = 0x2BD = 0010 1011 1101 => 1010 1111 0100 0000 => 0xAF40
     word CoolantTemp = ADC_10bit(COOLANT_TEMP_PIN);
-    XRAM[0xF686] = HIGH(CoolantTemp);
+    SET_MEM_BYTE(XRAM, ADC_COOLANT_TEMP, HIGH(CoolantTemp));
     bool CoolantTempNotInLimits = false;
 
     if (!FLASH[0x805D]) {
@@ -861,7 +861,7 @@ void Inputs_Part1() {
       // 1. AdjustedCoolantTemp: 0x5014
       // 2. AdjustedCoolantTemp: 0x0000
       // 2. AdjustedCoolantTemp: 0xC738
-      AdjustedCoolantTemp = GetAdcValueFromTableAndAdjustForCalculus(0x831F, CoolantTemp);
+      AdjustedCoolantTemp = GetAdcValueFromTableAndAdjustForCalculus(MEM_IDX(FLASH, COOLANT_TEMPERATURE_TABLE_1), CoolantTemp);
     } else if (CoolantTempNotInLimits) /* CoolantTempNotInLimits && !FLASH[0x805D] */ {
       AdjustedCoolantTemp = COMPOSE_WORD(FLASH[0x8A4B], 0);
     }
@@ -879,7 +879,7 @@ void Inputs_Part1() {
   // INTAKE AIR TEMPERATURE
   {
     word IntakeAirTemp = ADC_10bit(INTAKE_AIR_TEMP_PIN);
-    XRAM[0xF687] = HIGH(IntakeAirTemp);
+    SET_MEM_BYTE(XRAM, ADC_INTAKE_AIR_TEMP, HIGH(IntakeAirTemp));
 
     bool IntakeAirTempOutOfLimits = false;
     bool HasIntakeAirTempSensor = kitting_has_intake_air_temperature_sensor();
@@ -888,13 +888,13 @@ void Inputs_Part1() {
     if (HasIntakeAirTempSensor) {
       // Has intake air temperature sensor
       if (!FLASH[0x8060]) {
-        if (HIGH(IntakeAirTemp) < FLASH[0x805E]) {
+        if (HIGH(IntakeAirTemp) < GET_MEM_BYTE(FLASH, MIMIMUM_INTAKE_AIR_TEMPERATURE)) {
           // intake air temp below minimum
           SET_BIT_IN(RAM[0x24], 4);
           CLEAR_BIT_IN(RAM[0x24], 5);
 
           IntakeAirTempOutOfLimits = true;
-        } else if (FLASH[0x805F] < HIGH(IntakeAirTemp)) {
+        } else if (GET_MEM_BYTE(FLASH, MAXIMUM_INTAKE_AIR_TEMPERATURE) < HIGH(IntakeAirTemp)) {
           // intake air temp above minimum
           CLEAR_BIT_IN(RAM[0x24], 4);
           SET_BIT_IN(RAM[0x24], 5);
@@ -908,7 +908,8 @@ void Inputs_Part1() {
         CLEAR_BIT_IN(RAM[0x24], 5);
 
         // TODO Table length ?
-        AdjustedIntakeAirTemp = GetAdcValueFromTableAndAdjustForCalculus(0x8341, IntakeAirTemp);
+        AdjustedIntakeAirTemp = GetAdcValueFromTableAndAdjustForCalculus(
+            MEM_IDX(FLASH, INTAKE_AIR_TEMPERATURE_TABLE), IntakeAirTemp);
       }
     }
 
@@ -939,7 +940,7 @@ void Inputs_Part1() {
       // There is a CO Potentiometer sensor
       _544A:
       COPot = ADC_8bit(CO_POT_PIN);
-      XRAM[0xF689] = COPot;
+      SET_MEM_BYTE(XRAM, ADC_CO_POT, COPot);
 
       if (COPot < FLASH[0x8067]) {
         SET_BIT_IN(RAM[0x23], 4);
@@ -984,16 +985,16 @@ void Inputs_Part1() {
 
     if (!CHECK_BIT_AT(RAM[0x73], 3)) {
       if (!CantInitCOPot)
-        XRAM[0xF681] = HIGH(AdjustedCOPot);
+        SET_MEM_BYTE(XRAM, ADJUSTED_CO_POT, HIGH(AdjustedCOPot));
       else
-        XRAM[0xF681] = XRAM[0xFF74];
+        SET_MEM_BYTE(XRAM, ADJUSTED_CO_POT, XRAM[0xFF74]);
     }
   }
 
   // IGNITION SWITCH VOLTAGE
   {
     byte IgnVoltage = ADC_8bit(IGNITION_VOLTAGE_PIN);
-    XRAM[0xF688] = IgnVoltage;
+    SET_MEM_BYTE(XRAM, ADC_IGNITION_SWITCH_VOLTAGE, IgnVoltage);
 
     word MultipliedIgnVoltage = WORD(IgnVoltage) * IGNITION_VOLTAGE_FACTOR;
     byte AdjustedIgnVoltage;
@@ -1031,7 +1032,7 @@ void Inputs_Part1() {
 
 //_2813:
 void InitXramF8CD() {
-  XRAM[0xF683] = RAM[0x3A];
+  SET_MEM_BYTE(XRAM, ADJUSTED_COOLANT_TEMP, RAM[0x3A]);
 
   if ((RAM[0x3A] < FLASH[0x87B7]) || !kitting_has_knock_sensor()) {
     word XramPtr = 0xF8CD;
@@ -1060,8 +1061,7 @@ _286C:
   if (RAM[0x3A] < FLASH[0x8788]) {
 // _28B5:
 adjusted_coolant_temp_less_than_flash_8788:
-    
-    word XramPtr = 0xF500;
+    word XramPtr = RNG_START_IDX(XRAM, EGO_CALIBRATION);
     word ResultXramPtr = XramPtr - 0x100;
 
     for (int Idx = 0; Idx < 0x100; ++Idx, ++XramPtr, ++ResultXramPtr)
@@ -1070,7 +1070,7 @@ adjusted_coolant_temp_less_than_flash_8788:
     XRAM[0xF7A4] = FLASH[0x8789];
   } else {
     if (status_watchdog_triggerred() || status_xram_checksum_invalid()) {
-      word XramPtr = 0xF500;
+      word XramPtr = RNG_START_IDX(XRAM, EGO_CALIBRATION);
       word ResultXramPtr = XramPtr - 0x100;
       word FlashPtr = 0x9A1C;
 
@@ -1325,7 +1325,7 @@ void reset_interrupt() noreturn {
   RAM[0x20] |= SET_BIT_V(PSW.F1, 6);
 
   word R1_R0 = check_sum_xram_fx00_to_f657(); // R0 - low, R1 - high
-  word R3_R2 = *(word *)(&XRAM[0xF658]);      // R2 - low, R3 - high
+  word R3_R2 = GET_MEM_WORD(XRAM, CHECKSUM);      // R2 - low, R3 - high
   R1_R0 = subtract_word(R1_R0, R3_R2);
   
   RAM[0x20] |= SET_BIT_V(R0 || R1, 7);
@@ -1336,7 +1336,7 @@ void reset_interrupt() noreturn {
   RAM[0x2E] |= SET_BIT_V(kitting_camshaft_position_sensor_cross_section_aligned_with_TDC(), 0); // Camshaft position sensor cross-section is aligned with TDC
   RAM[0x2E] |= SET_BIT_V(kitting_has_knock_sensor(), 1); // Is there knock sensor
   
-  if (CHECK_BIT_AT(FLASH[0x8741], 0)) // Is there IROM?
+  if (CHECK_BIT_AT(kitting_has_irom(), 0)) // Is there IROM?
     read_eeprom_to_xram();
   else
     no_eeprom();
@@ -1375,7 +1375,7 @@ void reset_interrupt() noreturn {
     XRAM[0xF603] = 0x01;
     
     if (kitting_has_ego_sensor()) {
-      word XramPtr = 0xF500;
+      word XramPtr = RNG_START_IDX(XRAM, EGO_CALIBRATION);
       word FlashPtr = 0x991C;
       
       for (int Cnt = 0; Cnt < 0x100; ++Cnt)
@@ -1413,8 +1413,10 @@ _2748:
   RAM[0x57] = RAM[0x58] = FLASH[0x8755];
   XRAM[0xF6FB] = 0xFF;
   XRAM[0xF6FC] = 0xFF;
-  XRAM[0xF6B5] = XRAM[0xF6B7] = 0x00;
-  XRAM[0xF6B6] = XRAM[0xF6B8] = FLASH[0x807C];
+
+  SET_MEM_WORD(XRAM, THROTTLE_POSITION_1, COMPOSE_WORD(FLASH[0x807C], 0));
+  SET_MEM_WORD(XRAM, THROTTLE_POSITION_2, COMPOSE_WORD(FLASH[0x807C], 0));
+
   RAM[0x66] = 0;
   RAM[0x67] = FLASH[0x808C];
   XRAM[0xF707] = XRAM[0xF708] = XRAM[0xF709] = XRAM[0xF70A] = XRAM[0xF70B] = XRAM[0xF70C] = XRAM[0xF70D] = XRAM[0xF70E] = 0x80;
@@ -1832,38 +1834,38 @@ _2B19:
   // Coolant temperature sensor
   {
     word CoolantTemp = ADC_10bit(COOLANT_TEMP_PIN);
-    XRAM[0xF686] = HIGH(CoolantTemp);
+    SET_MEM_BYTE(XRAM, ADC_COOLANT_TEMP, HIGH(CoolantTemp));
 
     CoolantTemp = scale10bitADCValue(CoolantTemp, 8);
 
-    addWordInXRAMWord(CoolantTemp, 0xF69E);
+    addWordInXRAMWord(CoolantTemp, MEM_IDX(XRAM, COOLANT_TEMP_SUM));
   }
 
   // _2B53:
   // Intake air temperature sensor
   {
     word IntakeAirTemp = ADC_10bit(INTAKE_AIR_TEMP_PIN);
-    XRAM[0xF687] = HIGH(IntakeAirTemp);
+    SET_MEM_BYTE(XRAM, ADC_INTAKE_AIR_TEMP, HIGH(IntakeAirTemp));
 
     IntakeAirTemp = scale10bitADCValue(IntakeAirTemp, 8);
-    addWordInXRAMWord(IntakeAirTemp, 0xF6A0);
+    addWordInXRAMWord(IntakeAirTemp, MEM_IDX(XRAM, INTAKE_AIR_SUM));
   }
 
   // _2B6A:
   // CO Potentiometer sensor
   {
     byte COPot = ADC_8bit(CO_POT_PIN);
-    XRAM[0xF689] = COPot;
+    SET_MEM_BYTE(XRAM, ADC_CO_POT, COPot);
 
-    addByteInXRAMWord(COPot, 0xF6A4);
+    addByteInXRAMWord(COPot, MEM_IDX(XRAM, CO_POT_SUM));
   }
 
   // _2B7A:
   // Ignition switch
   {
     byte Voltage = ADC_8bit(IGNITION_VOLTAGE_PIN);
-    XRAM[0xF688] = Voltage;
-    addByteInXRAMWord(Voltage, 0xF69B);
+    SET_MEM_BYTE(XRAM, ADC_IGNITION_SWITCH_VOLTAGE, Voltage);
+    addByteInXRAMWord(Voltage, MEM_IDX(XRAM, IGNITION_SW_VOLTAGE_SUM));
 
     const byte ThresholdVoltage = FLASH[0x8096];
     Voltage = ADC_8bit(IGNITION_VOLTAGE_PIN);
@@ -1889,32 +1891,32 @@ _2B19:
   // Throttle Position Sensor
   {
     word ThrottlePosition = ADC_10bit(THROTTLE_POSITION_PIN);
-    XRAM[0xF685] = HIGH(ThrottlePosition);
+    SET_MEM_BYTE(XRAM, ADC_THROTTLE_POSITION, HIGH(ThrottlePosition));
 
     ThrottlePosition = scale10bitADCValue(ThrottlePosition, 8);
-    addWordInXRAMWord(ThrottlePosition, 0xF6A6);
+    addWordInXRAMWord(ThrottlePosition, MEM_IDX(XRAM, THROTTLE_POSITION_SUM));
 
     // _2BC6:
     if (!XRAM[0xF69D]) {
       // _2BCC:
-      XRAM[0xF6B3] = HIGH(ThrottlePosition);
-      XRAM[0xF6B4] = HIGH(ThrottlePosition);
+      SET_MEM_BYTE(XRAM, THROTTLE_POSITION_BYTE_1, HIGH(ThrottlePosition));
+      SET_MEM_BYTE(XRAM, THROTTLE_POSITION_BYTE_2, HIGH(ThrottlePosition));
     } else {
       // xram_f69d_not_zero:
       // _2BD7:
-      if (XRAM[0xF6B3] < HIGH(ThrottlePosition)) {
+      if (GET_MEM_BYTE(XRAM, THROTTLE_POSITION_BYTE_1) < HIGH(ThrottlePosition)) {
         // _2BE6:
-        if (XRAM[0xF6B4] < HIGH(ThrottlePosition))
-          XRAM[0xF6B4] = HIGH(ThrottlePosition)
+        if (GET_MEM_BYTE(XRAM, THROTTLE_POSITION_BYTE_2) < HIGH(ThrottlePosition))
+          SET_MEM_BYTE(XRAM, THROTTLE_POSITION_BYTE_2, HIGH(ThrottlePosition));
       } else {
         // _2BDF:
-        XRAM[0xF6B3] = HIGH(ThrottlePosition);
+        SET_MEM_BYTE(XRAM, THROTTLE_POSITION_BYTE_1, HIGH(ThrottlePosition));
       }
     }
   }
 
   // _2BF3:
-  addByteInXRAMWord(RAM[0x49], 0xF6A8);
+  addByteInXRAMWord(RAM[0x49], MEM_IDX(XRAM, RAM_49_SUM));
 
   if (++XRAM[0xF69D] == 0x20) {
     Xram_F69D_eq_20();
@@ -1986,7 +1988,7 @@ inline bool ShouldAdaptThrottlePositionSensorBasedOnXramValue(byte Value) {
 
 // _695C
 void ClearXramF69E_0C_Bytes() {
-  for (XramPtr = 0xF69E; XramPtr < 0xF69E + 0x0C; ++XramPtr)
+  for (XramPtr = MEM_IDX(XRAM, COOLANT_TEMP_SUM); XramPtr < MEM_IDX(XRAM, COOLANT_TEMP_SUM) + 0x0C; ++XramPtr)
     XRAM[XramPtr] = 0x00;
   XRAM[0xF69D] = 0;
 }
@@ -2018,7 +2020,7 @@ void Xram_F69D_eq_20() {
           _2C86:
           xram_F6BF_less_than_flash_805D_or_coolant_temperature_OK_2:
           AdjustedCoolantTemp = InitRam3ATemperature(
-              RNG_START(XRAM, COOLANT_TEMPERATURE_TABLE_2), ScaledADCCoolantTemp, FLASH[0x805B]);
+              RNG_START_IDX(XRAM, COOLANT_TEMPERATURE_TABLE_2), ScaledADCCoolantTemp, FLASH[0x805B]);
         }
       } else {
         _2C20:
@@ -2027,7 +2029,7 @@ void Xram_F69D_eq_20() {
           _2C4A:
           xram_F6BF_less_than_flash_805D_or_coolant_temperature_OK:
           AdjustedCoolantTemp = InitRam3ATemperature(
-              RNG_START(XRAM, COOLANT_TEMPERATURE_TABLE_1), ScaledADCCoolantTemp, FLASH[0x805C]);
+              RNG_START_IDX(XRAM, COOLANT_TEMPERATURE_TABLE_1), ScaledADCCoolantTemp, FLASH[0x805C]);
         }
       }
 
@@ -2080,7 +2082,7 @@ void Xram_F69D_eq_20() {
         CLEAR_BIT_IN(RAM[0x24], 5);
         // R1:R0
         AdjustedIntakeAirTemp = GetAdcValueFromTableAndAdjustForCalculus(
-            RNG_START(FLASH, INTAKE_AIR_TEMPERATURE_TABLE) - FLASH, IntakeAirTemp);
+            RNG_START_IDX(FLASH, INTAKE_AIR_TEMPERATURE_TABLE) - FLASH, IntakeAirTemp);
         RAM[0x3B] = HIGH(AdjustedIntakeAirTemp);
       }
     }
@@ -2167,7 +2169,7 @@ void Xram_F69D_eq_20() {
       CLEAR_BIT_IN(RAM[0x23], 5);
 
       if (!CHECK_BIT_AT(RAM[0x73], 3))
-        XRAM[0xF681] = XRAM[0xFF74];
+        SET_MEM_BYTE(XRAM, ADJUSTED_CO_POT, XRAM[0xFF74]);
     } else {
       CLEAR_BIT_IN(RAM[0x23], 4);
       CLEAR_BIT_IN(RAM[0x23], 5);
@@ -2178,7 +2180,7 @@ void Xram_F69D_eq_20() {
     calculate_xram_f681:
     if (HasCOPotSensor || !HasIROM) {
       if (!CHECK_BIT_AT(RAM[0x73], 3))
-        XRAM[0xF681] = HIGH(Product);
+        SET_MEM_BYTE(XRAM, ADJUSTED_CO_POT, HIGH(Product));
     }
 
     _2DAF:
@@ -2256,7 +2258,9 @@ void Xram_F69D_eq_20() {
 
 // _696B
 void ClearXram_F69A_F69B() {
-  XRAM[0xF69A] = XRAM[0xF69B] = 0;
+  XRAM[0xF69A] = 0;
+  // only zero low byte
+  SET_MEM_BYTE(XRAM, IGNITION_SW_VOLTAGE_SUM);
 }
 
 inline void ProcessEGO(pin EGOPin, byte *XramDiffSum,
@@ -2409,7 +2413,7 @@ _2ED3:
   }
 
   _3084:
-  start_egr_blow:
+  start_egr_blow: // Oh rly?
   if (CHECK_BIT_AT(RAM[0x24], 0) || CHECK_BIT_AT(RAM[0x24], 1)) {
     _30EF:
     throttle_position_out_of_limits:
@@ -2424,10 +2428,13 @@ _2ED3:
     }
 
     _30FB:
-    XRAM[0xF6AE] = XRAM[0xF6B0] = RAM[0x40] = Ram40Val;
-    XRAM[0xF6AD] = XRAM[0xF6AF] = 0;
-    XRAM[0xF6B5] = XRAM[0xF6B7] = 0;
-    XRAM[0xF6B6] = XRAM[0xF6B8] = FLASH[0x807C];
+    RAM[0x40] = Ram40Val;
+
+    SET_MEM_WORD(XRAM, THROTTLE_POSITION_LESS_THRESHOLD, COMPOSE_WORD(Ram40Val, 0));
+    SET_MEM_WORD(XRAM, THROTTLE_POSITION_THRESHOLD, COMPONSE_WORD(Ram40Val, 0));
+
+    SET_MEM_WORD(XRAM, THROTTLE_POSITION_1, COMPOSE_WORD(FLASH[0x807C], 0));
+    SET_MEM_WORD(XRAM, THROTTLE_POSITION_2, COMPOSE_WORD(FLASH[0x807C], 0));
   } else {
     _308A:
     word Throttle = ADC_10bit(THROTTLE_POSITION_PIN);

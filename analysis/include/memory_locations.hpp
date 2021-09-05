@@ -15,9 +15,9 @@
     return &segment[segment ## _ ## name ## _END_PTR];                          \
   };
 
-#define RNG_START(segment, name) \
+#define RNG_START_IDX(segment, name) \
   segment ## _ ## name ## _START_PTR
-#define RNG_END(segment, name) \
+#define RNG_END_IDX(segment, name) \
   segment ## _ ## name ## _END_PTR
 #define RNG_LENGTH(segment, name) \
   segment ## _ ## name ## _RANGE_LENGTH
@@ -28,6 +28,8 @@
 
 
 #define _MEM_PTR(segment, name) segment ## _ ## name ## _PTR
+#define MEM_IDX(segment, name) _MEM_PTR(segment, name)
+
 #define DEFINE_MEMORY_BYTE(segment, name, loc) \
   static const int _MEM_PTR(segment, name) = (loc);
 
@@ -97,6 +99,8 @@ DEFINE_MEMORY_RANGE(FLASH, INTAKE_AIR_TEMPERATURE_TABLE, 0x8341, 0x8351);
 
 DEFINE_MEMORY_BYTE(FLASH, MIMIMUM_INTAKE_AIR_TEMPERATURE, 0x805E);
 DEFINE_MEMORY_BYTE(FLASH, MAXIMUM_INTAKE_AIR_TEMPERATURE, 0x805F);
+
+DEFINE_MEMORY_RANGE(FLASH, KITTING, 0x873F, 0x8744);
 
 ////////////////////////////////////////////////////////////
 // RAM
