@@ -1126,15 +1126,15 @@
  00000000:0000552F       code_552F
  00000000:0000553D       convert_analog_to_digital_10bit
  00000000:00005546       code_5546
- 00000000:00005555       code_5555
- 00000000:000055BA       code_55BA
- 00000000:000055BE       code_55BE
- 00000000:000055C0       code_55C0
+ 00000000:00005555       get_2values_for_throttle
+ 00000000:000055BA       get_flash_8e0b_plus_swapped_0f_plus_ram4c
+ 00000000:000055BE       get_flash_8e0b_plus_swapped_ram41_plus_ram4c
+ 00000000:000055C0       get_flash_8e0b_plus_swapped_acc_plus_ram4c
  00000000:000055CC       code_55CC
- 00000000:000055DE       code_55DE
- 00000000:000055F7       code_55F7
- 00000000:000055FF       code_55FF
- 00000000:00005605       code_5605
+ 00000000:000055DE       filter_throttle_poistion?
+ 00000000:000055F7       sum_xram_f602_and_f779_larger_ff
+ 00000000:000055FF       sum_xram_f602_and_f779_less_80
+ 00000000:00005605       sum_xram_f602_and_f779_less_80_no_overflow
  00000000:00005619       code_5619
  00000000:00005620       code_5620
  00000000:00005644       code_5644
@@ -1267,7 +1267,7 @@
  00000000:00006019       code_6019
  00000000:0000601F       code_601F
  00000000:0000602A       code_602A
- 00000000:00006058       code_6058
+ 00000000:00006058       subtract_acc_from_word
  00000000:00006060       abs_word_by_msb
  00000000:0000606B       code_606B
  00000000:0000606C       cast_signed_R2_to_R3R2
@@ -1283,7 +1283,7 @@
  00000000:000060AE       code_60AE
  00000000:000060B2       code_60B2
  00000000:000060BA       code_60BA
- 00000000:000060CB       code_60CB
+ 00000000:000060CB       shift_right_word
  00000000:000060D3       shr_word_twice
  00000000:000060D6       code_60D6
  00000000:000060DF       shr_word_3_times
@@ -1358,9 +1358,9 @@
  00000000:0000638C       code_638C
  00000000:0000638E       code_638E
  00000000:000063A5       code_63A5
- 00000000:000063CB       code_63CB
- 00000000:000063CF       code_63CF
- 00000000:000063D1       code_63D1
+ 00000000:000063CB       profile_table_value_no_negate_table_size_0x10
+ 00000000:000063CF       profile_table_value_negate_table_size_0x10
+ 00000000:000063D1       profile_table_value_table_size_0x10_impl
  00000000:000063D5       profile_table_value
  00000000:000063DB       code_63DB
  00000000:000063DD       profile_table_value_impl

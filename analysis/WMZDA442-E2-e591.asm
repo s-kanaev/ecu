@@ -4910,7 +4910,7 @@ code_163B:                              ; CODE XREF: IE0_0+29C↑j
                 inc     DPTR
                 movx    A, @DPTR
                 mov     R1, A
-                lcall   code_55DE
+                lcall   filter_throttle_poistion?
                 ljmp    code_1772
 ; ---------------------------------------------------------------------------
 
@@ -4944,7 +4944,40 @@ code_1661:                              ; CODE XREF: IE0_0+28B↑j
                 mov     DPTR, #0B2EEh
                 mov     R2, RAM_4A
                 mov     R3, A
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     R2, A
                 add     A, #80h
                 mov     B, A            ; B-Register
@@ -5140,7 +5173,40 @@ code_1731:                              ; CODE XREF: IE0_0+368↑j
 code_174C:                              ; CODE XREF: IE0_0+3B9↑j
                 mov     R2, RAM_4A
                 mov     R3, RAM_50
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     B, A            ; B-Register
                 mov     DPTR, #0F6CAh
                 movx    A, @DPTR
@@ -5859,7 +5925,40 @@ code_1AC8:                              ; CODE XREF: IE0_0+731↑j
 
 code_1AD5:                              ; CODE XREF: IE0_0+742↑j
                 mov     DPTR, #0AE94h
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     A, R0
                 push    ACC             ; Accumulator
                 mov     A, R1
@@ -5935,7 +6034,40 @@ code_1B26:                              ; CODE XREF: IE0_0+78F↑j
 
 code_1B33:                              ; CODE XREF: IE0_0+7A0↑j
                 mov     DPTR, #0B018h
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     DPTR, #0AFD6h
                 mov     A, RAM_3D
                 lcall   table_lookup_0  ; INPUT:
@@ -5993,7 +6125,40 @@ code_1B6B:                              ; CODE XREF: IE0_0+7D4↑j
 
 code_1B78:                              ; CODE XREF: IE0_0+7E5↑j
                 mov     DPTR, #0B19Ch
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     DPTR, #0B15Ah
                 mov     A, RAM_3D
                 lcall   table_lookup_0  ; INPUT:
@@ -6301,7 +6466,12 @@ code_1D0A:                              ; CODE XREF: IE0_0+974↑j
 ; ---------------------------------------------------------------------------
 
 code_1D0E:                              ; CODE XREF: IE0_0+971↑j
-                lcall   code_6058
+                lcall   subtract_acc_from_word ; INPUT:
+                                        ;  R1:R0
+                                        ;  Acc
+                                        ;
+                                        ; OUTPUT:
+                                        ;  R1:R0 = R1:R0 - Acc
                 mov     A, R1
                 jnz     code_1D1A
                 mov     A, R0
@@ -10724,13 +10894,6 @@ code_30FB:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    @DPTR, A
 
 
-!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!
-
-
-
-
-
-
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -10758,32 +10921,49 @@ code_3124:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT:
                                         ;  - Acc - table value
-                mov     RAM_43, A
+                mov     RAM_43, A       ; RAM[0x43] = Interpolated value
                 mov     B, A            ; B-Register
                 add     A, #4
                 swap    A
                 rl      A
                 anl     A, #1Fh
-                mov     RAM_42, A
+                mov     RAM_42, A       ; RAM[0x42] = ((A + 4) & 0xF8) >> 3
                 mov     A, B            ; B-Register
                 add     A, #8
                 swap    A
                 anl     A, #0Fh
-                mov     RAM_41, A
-                jnb     RAM_27.4, code_31A5
+                mov     RAM_41, A       ; RAM[0x41] = ((A + 1) & 0xF0) >> 4
+
+
+!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!
+
+/// BRANCH
+
+
+
+                jnb     RAM_27.4, code_31A5 ; if (RAM[0x27] & (1 << 4)) jump ...
                 mov     DPTR, #0F6ADh
                 movx    A, @DPTR
                 mov     R0, A
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
+                mov     R1, A           ; R1:R0 = COMPOSE_WORD(XRAM[0xF6AE], XRAM[0xF6AD])
                 mov     DPTR, #0F6B1h
                 mov     A, R0
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, R1
-                movx    @DPTR, A
-                lcall   code_55DE
+                movx    @DPTR, A        ; XRAM[0xF6B1] = XRAM[0xF6AD]
+                                        ; XRAM[0xF6B2] = XRAM[0xF6AE]
+
+
+!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!
+
+
+
+
+R1:R0 = COMPOSE_WORD(XRAM[0xF6AE], XRAM[0xF6AD]) // latest throttle position which is less than threshold
+                lcall   filter_throttle_poistion?
                 mov     DPTR, #0F6D6h
                 mov     A, R0
                 movx    @DPTR, A
@@ -10980,7 +11160,12 @@ code_3269:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     R0, RAM_2
                 mov     R1, RAM_3
                 jnb     PSW.5, code_3273 ; Program Status Word
-                lcall   code_6058
+                lcall   subtract_acc_from_word ; INPUT:
+                                        ;  R1:R0
+                                        ;  Acc
+                                        ;
+                                        ; OUTPUT:
+                                        ;  R1:R0 = R1:R0 - Acc
 
 code_3273:                              ; CODE XREF: power_on__ignition_key_turned_+EDB↑j
                 mov     DPTR, #0F6EAh
@@ -11107,7 +11292,12 @@ code_32D9:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     A, R0
                 rrc     A
                 mov     R0, A
-                lcall   code_6058
+                lcall   subtract_acc_from_word ; INPUT:
+                                        ;  R1:R0
+                                        ;  Acc
+                                        ;
+                                        ; OUTPUT:
+                                        ;  R1:R0 = R1:R0 - Acc
                 mov     R2, RAM_0
                 mov     R3, RAM_1
                 mov     DPTR, #0F6E8h
@@ -11188,7 +11378,7 @@ code_3346:                              ; CODE XREF: power_on__ignition_key_turn
                 inc     DPTR
                 movx    A, @DPTR
                 mov     R1, A
-                lcall   code_55DE
+                lcall   filter_throttle_poistion?
                 mov     DPTR, #0F6EEh
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -11378,7 +11568,40 @@ code_3434:                              ; CODE XREF: power_on__ignition_key_turn
 code_3447:                              ; CODE XREF: power_on__ignition_key_turned_+10B0↑j
                 mov     R2, RAM_4A
                 mov     R3, RAM_4
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     B, A            ; B-Register
                 mov     DPTR, #0F6DEh
                 movx    A, @DPTR
@@ -12679,13 +12902,79 @@ code_3B32:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #945Ah
                 mov     R2, RAM_4A
                 mov     R3, RAM_50
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     DPTR, #0F6F7h
                 movx    @DPTR, A
                 mov     DPTR, #955Ah
                 mov     R2, RAM_4A
                 mov     R3, RAM_50
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     R1, A
                 mov     DPTR, #0F6F7h
                 movx    A, @DPTR
@@ -12728,7 +13017,7 @@ code_3B79:                              ; CODE XREF: power_on__ignition_key_turn
 code_3B93:                              ; CODE XREF: power_on__ignition_key_turned_+17FC↑j
                 mov     R2, RAM_4A
                 mov     R3, RAM_50
-                lcall   code_63CF
+                lcall   profile_table_value_negate_table_size_0x10
                 mov     R0, A
                 mov     DPTR, #873Fh
                 clr     A
@@ -13122,7 +13411,7 @@ code_3DCF:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #0A6F9h
                 mov     R2, RAM_4A
                 mov     R3, RAM_50
-                lcall   code_63CF
+                lcall   profile_table_value_negate_table_size_0x10
                 mov     RAM_5A, A
 
 code_3DE7:                              ; CODE XREF: power_on__ignition_key_turned_+1A46↑j
@@ -13685,7 +13974,40 @@ code_40F9:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #0A5F9h
                 mov     R2, RAM_4A
                 mov     R3, RAM_50
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     DPTR, #0F7A3h
                 movx    @DPTR, A
 
@@ -13920,7 +14242,40 @@ code_424D:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #935Ah
                 mov     R2, RAM_4A
                 mov     R3, RAM_50
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     RAM_57, A
                 jb      RAM_2A.2, code_42A1
                 mov     A, RAM_64
@@ -13930,7 +14285,7 @@ code_424D:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #9D1Ch
                 mov     R2, RAM_4A
                 mov     R3, RAM_50
-                lcall   code_63CF
+                lcall   profile_table_value_negate_table_size_0x10
                 mov     R0, A
                 mov     DPTR, #873Fh
                 clr     A
@@ -13976,7 +14331,40 @@ code_42A1:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #935Ah
                 mov     R2, RAM_4A
                 mov     R3, RAM_50
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 cjne    A, RAM_57, code_42E4
                 lcall   code_64E7
                 jb      RAM_2A.5, code_42E7
@@ -14174,7 +14562,40 @@ code_43CA:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #9B1Ch
                 mov     R2, RAM_4A
                 mov     R3, RAM_43
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 add     A, #80h
                 rrc     A
                 mov     R2, A
@@ -17900,8 +18321,16 @@ code_5546:                              ; CODE XREF: convert_analog_to_digital_1
 
 ; =============== S U B R O U T I N E =======================================
 
+; INPUT
+;   R1:R0
+;
+; OUTPUT
+;   R1:R0
+;   R3:R2
+;
+; CALCULUS and NAME is TODO
 
-code_5555:                              ; CODE XREF: code_55DE↓p
+get_2values_for_throttle:               ; CODE XREF: filter_throttle_poistion?↓p
                                         ; code_5783+8↓p
                 mov     DPTR, #856Ch
                 lcall   interpolate_table_value ; INPUT:
@@ -17911,20 +18340,57 @@ code_5555:                              ; CODE XREF: code_55DE↓p
                                         ;
                                         ; OUTPUT:
                                         ;  - Acc - table value
-                push    ACC             ; Accumulator
-                mov     R3, A
-                mov     R2, RAM_4A
+                push    ACC             ; store interoplated value
+                mov     R3, A           ; R3 = interpolate_table_value(R1, R0, DPTR)
+                mov     R2, RAM_4A      ; R2 = RAM[0x4A]
                 mov     DPTR, #8C0Bh
-                lcall   code_63CB
+R1:R0 = profile_table_value_no_negate_table_size_0x10(R2, R3, DPTR)
+A = R1
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     DPTR, #900Bh
                 mov     A, RAM_3D
+A = table_lookup_0(DPTR, RAM[0x3D])
                 lcall   table_lookup_0  ; INPUT:
                                         ;  - DPTR - flash location of table
                                         ;  - A - packed offset and factor (factor - least significant three bits, will be SHL 5; offset - most significant five bits, will be SHR 3)
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = A = table_lookup_0(DPTR, RAM[0x3D])
+R1:R0 = scale_ADC_10bit_value(table_lookup_0(DPTR, RAM[0x3D]), R1:R0)
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
@@ -17940,24 +18406,61 @@ code_5555:                              ; CODE XREF: code_55DE↓p
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
                 mov     B, A            ; B-Register
+R1:R0 = scale_ADC_10bit_value(table_lookup_0(DPTR, RAM[0x3E]), R1:R0)
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
                                         ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
-                lcall   code_60CB
-                pop     B               ; B-Register
+R1:R0 >>= 1
+                lcall   shift_right_word
+                pop     B               ; restore interpolated value
                 mov     A, R0
-                push    ACC             ; Accumulator
+                push    ACC             ; store R0
                 mov     A, R1
-                push    ACC             ; Accumulator
-                mov     R3, B           ; B-Register
-                mov     R2, RAM_4A
+                push    ACC             ; store R1
+                mov     R3, B           ; R3 = interpolated value
+                mov     R2, RAM_4A      ; R2 = RAM[0x4A]
                 mov     DPTR, #8D0Bh
-                lcall   code_63CB
+R1:R0 = profile_table_value_no_negate_table_size_0x10(R2, R3, DPTR)
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     DPTR, #900Bh
                 mov     A, RAM_3D
+A = table_lookup_0(DPTR, RAM[0x3D])
                 lcall   table_lookup_0  ; INPUT:
                                         ;  - DPTR - flash location of table
                                         ;  - A - packed offset and factor (factor - least significant three bits, will be SHL 5; offset - most significant five bits, will be SHR 3)
@@ -17965,6 +18468,7 @@ code_5555:                              ; CODE XREF: code_55DE↓p
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
                 mov     B, A            ; B-Register
+R1:R0 = scale_ADC_10bit_value(R1:R0, table_lookup_0(DPTR, RAM[0x3D]))
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
@@ -17980,82 +18484,109 @@ code_5555:                              ; CODE XREF: code_55DE↓p
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
                 mov     B, A            ; B-Register
+R1:R0 = scale_ADC_10bit_value(R1:R0, table_lookup_0(DPTR, RAM[0x3E]))
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
                                         ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
-                lcall   code_60CB
+R1:R0 >>= 1
+                lcall   shift_right_word
                 pop     ACC             ; Accumulator
                 mov     R3, A
                 pop     ACC             ; Accumulator
-                mov     R2, ACC         ; Accumulator
+                mov     R2, ACC         ; R3:R2 = previous R1:R0
                 ret
-; End of function code_5555
+; End of function get_2values_for_throttle
 
 
 ; =============== S U B R O U T I N E =======================================
 
+; OUTPUT
+;   Ptr = 0x8E0B + SWAP(0x0F) + RAM[0x4C]
+;       = 0x8E0B + 0xF0 + RAM[0x4C]
+;   R2 = FLASH[Ptr]
+;   R3 = FLASH[Ptr + 1]
 
-code_55BA:                              ; CODE XREF: code_5649+2B↓p
-                mov     A, #0Fh
-                sjmp    code_55C0
-; End of function code_55BA
+get_flash_8e0b_plus_swapped_0f_plus_ram4c:
+                                        ; CODE XREF: code_5649+2B↓p
+                mov     A, #0Fh         ; A = 0x0F
+                sjmp    get_flash_8e0b_plus_swapped_acc_plus_ram4c
+; End of function get_flash_8e0b_plus_swapped_0f_plus_ram4c
 
 
 ; =============== S U B R O U T I N E =======================================
 
+; OUTPUT
+;   Ptr = 0x8E0B + SWAP(RAM[0x41]) + RAM[0x4C]
+;   R2 = FLASH[Ptr]
+;   R3 = FLASH[Ptr + 1]
 
-code_55BE:                              ; CODE XREF: code_55DE:code_5619↓p
+get_flash_8e0b_plus_swapped_ram41_plus_ram4c:
+                                        ; CODE XREF: filter_throttle_poistion?:code_5619↓p
                                         ; code_5783+27↓p
-                mov     A, RAM_41
+                mov     A, RAM_41       ; A = RAM[0x41]
 
-code_55C0:                              ; CODE XREF: code_55BA+2↑j
-                swap    A
-                add     A, RAM_4C
+get_flash_8e0b_plus_swapped_acc_plus_ram4c:
+                                        ; CODE XREF: get_flash_8e0b_plus_swapped_0f_plus_ram4c+2↑j
+                swap    A               ; A = ((A & 0x0F) << 4) | ((A & 0xF0) >> 4)
+                add     A, RAM_4C       ; A += RAM[0x4C]
                 mov     DPTR, #8E0Bh
                 clr     C
-                rlc     A
-                jnc     code_55CC
-                inc     DPH             ; Data Pointer, High Byte
+                rlc     A               ; CY = !!(A & (0x80))
+                                        ; A <<= 1
+                jnc     code_55CC       ; if (!CY) jump ...
+                inc     DPH             ; DPTR = 0x8F0B // switch table
 
-code_55CC:                              ; CODE XREF: code_55BE+A↑j
+code_55CC:                              ; CODE XREF: get_flash_8e0b_plus_swapped_ram41_plus_ram4c+A↑j
                 add     A, DPL          ; Data Pointer, Low Byte
                 mov     DPL, A          ; Data Pointer, Low Byte
                 mov     A, DPH          ; Data Pointer, High Byte
                 addc    A, #0
-                mov     DPH, A          ; Data Pointer, High Byte
+                mov     DPH, A          ; DPTR += Acc // offset
                 clr     A
                 movc    A, @A+DPTR
-                mov     R2, A
+                mov     R2, A           ; R2 = FLASH[DPTR]
                 inc     DPTR
                 clr     A
                 movc    A, @A+DPTR
-                mov     R3, A
+                mov     R3, A           ; R3 = FLASH[DPTR + 1]
                 ret
-; End of function code_55BE
+; End of function get_flash_8e0b_plus_swapped_ram41_plus_ram4c
 
 
 ; =============== S U B R O U T I N E =======================================
 
 
-code_55DE:                              ; CODE XREF: IE0_0+2BD↑p
+filter_throttle_poistion?:              ; CODE XREF: IE0_0+2BD↑p
                                         ; power_on__ignition_key_turned_+DC8↑p ...
-                lcall   code_5555
+                lcall   get_2values_for_throttle ; INPUT
+                                        ;   R1:R0
+                                        ;
+                                        ; OUTPUT
+                                        ;   R1:R0
+                                        ;   R3:R2
+                                        ;
+                                        ; CALCULUS and NAME is TODO
                 mov     DPTR, #0F602h
                 movx    A, @DPTR
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = XRAM[0xF602]
                 mov     DPTR, #0F779h
-                movx    A, @DPTR
-                add     A, B            ; B-Register
-                jb      B.7, code_55FF  ; B-Register
+                movx    A, @DPTR        ; A = XRAM[0xF779]
+                add     A, B            ; A = XRAM[0xF602] + XRAM[0xF779]
+                jb      B.7, sum_xram_f602_and_f779_less_80 ; if ((XRAM[0xF602] + XRAM[0xF779]) > 0x80) jump ...
                 mov     B, A            ; B-Register
-                jnc     code_55F7
-                lcall   add_word_R3_R2
+                jnc     sum_xram_f602_and_f779_larger_ff ; if ((XRAM[0xF602] + XRAM[0xF779]) > 0xFF) jump ...
+                lcall   add_word_R3_R2  ; INPUT
+                                        ;  - R1:R0
+                                        ;  - R3:R2
+                                        ;
+                                        ; OUTPUT
+                                        ;  R3:R2 += R1:R0
 
-code_55F7:                              ; CODE XREF: code_55DE+14↑j
-                                        ; code_55DE+25↓j
+sum_xram_f602_and_f779_larger_ff:       ; CODE XREF: filter_throttle_poistion?+14↑j
+                                        ; filter_throttle_poistion?+25↓j
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
@@ -18077,16 +18608,17 @@ code_55F7:                              ; CODE XREF: code_55DE+14↑j
                 sjmp    code_5619
 ; ---------------------------------------------------------------------------
 
-code_55FF:                              ; CODE XREF: code_55DE+F↑j
-                jnc     code_5605
+sum_xram_f602_and_f779_less_80:         ; CODE XREF: filter_throttle_poistion?+F↑j
+                jnc     sum_xram_f602_and_f779_less_80_no_overflow
                 mov     B, A            ; B-Register
-                sjmp    code_55F7
+                sjmp    sum_xram_f602_and_f779_larger_ff
 ; ---------------------------------------------------------------------------
 
-code_5605:                              ; CODE XREF: code_55DE:code_55FF↑j
+sum_xram_f602_and_f779_less_80_no_overflow:
+                                        ; CODE XREF: filter_throttle_poistion?:sum_xram_f602_and_f779_less_80↑j
                 cpl     A
                 inc     A
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = -A
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
@@ -18101,14 +18633,22 @@ code_5605:                              ; CODE XREF: code_55DE:code_55FF↑j
                                         ;
                                         ; R1 - high, R0 - low
                                         ; R3 - high, R2 - low
-                lcall   code_6058
+                lcall   subtract_acc_from_word ; INPUT:
+                                        ;  R1:R0
+                                        ;  Acc
+                                        ;
+                                        ; OUTPUT:
+                                        ;  R1:R0 = R1:R0 - Acc
                 jnb     ACC.7, code_5619 ; Accumulator
                 mov     R0, #0
                 mov     R1, #0
 
-code_5619:                              ; CODE XREF: code_55DE+1F↑j
-                                        ; code_55DE+34↑j
-                lcall   code_55BE
+code_5619:                              ; CODE XREF: filter_throttle_poistion?+1F↑j
+                                        ; filter_throttle_poistion?+34↑j
+                lcall   get_flash_8e0b_plus_swapped_ram41_plus_ram4c ; OUTPUT
+                                        ;   Ptr = 0x8E0B + SWAP(RAM[0x41]) + RAM[0x4C]
+                                        ;   R2 = FLASH[Ptr]
+                                        ;   R3 = FLASH[Ptr + 1]
                 lcall   add_word        ; Add words
                                         ;
                                         ; INPUT:
@@ -18122,7 +18662,7 @@ code_5619:                              ; CODE XREF: code_55DE+1F↑j
                                         ;    CY - if overflowed
                                         ;
                 ret
-; End of function code_55DE
+; End of function filter_throttle_poistion?
 
 
 ; =============== S U B R O U T I N E =======================================
@@ -18222,9 +18762,18 @@ code_5649:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT:
                                         ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
-                lcall   code_60CB
-                lcall   code_55BA
-                lcall   add_word_R3_R2
+                lcall   shift_right_word
+                lcall   get_flash_8e0b_plus_swapped_0f_plus_ram4c ; OUTPUT
+                                        ;   Ptr = 0x8E0B + SWAP(0x0F) + RAM[0x4C]
+                                        ;       = 0x8E0B + 0xF0 + RAM[0x4C]
+                                        ;   R2 = FLASH[Ptr]
+                                        ;   R3 = FLASH[Ptr + 1]
+                lcall   add_word_R3_R2  ; INPUT
+                                        ;  - R1:R0
+                                        ;  - R3:R2
+                                        ;
+                                        ; OUTPUT
+                                        ;  R3:R2 += R1:R0
                 pop     ACC             ; Accumulator
                 mov     R1, A
                 pop     ACC             ; Accumulator
@@ -18455,7 +19004,14 @@ code_5783:                              ; CODE XREF: code_5D9F+1A4↓p
                 inc     DPTR
                 mov     A, R3
                 movx    @DPTR, A
-                lcall   code_5555
+                lcall   get_2values_for_throttle ; INPUT
+                                        ;   R1:R0
+                                        ;
+                                        ; OUTPUT
+                                        ;   R1:R0
+                                        ;   R3:R2
+                                        ;
+                                        ; CALCULUS and NAME is TODO
                 mov     A, R0
                 orl     A, R1
                 jz      code_57C5
@@ -18477,7 +19033,10 @@ code_5783:                              ; CODE XREF: code_5D9F+1A4↓p
                 inc     DPTR
                 mov     A, R3
                 movx    @DPTR, A
-                lcall   code_55BE
+                lcall   get_flash_8e0b_plus_swapped_ram41_plus_ram4c ; OUTPUT
+                                        ;   Ptr = 0x8E0B + SWAP(RAM[0x41]) + RAM[0x4C]
+                                        ;   R2 = FLASH[Ptr]
+                                        ;   R3 = FLASH[Ptr + 1]
                 lcall   subtract_word   ; INPUT - R1:R0
                                         ;         R3:R2
                                         ;
@@ -18621,7 +19180,40 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                 push    ACC             ; Accumulator
                 mov     R3, A
                 mov     DPTR, #8C0Bh
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     DPTR, #900Bh
                 mov     A, RAM_3D
                 lcall   table_lookup_0  ; INPUT:
@@ -18652,7 +19244,7 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
-                lcall   code_60CB
+                lcall   shift_right_word
                 pop     ACC             ; Accumulator
                 mov     R3, A
                 pop     ACC             ; Accumulator
@@ -18663,7 +19255,40 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                 mov     A, R1
                 push    ACC             ; Accumulator
                 mov     DPTR, #8D0Bh
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     DPTR, #900Bh
                 mov     A, RAM_3D
                 lcall   table_lookup_0  ; INPUT:
@@ -18694,7 +19319,7 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
-                lcall   code_60CB
+                lcall   shift_right_word
                 pop     ACC             ; Accumulator
                 mov     R3, A
                 pop     ACC             ; Accumulator
@@ -18830,7 +19455,7 @@ code_5913:                              ; CODE XREF: code_58D1+15↑j
 
 code_5921:                              ; CODE XREF: code_58D1+47↑j
                 setb    RAM_29.0
-                lcall   code_60CB
+                lcall   shift_right_word
 
 code_5926:                              ; CODE XREF: code_58D1+4E↑j
                 mov     A, R0
@@ -18861,7 +19486,7 @@ code_593A:                              ; CODE XREF: code_58D1+63↑j
                                         ; OUTPUT:
                                         ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
                 jb      RAM_29.4, code_594A
-                lcall   code_60CB
+                lcall   shift_right_word
 
 code_594A:                              ; CODE XREF: code_58D1+73↑j
                 mov     A, R0
@@ -19878,7 +20503,12 @@ code_5E9A:                              ; CODE XREF: code_5D9F:code_5E95↑j
                 movx    A, @DPTR
                 mov     R1, A
                 jnb     ACC.7, code_5EA8 ; Accumulator
-                lcall   code_6058
+                lcall   subtract_acc_from_word ; INPUT:
+                                        ;  R1:R0
+                                        ;  Acc
+                                        ;
+                                        ; OUTPUT:
+                                        ;  R1:R0 = R1:R0 - Acc
 
 code_5EA8:                              ; CODE XREF: code_5D9F+103↑j
                 mov     A, R1
@@ -20335,8 +20965,14 @@ code_602A:                              ; CODE XREF: IE0_0+780↑p
 
 ; =============== S U B R O U T I N E =======================================
 
+; INPUT:
+;  R1:R0
+;  Acc
+;
+; OUTPUT:
+;  R1:R0 = R1:R0 - Acc
 
-code_6058:                              ; CODE XREF: IE0_0:code_1D0E↑p
+subtract_acc_from_word:                 ; CODE XREF: IE0_0:code_1D0E↑p
                                         ; power_on__ignition_key_turned_+EDE↑p ...
                 clr     C
                 clr     A
@@ -20346,7 +20982,7 @@ code_6058:                              ; CODE XREF: IE0_0:code_1D0E↑p
                 subb    A, R1
                 mov     R1, A
                 ret
-; End of function code_6058
+; End of function subtract_acc_from_word
 
 
 ; =============== S U B R O U T I N E =======================================
@@ -20543,8 +21179,8 @@ code_60BA:                              ; CODE XREF: IE0_0+370↑p
 ; =============== S U B R O U T I N E =======================================
 
 
-code_60CB:                              ; CODE XREF: code_5555+2B↑p
-                                        ; code_5555+5A↑p ...
+shift_right_word:                       ; CODE XREF: get_2values_for_throttle+2B↑p
+                                        ; get_2values_for_throttle+5A↑p ...
                 clr     C
                 mov     A, R1
                 rrc     A
@@ -20553,7 +21189,7 @@ code_60CB:                              ; CODE XREF: code_5555+2B↑p
                 rrc     A
                 mov     R0, A
                 ret
-; End of function code_60CB
+; End of function shift_right_word
 
 
 ; =============== S U B R O U T I N E =======================================
@@ -20876,8 +21512,14 @@ code_617E:                              ; CODE XREF: add_signed_word_with_satura
 
 ; =============== S U B R O U T I N E =======================================
 
+; INPUT
+;  - R1:R0
+;  - R3:R2
+;
+; OUTPUT
+;  R3:R2 += R1:R0
 
-add_word_R3_R2:                         ; CODE XREF: code_55DE+16↑p
+add_word_R3_R2:                         ; CODE XREF: filter_throttle_poistion?+16↑p
                                         ; code_5649+2E↑p
                 mov     A, R0
                 add     A, R2
@@ -21718,25 +22360,62 @@ code_63A5:                              ; CODE XREF: code_638E+D↑j
 
 ; =============== S U B R O U T I N E =======================================
 
+; INPUT:
+;  - R2 = low byte of difference = RAM[0x4A]
+;  - R3 = table entry = interpolated value
+;  - DPTR = table base address in FLASH
+;  - R4 = table line length
+;
+; saturated(x) = 0 if x < 0,
+;                0xff on overflow
+;
+;   table entry (R3) is expected to be pack:
+;    high nibble = offset in table line
+;    low nibble = offset to next value in table line with 1/16 stepping
+;
+; OUTPUT:
+;  - R1
+;  - R0
+;
+; LOW(x) = x & 0x0F
+; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+;              TableLineIdx * TableLineSz + TableLineOffset
+;               (R3 >> 4)        R4            (R2 / 16)
+; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+; R4 = 0x10 = table line size
+; DPTR now points to value in table, from which to start interpolating/profiling (?)
+;      i.e. it points to base now
+;
+; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+;
+; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+;
+; A = R1
 
-code_63CB:                              ; CODE XREF: IE0_0+2EF↑p
+profile_table_value_no_negate_table_size_0x10:
+                                        ; CODE XREF: IE0_0+2EF↑p
                                         ; IE0_0+3C2↑p ...
                 clr     PSW.1           ; Program Status Word
-                sjmp    code_63D1
-; End of function code_63CB
+                sjmp    profile_table_value_table_size_0x10_impl
+; End of function profile_table_value_no_negate_table_size_0x10
 
 
 ; =============== S U B R O U T I N E =======================================
 
 
-code_63CF:                              ; CODE XREF: power_on__ignition_key_turned_+1805↑p
+profile_table_value_negate_table_size_0x10:
+                                        ; CODE XREF: power_on__ignition_key_turned_+1805↑p
                                         ; power_on__ignition_key_turned_+1A50↑p ...
                 setb    PSW.1           ; Program Status Word
 
-code_63D1:                              ; CODE XREF: code_63CB+2↑j
+profile_table_value_table_size_0x10_impl:
+                                        ; CODE XREF: profile_table_value_no_negate_table_size_0x10+2↑j
                 mov     R4, #10h
                 sjmp    profile_table_value_impl
-; End of function code_63CF
+; End of function profile_table_value_negate_table_size_0x10
 
 
 ; =============== S U B R O U T I N E =======================================
@@ -21786,9 +22465,9 @@ profile_table_value:                    ; CODE XREF: update_ram_63+66↑p
 code_63DB:                              ; CODE XREF: profile_table_value+2↑j
                 mov     R4, #11h        ; R4 = 0x11, table line size?
 INPUT:
- - R2 = low byte of difference  = saturated(RAM[0x63] - XRAM[0xF602])
- - R3 = table entry //table line number << 4
- - DPTR = table base address
+ - R2 = low byte of difference
+ - R3 = table entry
+ - DPTR = table base address in FLASH
  - R4 = table line length
 
 saturated(x) = 0 if x < 0,
@@ -21798,8 +22477,29 @@ saturated(x) = 0 if x < 0,
    high nibble = offset in table line
    low nibble = offset to next value in table line with 1/16 stepping
 
+OUTPUT:
+ - R1
+ - R0
 
-profile_table_value_impl:               ; CODE XREF: code_63CF+4↑j
+LOW(x) = x & 0x0F
+BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+             TableLineIdx * TableLineSz + TableLineOffset
+              (R3 >> 4)        R4            (R2 / 16)
+(R3 >> 4) * R4 - expected to be 0x00..0xFF
+R4 = 0x11 = table line size
+DPTR now points to value in table, from which to start interpolating/profiling (?)
+     i.e. it points to base now
+
+R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+
+R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+        + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+        + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+        + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+
+A = R1
+
+profile_table_value_impl:               ; CODE XREF: profile_table_value_negate_table_size_0x10+4↑j
                 mov     A, R3           ; A = R3
                 anl     A, #0F0h
                 swap    A               ; A = R3 >> 4
@@ -22235,13 +22935,79 @@ code_6534:                              ; CODE XREF: code_64E7+28↑j
                 mov     DPTR, #965Ah
                 mov     R2, RAM_4A
                 mov     R3, RAM_50
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     DPTR, #0F6F8h
                 movx    @DPTR, A
                 mov     DPTR, #975Ah
                 mov     R2, RAM_4A
                 mov     R3, RAM_50
-                lcall   code_63CB
+                lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
+                                        ;  - R2 = low byte of difference = RAM[0x4A]
+                                        ;  - R3 = table entry = interpolated value
+                                        ;  - DPTR = table base address in FLASH
+                                        ;  - R4 = table line length
+                                        ;
+                                        ; saturated(x) = 0 if x < 0,
+                                        ;                0xff on overflow
+                                        ;
+                                        ;   table entry (R3) is expected to be pack:
+                                        ;    high nibble = offset in table line
+                                        ;    low nibble = offset to next value in table line with 1/16 stepping
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1
+                                        ;  - R0
+                                        ;
+                                        ; LOW(x) = x & 0x0F
+                                        ; BASE = DPTR + ((R3 >> 4) * R4) + (R2 >> 4)
+                                        ;              TableLineIdx * TableLineSz + TableLineOffset
+                                        ;               (R3 >> 4)        R4            (R2 / 16)
+                                        ; (R3 >> 4) * R4 - expected to be 0x00..0xFF
+                                        ; R4 = 0x10 = table line size
+                                        ; DPTR now points to value in table, from which to start interpolating/profiling (?)
+                                        ;      i.e. it points to base now
+                                        ;
+                                        ; R1:R0 = FLASH[BASE] : 0x00, if LOW(R2) and LOW(R3) are both nil
+                                        ;
+                                        ; R1:R0 =   ((        LOW(R2)  *         LOW(R3))  * FLASH[BASE + R4 + 1])
+                                        ;         + (((0x10 - LOW(R2)) *         LOW(R3))  * FLASH[BASE + R4]    )
+                                        ;         + ((        LOW(R2)  * (0x10 - LOW(R3))) * FLASH[BASE + 1]     )
+                                        ;         + (((0x10 - LOW(R2)) * (0x10 - LOW(R3))) * FLASH[BASE]         )
+                                        ;
+                                        ; A = R1
                 mov     R1, A
                 mov     DPTR, #0F6F8h
                 movx    A, @DPTR
@@ -22291,7 +23057,7 @@ code_6598:                              ; CODE XREF: code_64E7+A7↑j
                 mov     DPTR, #0A01Ch
                 mov     R2, RAM_4A
                 mov     R3, RAM_50
-                lcall   code_63CF
+                lcall   profile_table_value_negate_table_size_0x10
                 mov     R0, A
                 mov     DPTR, #873Fh
                 clr     A
