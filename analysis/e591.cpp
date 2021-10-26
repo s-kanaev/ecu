@@ -1,10 +1,13 @@
-#include "include/types.h"
-#include "include/ram.h"
-#include "include/flash.h"
-#include "include/xram.h"
-#include "include/eeprom.h"
-#include "include/binary_ops.h"
-#include "include/undefined.h"
+#include "include/types.hpp"
+#include "include/ram.hpp"
+#include "include/flash.hpp"
+#include "include/xram.hpp"
+#include "include/eeprom.hpp"
+#include "include/binary_ops.hpp"
+#include "include/undefined.hpp"
+#include "include/memory-locations.hpp"
+#include "include/pins.hpp"
+#include "e591/impl.hpp"
 
 //////////////////////////////// FUNCTIONS:
 #define WAIT_MACHINE_CYCLES_BY_2(x) /* waits for x*2 machine cycles, x = 0 is 0x100 */
@@ -22,17 +25,10 @@
 #define EEPROM_ADDRESS ((byte)0xA0)
 #define EEPROM_SELECT_PAGE_BLOCK(addr, block) (((addr) & 0xFD) | (((bl) & 0x01) << 1))
 // r = 1 - read, r = 0 - write
-#define I2C_READ_ADDRESS(addr, r) (((addr) & 0xFE) | ((r) & 0x01)) 
+#define I2C_READ_ADDRESS(addr, r) (((addr) & 0xFE) | ((r) & 0x01))
 
-#define COOLANT_TEMP_PIN ((pin)0x07)
-#define INTAKE_AIR_TEMP_PIN ((pin)0x0E)
-#define CO_POT_PIN ((pin)0x08)
-#define IGNITION_VOLTAGE_PIN ((pin)0x09)
-#define THROTTLE_POSITION_PIN ((pin)0x0C)
-#define EGO1_PIN ((pin)0x01)
-#define EGO2_PIN ((pin)0x02)
 
-#define IGNITION_VOLTAGE_FACTOR BYTE(0x75)
+
 
 //////////////////////////////// General purpose flags:
 /*
@@ -41,66 +37,9 @@ PSW.5 (F0) - was previously working?
 PSW.1 (F1) - general purpose flag, boolean parameter employed in trampoline functions
 */
 
-//////////////////////////////// Pins
-
-enum Pins {
-  P0_0 = 1,
-  P0_1,
-  // and so on and on and on ...
-  P9_7
-};
-
 
 //////////////////////////////// Auxiliary functions
 
-inline bool status_watchdog_triggerred() {
-  return CHECK_BIT_AT(RAM[0x20], 6);
-}
-
-inline bool status_xram_checksum_invalid() {
-  return CHECK_BIT_AT(RAM[0x20], 7);
-}
-
-
-inline bool kitting_has_ego_sensor() {
-  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[0], 1);
-}
-
-inline bool kitting_has_additional_ego_sensor() {
-  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[1], 4)
-}
-
-inline bool kitting_has_absorber() {
-  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[4], 4);
-}
-
-inline bool kitting_has_intake_air_temperature_sensor() {
-  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[0], 3);
-}
-
-inline bool kitting_has_co_potentiometer_sensor() {
-  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[0], 7);
-}
-
-inline bool kitting_has_irom() {
-  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[2], 0);
-}
-
-inline bool kitting_has_camshaft_position_sensor() {
-  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[0], 4);
-}
-
-inline bool kitting_camshaft_position_sensor_cross_section_aligned_with_TDC() {
-  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[0], 5);
-}
-
-inline bool kitting_has_knock_sensor() {
-  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[0], 2);
-}
-
-inline bool kitting_should_adapt_throttle_position_sensor() {
-  return CHECK_BIT_AT(GET_RNG_START_IDX(FLASH, KITTING)[2], 6);
-}
 
 void reset_init(void) {
   disable_interrupts();
@@ -124,8 +63,8 @@ void init_pins(void) {
   P4 - 7 - in; others - out
   P5 - 7 - in; others - out
   P6 - all out
-  P7 - 
-  P8 - 
+  P7 -
+  P8 -
   P9 - 0, 4, 5 - in; other - out
 
   PORTS' CONTENTS:
@@ -134,8 +73,8 @@ void init_pins(void) {
   P4 - 0xBF
   P5 - 0x9F
   P6 - 0xFF
-  P7 - 
-  P8 - 
+  P7 -
+  P8 -
   P9 - 0xB3
 */
 }
@@ -151,7 +90,7 @@ void init_HIP0045(void) {
 
   P6 |= 0x40; // disabke HIP0045 by setting P6_6 high
 /*
-  HIP0045 configured with byte 0x44 sent in following order: 
+  HIP0045 configured with byte 0x44 sent in following order:
   D7I..D1I = 0010 0010
 
   D7I: out1 = 0 - RTFM
@@ -169,7 +108,7 @@ void init_HIP0045(void) {
 void init_HIP9010(void) {
   SET_BIT_IN(ADCON0, 6); // ADCON0.6 = ADCON0.CLK = 1 - clock output enable through P1.6 (CLKOUT = OSCIN @ HIP9010)
   SYSCON &= 0x7F; // clear CLKP bit - CLKOUT freq = f_osc/6
-  
+
   WAIT_MACHINE_CYCLES_BY_2(0x33);
   WAIT_MACHINE_CYCLES_BY_2(0);
   WAIT_MACHINE_CYCLES_BY_2(0);
@@ -179,19 +118,19 @@ void init_HIP9010(void) {
 
 #define turn_on_hip9010 P9 &= 0x7F /* enable SPI @ HIP9010 by setting P9.7 low = !CS @ HIP9010 */
 #define turn_off_hip9010 P9 |= 0x80 /* disable SPI @ HIP9010 by setting P9.7 high = !CS @ HIP9010 */
-/*  
+/*
   send 0x2C over SPI to HIP9010/9011 in the following order:
   B7..B0 = 0010 1100
 
   address = 00 - knock filter frequency
   data = 101100 = 44 (dec) = 8.02 kHz
 */
-  turn_on_hip9010; 
+  turn_on_hip9010;
   SendOverSPI(FLASH[0x87A7] & KNOCK_SENSOR_FILTER_FREQUENCY_CONFIG_WORD_MASK, P1_5, NULL, P9_6);
   turn_off_hip9010;
-  
+
   WAIT_MACHINE_CYCLES_BY_2(0x0E);
-  
+
 /*
   send 0x41 over SPI to HIP9010/9011 in the following order:
   0100 0001
@@ -202,7 +141,7 @@ void init_HIP9010(void) {
   turn_on_hip9010;
   SendOverSPI(KNOCK_SENSOR_REFERENCE_FILTER_FREQUENCY_CONFIG_WORD | KNOCK_SENSOR_REFERENCE_FILTER_FREQUENCY_CONFIG_WORD_PREFIX, P1_5, NULL, P9_6);
   turn_off_hip9010;
-  
+
   WAIT_MACHINE_CYCLES_BY_2(0x0E);
 
 /*
@@ -228,7 +167,7 @@ void init_HIP9010(void) {
   turn_on_hip9010;
   SendOverSPI(FLASH[0xAE01 & 0x1F] | KNOCK_SENSOR_INTEGRATOR_TIME_CONSTANT_CONFIG_WORD_PREFIX, P1_5, NULL, P9_6);
   turn_off_hip9010;
-  
+
   WAIT_MACHINE_CYCLES_BY_2(0x0E);
 
 /*
@@ -244,7 +183,7 @@ void init_HIP9010(void) {
   turn_on_hip9010;
   SendOverSPI(KNOCK_SENSOR_TEST_CONFIG_WORD | KNOCK_SENSOR_TEST_CONFIG_WORD_PREFIX, P1_5, NULL, P9_6);
   turn_off_hip9010;
-  
+
   WAIT_MACHINE_CYCLES_BY_2(0x0E);
 
 #undef turn_off_hip9010
@@ -270,7 +209,7 @@ IP0.OWDS and IP0.WDTS are cleared.
 word check_sum_xram_fx00_to_f657(void) {
   word Result = 0x0001;
   word Ptr = RNG_START_IDX(XRAM, SUM_OF_EGO_CALIBRATION) ; // current case: both EGO and absorber are present
-  
+
   if (!kitting_has_ego_sensor()) // There is no EGO
     Ptr = 0xF600;
   else if (!kitting_has_absorber()) // There is no absorber
@@ -295,14 +234,14 @@ word subtract_word(word A, word B) {
 void init_xram(void) {
   word FlashPtr = 0xABF1;
   word XramPtr = 0xF7D5;
-  
+
   for (byte Cnt = 0xF8; Cnt != 0; --Cnt)
     XRAM[XramPtr++] = FLASH[FlashPtr++];
 
   XramPtr = 0xF675;
   for (word Cnt = 0x160; Cnt != 0; --Cnt)
     XRAM[XramPtr] = 0x00;
-  
+
   XRAM[0xF97E] = 0x00;
   XRAM[0xF972] = 0x00;
   XRAM[0xF973] = 0x00;
@@ -323,7 +262,7 @@ word sum_xram(word XramPtr, byte WordCount) {
     Sum += *(word *)(&XRAM[XramPtr++]);
     --WordCount;
   } (WordCount != 0);
-  
+
   return Sum;
 }
 
@@ -334,27 +273,27 @@ void mark_eeprom_failure(void) {
 void read_eeprom_to_xram(void) {
   word XramPtr = 0xFF00;
   byte Offset = 0;
-  
+
   // send slave address + page block selector (0)
   if (!SendOverI2C(0, P3_3, P1_7)) {
     mark_eeprom_failure();
     nullify_xram(0xFF30, 0x10);
   }
-  
+
   // send word address (byte offset in page block)
   if (!SendOverI2C(Offset, P3_3, P1_7)) {
     mark_eeprom_failure();
     nullify_xram(0xFF30, 0x10);
   }
-  
+
   byte Size = 0x42;
   for (int Idx = 0; Idx < Size; ++Idx)
     XRAM[XramPtr++] = ReadOnI2C(P3_3, P1_7);
-  
+
   if (sum_xram(XramPtr - Size, Size >> 1)) {
     mark_eeprom_failure();
   }
-  
+
   Offset += Size;
 
   //////////////////////////////////////////////////////
@@ -377,9 +316,9 @@ void read_eeprom_to_xram(void) {
   if (sum_xram(XramPtr - Size, Size >> 1)) {
     mark_eeprom_failure();
   }
-  
+
   Offset += Size;
-  
+
   //////////////////////////////////////////////////////
 
   // send slave address + page block selector (0)
@@ -418,63 +357,6 @@ void close_bypass_air_valve(void) {
 void open_bypass_air_valve(void) {
   CLEAR_BIT_IN(P1, 1);
   SET_BIT_IN(P1, 0);
-}
-
-// FlashPtr - location of table in FLASH
-// Offset - ???
-// Factor - ???
-// Negate - should table data be XOR'ed with 0x80 (negated?)
-// Returns - result:
-//           T[N] in high byte and zero in low byte if factor eq nil,
-//           factor*(T[N+1] - T[N]) if factor isn't nil
-//           N = Offset
-// _635D:
-// Example inputs:
-// A. FlashPtr = 0x831F (coolant temperature table), Negate = false
-// A.1. Offset = 0x08, Factor = 0xF4
-// A.2. Offset = 0x0B, Factor = 0xF0
-// A.3. Offset = 0x0A, Factor = 0xF4
-word GetValueFromTableImpl(word FlashPtr, byte Offset, byte Factor, bool Negate) {
-  if (!Factor)
-    return COMPOSE_WORD(FLASH[FlashPtr + Offset], 0);
-
-  // A.1. TableData = FLASH[0x831F + 0x08 + 1] = 0x44
-  // A.2. TableData = FLASH[0x831F + 0x0B + 1] = 0xA2
-  // A.3. TableData = FLASH[0x831F + 0x0A + 1] = 0x83
-  byte TableData = FLASH[FlashPtr + Offset + 1];
-
-  if (Negate)
-    TableData ^= 0x80;
-
-  // A.1. Prod1 = 0x44 * 0xF4
-  // A.2. Prod1 = 0xA2 * 0xF0
-  // A.3. Prod1 = 0x83 * 0xF4
-  word Prod1 = TableData * Factor; // A - low byte of result, B - high byte of result
-
-  // A.1. TableData = FLASH[0x831F + 0x08] = 0x25
-  // A.2. TableData = FLASH[0x831F + 0x0B] = 0x83
-  // A.3. TableData = FLASH[0x831F + 0x0A] = 0x63
-  TableData = FLASH[FlashPtr + Offset];
-
-  if (Negate)
-    TableData ^= 0x80;
-
-  // A.1. Prod1 = 0x25 * 0xF4
-  // A.2. Prod1 = 0x83 * 0xF0
-  // A.3. Prod1 = 0x63 * 0xF4
-  word Prod2 = TableData * (-Factor);
-
-  // A.1. Result = (0x25 + 0x44) * 0xF4 = 0x6414
-  // A.2. Result = (0x83 + 0xA2) * 0xF0 = 0x12B0
-  // A.3. Result = (0x63 + 0x83) * 0xF4 = 0xDB38
-  word Result = Prod1 + Prod2;
-
-  if (Negate) {
-    Result ^= 0x8000;
-    CY = CHECK_BIT_AT(Result, 0x0F);
-  }
-
-  return Result;
 }
 
 // FlashPtr - location of table in FLASH
@@ -556,7 +438,7 @@ TableEntryT Lookup17ByteTableWithSaturation(byte Input, word FlashPtr) {
 
   byte LargerVal = FLASH[FlashPtr + Idx];
 
-  --Idx; 
+  --Idx;
   // Max Idx value at the time = 0x0e.
 
   byte LesserVal = FLASH[FlashPtr + Idx];
@@ -621,7 +503,7 @@ void UpdateRam63Impl() {
   byte LookupValue = RAM[0x5D];
 
   TableEntryT Entry = Lookup17ByteTableWithSaturation(LookupValue, TableLinePtr);
-  
+
   XRAM[0xF779] = Entry.ByteVal;
 
   word Val = Entry.ByteVal;
@@ -633,7 +515,7 @@ void UpdateRam63Impl() {
   R1_R0 = 00:xx
   R3_R2 = 00:yy
   SUM = 00:zz or 01:zz - carry, CY = 1
-  
+
   R1_R0 = 00:xx
   R3_R2 = FF:yy
   SUM = FF:zz or 00:zz, CY = 1
@@ -657,7 +539,7 @@ void InitRam5d() {
   word XramData = (sword)((sbyte)(XRAM[0xF602]));
 
   sword Diff = RamData - XramData;
-  
+
   byte DiffByte;
 
 /*
@@ -708,326 +590,6 @@ void UpdateRam63() {
     UpdateRam63Impl();
   else
     InitRam5d();
-}
-
-
-// example inputs:
-// 1. 0x831F, 0x8F40 for Coolant Temperature = 8 degrees
-// 2. 0x831F, 0xBF00 for Coolant Temperature = 102 degrees
-// 3. 0xAF40, 0xBF00 for Coolant Temperature = 71 degrees
-word GetAdcValueFromTable(word FlashPtr, word ADCValue) {
-  // max value in ADCValue = F0:FF
-  // max offset = HIGH(ADCValue) >> 4 = F0 >> 4 = F
-  // max Factor = (HIGH(ADCValue) << 4) | (LOW(ADCValue) >> 4) = (F0 << 4) | (C0 >> 4) = 0C
-  // max Factor = (HIGH(ADCValue) << 4) | (LOW(ADCValue) >> 4) = (EF << 4) | (C0 >> 4) = FC
-  // With non nil factor, offset is incremented.
-  // Hence, table size is 0x11
-
-  // 1. Offset = 0x8F >> 4 = 0x08, Factor = (0x8F << 4) | (0x40 >> 4) = 0xF4
-  // 2. Offset = 0xBF >> 4 = 0x0B, Factor = (0xBF << 4) | (0x00 >> 4) = 0xF0
-  // 3. Offset = 0xAF >> 4 = 0x0A, Factor = (0xAF << 4) | (0x40 >> 4) = 0xF4
-  byte Offset = HIGH(ADCValue) >> 4;
-  byte Factor = (HIGH(ADCValue) << 4) | (LOW(ADCValue) >> 4);
-  return GetValueFromTableImpl(FlashPtr, Offset, Factor, false);
-}
-
-// example inputs:
-// 1. 0x831F, 0x8F40 for Coolant Temperature = 8 degrees
-// 2. 0x831F, 0xBF00 for Coolant Temperature = 102 degrees
-// 3. 0xAF40, 0xBF00 for Coolant Temperature = 71 degrees
-word GetAdcValueFromTableAndAdjustForCalculus(word FlashPtr, word ADCValue) {
-  // 1. Result = (0x25 + 0x44) * 0xF4 = 0x6414
-  // 2. Result = (0x83 + 0xA2) * 0xF0 = 0x12B0
-  // 3. Result = (0x63 + 0x83) * 0xF4 = 0xDB38
-
-  word Result = GetAdcValueFromTable(FlashPtr, ADCValue);
-
-  // 1. Returned value: 0x5014
-  // 2. Returned value: 0x0000
-  // 3. Returned value: 0xC738
-  if (HIGH(Result) < 0x14)
-    return COMPOSE_WORD(0, 0);
-
-  return COMPOSE_WORD(HIGH(Result) - 0x14, LOW(Result));
-}
-
-byte AdjustTemperature(word TemperatureTableValue) {
-  static const word MAX_SUM = 0xFFFF;
-  static const word TO_ADD = WORD(0x50);
-  static const word DIVIDER = WORD(0xA0);
-
-  byte Result = 0xFF;
-  
-  // 1. 0x5014 < MAX_SUM - TO_ADD, true
-  // 2. 0x0000 < MAX_SUM - TO_ADD, true
-  // 3. 0xC738 < MAX_SUM - TO_ADD, true
-  if (TemperatureTableValue <= MAX_SUM - TO_ADD) {
-    // 1. TemperatureTableValue = 0x5014 + 0x50 = 0x5064
-    // 2. TemperatureTableValue = 0x0000 + 0x50 = 0x0050
-    // 3. TemperatureTableValue = 0xC738 + 0x50 = 0xC788
-    TemperatureTableValue += TO_ADD;
-
-    word Quot;
-
-    do {
-      CLEAR_BIT_IN(RAM[0x27], 2);
-
-      Quot = TemperatureTableValue / DIVIDER;
-    } while (CHECK_BIT_AT(RAM[0x27], 2));
-
-    // 1. Quot = 0x5064 / 0xA0 = 0x80
-    // 2. Quot = 0x0050 / 0xA0 = 0
-    // 3. Quot = 0xC788 / 0xA0 = 0x013F
-    if (!HIGH(Quot))
-      Result = LOW(Quot);
-  }
-
-  // 1. Returned value: 0x80
-  // 2. Returned value: 0x00
-  // 3. Returned value: 0xFF
-  return Result;
-}
-
-word MultiplySigned(byte _M1, byte _M2) {
-  sbyte M1 = _M1;
-  sbyte M2 = _M2;
-  if (!CHECK_BIT_AT(M1, 7))
-    return WORD(M1) * M2;
-
-  M1 = -M1; // M1 = (~M1) + 1;
-  word Result = WORD(M1) * M2;
-
-  M1 = LOW(Result);
-  M2 = HIGH(Result);
-
-  M1 = -M1; // M1 = (~M1) + 1;
-
-  if (M1)
-    M2 = ~M2;
-  else
-    M2 = -M2; // M2 = (~M2) + 1;
-
-  return COMPOSE_WORD(M1, M2);
-}
-
-void Inputs_Part1() {
-  CLEAR_BIT_IN(RAM[0x26], 6);
-
-  // COOLANT TEMPERATURE
-  {
-    // example 1 - Temperature is 8 degrees Celsius,
-    // voltage = 2.801 V ~ 10mV * (273 + 8) = 10mV * 281 = 2810 mV = 2.810 V
-    // CoolantTemp should be (10-bit value): 2^10 * 2.801 / 5 = 0x23D = 0010 0011 1101 => 1000 1111 0100 0000 => 0x8F40
-    // example 2 - Temperature is 102 degrees Celsius
-    // voltage = 3.735 V ~ 10mV * (273 + 102) = 10mV * 375 = 3750 mV = 3.75 V
-    // CoolantTemp should be (10-bit value): 2^10 * 3.735 / 5 = 0x2FC = 0010 1111 1100 => 1011 1111 0000 0000 => 0xBF00
-    // example 3 - Temperature is 71 degrees Celcius
-    // volatage = 3.424 V ~ 10mV * (273 + 71) = 10mV * 344 = 3440 mV = 3.44 V
-    // CoolantTemp should be (10-bit value): 2^10 * 3.424 / 5 = 0x2BD = 0010 1011 1101 => 1010 1111 0100 0000 => 0xAF40
-    word CoolantTemp = ADC_10bit(COOLANT_TEMP_PIN);
-    SET_MEM_BYTE(XRAM, ADC_COOLANT_TEMP, HIGH(CoolantTemp));
-    bool CoolantTempNotInLimits = false;
-
-    if (!FLASH[0x805D]) {
-      // 0x8F < 0x64 - false
-      // 0xBF < 0x64 - false
-      // 0xAF < 0x64 - false
-      if (HIGH(CoolantTemp) < FLASH[0x8057]) {
-        // coolant_temp_less_than_low_limit
-        SET_BIT_IN(RAM[0x23], 2);
-        CLEAR_BIT_IN(RAM[0x23], 3);
-
-        CoolantTempNotInLimits = true;
-      } else
-        // 0x8F > 0xF0 - false
-        // 0xBF > 0xF0 - false
-        // 0xAF > 0xF0 - false
-        if (HIGH(CoolantTemp) > FLASH[0x8058]) {
-        // coolant_temp_larger_than_high_limit
-        CLEAR_BIT_IN(RAM[0x23], 2);
-        SET_BIT_IN(RAM[0x23], 3);
-
-        CoolantTempNotInLimits = true;
-      }
-    }
-
-    word AdjustedCoolantTemp;
-
-    // CoolantTempNotInLimits = false in both examples
-    if (!CoolantTempNotInLimits || FLASH[0x805D]) {
-      CLEAR_BIT_IN(RAM[0x23], 2);
-      CLEAR_BIT_IN(RAM[0x23], 3);
-
-      // 1. AdjustedCoolantTemp: 0x5014
-      // 2. AdjustedCoolantTemp: 0x0000
-      // 2. AdjustedCoolantTemp: 0xC738
-      AdjustedCoolantTemp = GetAdcValueFromTableAndAdjustForCalculus(MEM_IDX(FLASH, COOLANT_TEMPERATURE_TABLE_1), CoolantTemp);
-    } else if (CoolantTempNotInLimits) /* CoolantTempNotInLimits && !FLASH[0x805D] */ {
-      AdjustedCoolantTemp = COMPOSE_WORD(FLASH[0x8A4B], 0);
-    }
-
-    // 1. 0x50
-    // 2. 0x00
-    // 2. 0xC7
-    RAM[0x3A] = HIGH(AdjustedCoolantTemp);
-    // 1. 0x80
-    // 2. 0x00
-    // 3. 0xFF
-    RAM[0x3D] = AdjustTemperature(AdjustedCoolantTemp);
-  }
-
-  // INTAKE AIR TEMPERATURE
-  {
-    word IntakeAirTemp = ADC_10bit(INTAKE_AIR_TEMP_PIN);
-    SET_MEM_BYTE(XRAM, ADC_INTAKE_AIR_TEMP, HIGH(IntakeAirTemp));
-
-    bool IntakeAirTempOutOfLimits = false;
-    bool HasIntakeAirTempSensor = kitting_has_intake_air_temperature_sensor();
-    word AdjustedIntakeAirTemp;
-
-    if (HasIntakeAirTempSensor) {
-      // Has intake air temperature sensor
-      if (!FLASH[0x8060]) {
-        if (HIGH(IntakeAirTemp) < GET_MEM_BYTE(FLASH, MIMIMUM_INTAKE_AIR_TEMPERATURE)) {
-          // intake air temp below minimum
-          SET_BIT_IN(RAM[0x24], 4);
-          CLEAR_BIT_IN(RAM[0x24], 5);
-
-          IntakeAirTempOutOfLimits = true;
-        } else if (GET_MEM_BYTE(FLASH, MAXIMUM_INTAKE_AIR_TEMPERATURE) < HIGH(IntakeAirTemp)) {
-          // intake air temp above minimum
-          CLEAR_BIT_IN(RAM[0x24], 4);
-          SET_BIT_IN(RAM[0x24], 5);
-
-          IntakeAirTempOutOfLimits = true;
-        }
-      }
-
-      if (FLASH[0x8060] || !IntakeAirTempOutOfLimits) {
-        CLEAR_BIT_IN(RAM[0x24], 4);
-        CLEAR_BIT_IN(RAM[0x24], 5);
-
-        // TODO Table length ?
-        AdjustedIntakeAirTemp = GetAdcValueFromTableAndAdjustForCalculus(
-            MEM_IDX(FLASH, INTAKE_AIR_TEMPERATURE_TABLE), IntakeAirTemp);
-      }
-    }
-
-    if (!HasIntakeAirTempSensor || IntakeAirTempOutOfLimits)
-      AdjustedIntakeAirTemp = COMPOSE_WORD(FLASH[0x8061], 0);
-
-    RAM[0x3B] = HIGH(AdjustedIntakeAirTemp);
-    RAM[0x3E] = AdjustTemperature(AdjustedIntakeAirTemp);
-  }
-
-  // MODE SELECTION
-  {
-    if (CHECK_BIT_AT(P9, 5))  // test LO @ MC33199 (ISO9141)
-      XRAM[0xF7BE] = 3;
-    else
-      XRAM[0xF7BE] = 0;
-  }
-
-  // CO POTENTIOMETER
-  {
-    bool COPotNotInLimits = false;
-    bool CantInitCOPot = false;
-    byte COPot;
-
-    word AdjustedCOPot;
-
-    if (kitting_has_co_potentiometer_sensor()) {
-      // There is a CO Potentiometer sensor
-      _544A:
-      COPot = ADC_8bit(CO_POT_PIN);
-      SET_MEM_BYTE(XRAM, ADC_CO_POT, COPot);
-
-      if (COPot < FLASH[0x8067]) {
-        SET_BIT_IN(RAM[0x23], 4);
-        CLEAR_BIT_IN(RAM[0x23], 5);
-
-        COPotNotInLimits = true;
-      } else if (COPot > FLASH[0x8068]) {
-        CLEAR_BIT_IN(RAM[0x23], 4);
-        SET_BIT_IN(RAM[0x23], 5);
-
-        COPotNotInLimits = true;
-      }
-
-      _5478:
-      CLEAR_BIT_IN(RAM[0x23], 4);
-      CLEAR_BIT_IN(RAM[0x23], 5);
-
-      if (COPot & 0x80)
-        COPot = 0xFF;
-      else
-        COPot *= 2;
-
-      COPot -= 0x50;
-
-      AdjustedCOPot = MultiplySigned(COPot,  0xC0);
-    } else if (kitting_has_irom()) {
-      // No CO Potentiometer but has an IROM
-      CLEAR_BIT_IN(RAM[0x23], 4);
-      CLEAR_BIT_IN(RAM[0x23], 5);
-
-      CantInitCOPot = true;
-    } else {
-      // Neither CO Potentiometer nor IROM is available
-      CLEAR_BIT_IN(RAM[0x23], 4);
-      CLEAR_BIT_IN(RAM[0x23], 5);
-
-      COPotNotInLimits = true;
-    }
-
-    if (COPotNotInLimits)
-      AdjustedCOPot = COMPOSE_WORD(FLASH[0x8069], FLASH[0x8069]);
-
-    if (!CHECK_BIT_AT(RAM[0x73], 3)) {
-      if (!CantInitCOPot)
-        SET_MEM_BYTE(XRAM, ADJUSTED_CO_POT, HIGH(AdjustedCOPot));
-      else
-        SET_MEM_BYTE(XRAM, ADJUSTED_CO_POT, XRAM[0xFF74]);
-    }
-  }
-
-  // IGNITION SWITCH VOLTAGE
-  {
-    byte IgnVoltage = ADC_8bit(IGNITION_VOLTAGE_PIN);
-    SET_MEM_BYTE(XRAM, ADC_IGNITION_SWITCH_VOLTAGE, IgnVoltage);
-
-    word MultipliedIgnVoltage = WORD(IgnVoltage) * IGNITION_VOLTAGE_FACTOR;
-    byte AdjustedIgnVoltage;
-
-    if (CHECK_BIT_AT(MultipliedIgnVoltage, 0x0F)) // not possible as minimum IgnVoltage for it is 0x0119 which doesn't fit a byte
-      AdjustedIgnVoltage = 0xFF;
-    else
-      AdjustedIgnVoltage = HIGH(MultipliedIgnVoltage * 2);
-
-    if (AdjustedIgnVoltage < FLASH[0x8062])
-      SET_BIT_IN(RAM[0x22], 4);
-    else
-      CLEAR_BIT_IN(RAM[0x22], 4);
-
-    if (FLASH[0x8063] < AdjustedIgnVoltage)
-      SET_BIT_IN(RAM[0x22], 5);
-    else
-      CLEAR_BIT_IN(RAM[0x22], 5);
-
-    RAM[0x3C] = AdjustedIgnVoltage;
-
-    if (AdjustedIgnVoltage < 0x36)
-      AdjustedIgnVoltage = 0;
-    else
-      AdjustedIgnVoltage -= 0x36;
-
-    AdjustedIgnVoltage = HIGH(WORD(AdjustedIgnVoltage) * 0x40);
-
-    if (AdjustedIgnVoltage > 0x1F)
-      AdjustedIgnVoltage = 0x1F;
-
-    RAM[0x3F] = AdjustedIgnVoltage;
-  }
 }
 
 //_2813:
@@ -1210,7 +772,7 @@ INTERRUPTS:
 
 void reset_interrupt() noreturn {
   reset_init();
-  
+
   if (PSW.F0) {
     init_pins();
   } else {
@@ -1256,14 +818,14 @@ void reset_interrupt() noreturn {
 
   init_HIP0045();
   init_HIP9010();
-  
+
   enable_access_to_xram(); // xram = 0xF400..0xFFFF
   // TCON.IT0 = 1, negative edge triggered external interrupt 0 (external interrupt 0 is at P3.2, which isn't connected to anywhere)
   // TCON.IT1 = 1, negative edge triggered external interrupt 1 (external interrupt 1 is at P3.3 - SDA @ NM24C04 / AT24C04 (EEPROM, I2C))
   TCON |= SET_BIT(0) | SET_BIT(2);
   //set_negative_edge_trigger_ext_int(0); // P3_2
   //set_negative_edge_trigger_ext_int(1); // P3.3
-  
+
   PRSC = 0xE5;  // PRSC = 0xE5 = 1110 0101
                 // WDTP = 1 - watchdog freq f_osc/24 or f_osc/384
                 // S0P = 1 - serial interface0 baud rate prescaler by 2 is active
@@ -1286,7 +848,7 @@ void reset_interrupt() noreturn {
 
   //set_watchdog_frequency_divider(12 or 192); // TODO see WPSEL
   //enable_serial0_baud_rate_prescaler();
-  
+
   //set_timer2_input_clock_divider(192); // timer2 input clock freq = f_osc/192
   //disable_timer2_reload();
   //timer2_compare_mode(1);
@@ -1297,96 +859,96 @@ void reset_interrupt() noreturn {
 
   //set_positive_edge_trigger_ext_int(3); // P1_0
   //set_positive_edge_trigger_ext_int(2); // P1_4
-  
+
   //set_compare_timer_input_clock_divider(2); // compare timer input clock at f_osc/2
-  
+
   CTRELL = CTRELH = 0x00; // launch compare timer ; compare timer reload register (low and high halves)
   TL2 = TH2 = 0x00; // launch timer2? ; timer2 register
-  
+
   CMSEL = 0x20; // CMSEL = 0x20 = 0010 0000
                 // Assign CML5/CMH5 (EGR valve at Port4) registers to the compare timer and compare mode 0 selected.
                 // Other CMLx/CMHx (x = 0..4, 6, 7) registers are assigned to compare timer 2 and compare mode 1 selected.
                 // CMEN = 0 for the time being
   //assign_registers_to_compare_timer_with_mode0(5); // CMH5/CML5 registers are assigned to compare timer and compare mode 0 selected
   //assign_registers_to_compare_timer2_with_mode1(0, 1, 2, 3, 4, 6, 7); // CMHx/CMLx (x=0..4, 6, 7) registers are assigned to compare timer2 and compare mode 1 selected
-  
+
   PSW.F1 = 0;
   if (IP0.OWDS | IP0.WDTS) {
     PSW.F1 = 1;
   }
-  
+
   init_interrupt_priorities();
-  
+
   // clear ram up to 0x7B (incl) to 0
   for (R0 = 0x01; R0 != 0x7C; ++R0)
     RAM[R0] = 0x00;
-  
+
   RAM[0x27] |= SET_BIT_V(PSW.F0, 3);
   RAM[0x20] |= SET_BIT_V(PSW.F1, 6);
 
   word R1_R0 = check_sum_xram_fx00_to_f657(); // R0 - low, R1 - high
   word R3_R2 = GET_MEM_WORD(XRAM, CHECKSUM);      // R2 - low, R3 - high
   R1_R0 = subtract_word(R1_R0, R3_R2);
-  
+
   RAM[0x20] |= SET_BIT_V(R0 || R1, 7);
-  
+
   init_xram();
 
   RAM[0x2D] |= SET_BIT_V(kitting_has_camshaft_position_sensor(), 7); // Has camshaft position sensor
   RAM[0x2E] |= SET_BIT_V(kitting_camshaft_position_sensor_cross_section_aligned_with_TDC(), 0); // Camshaft position sensor cross-section is aligned with TDC
   RAM[0x2E] |= SET_BIT_V(kitting_has_knock_sensor(), 1); // Is there knock sensor
-  
+
   if (CHECK_BIT_AT(kitting_has_irom(), 0)) // Is there IROM?
     read_eeprom_to_xram();
   else
     no_eeprom();
-  
+
   SET_BIT_IN(PCON, 7); // PCON.SMOD = 1, When set, the baud rate of serial interface 0 in modes 1, 2, 3 is doubled
   SET_BIT_IN(ADCON0, 7); // ADCON0.BD = 1, When set, the baud rate of serial interface 0 is derived from a dedicated baud rate generator.
-  
+
   RAM[0x5F] = 0x20;
   RAM[0x60] = 0x03;
   RAM[0x61] = 0x21;
   RAM[0x62] = 0x00;
-  
+
   open_bypass_air_valve();
-  
+
   CCL1 = RAM[0x5F]; CCH1 = RAM[0x60];
   CRCL = CCL1 + 0x28; CRCH = CCH1 + 0x00;
-  
+
   CCEN |= SET_BIT(1) | SET_BIT(3); // Timer2: Compare enabled for CC register 0 (CRC = CRCH:CRCL) and CC register 1 (CC1 = CCH1:CCL1)
                                    // FYI:
                                    //  - Timer2 is in compare mode 1;
                                    //  - freq = f_osc/192;
                                    //  - reload disabled;
-                                   //  - input - timer with selected frequency; 
+                                   //  - input - timer with selected frequency;
                                    //  - external interrupt 3 on positive edge on INT3 (P1.0);
                                    //  - external interrupt 2 on positive edge on INT2 (P1.4);
 
   close_bypass_air_valve();
-  
+
   SET_BIT_IN(IEN1, 2);     // External interrupt 3 / capture/compare interrupt 0 enable
   CLEAR_BIT_IN(IEN1, 3);    // External interrupt 4 / capture/compare interrupt 0 enable
-  
+
   // Closing of bypass intake air valve is scheduled at TH2:TL2 = CRC (mode 1 of timer2 operation)
-  
+
   if (status_watchdog_triggerred() || status_xram_checksum_invalid()) {
     XRAM[0xF602] = FLASH[0x8761]; // 0
     XRAM[0xF603] = 0x01;
-    
+
     if (kitting_has_ego_sensor()) {
       word XramPtr = RNG_START_IDX(XRAM, EGO_CALIBRATION);
       word FlashPtr = 0x991C;
-      
+
       for (int Cnt = 0; Cnt < 0x100; ++Cnt)
         XRAM[XramPtr++] = FLASH[FlashPtr++];
     }
-    
+
     XRAM[0xF600] = 0x80;
-    
+
     {
       word XramPtr = 0xF605;
-      
+
       for (byte Cnt = 0; Cnt < 0x53; ++Cnt)
         XRAM[XramPtr++] = 0;
     }
@@ -1394,7 +956,7 @@ void reset_interrupt() noreturn {
 
   word TableData = GetValueFromTable(0xA2FD, 0, false);
   init_ram_63(HIGH(TableData));
-  
+
   UpdateRam63();
 
 _2748:
@@ -1494,17 +1056,17 @@ check_K_L_Line:
   CLEAR_BIT_IN(P3, 1);  // TxD @ MC33199 (ISO9141)
 
   WAIT_MACHINE_CYCLES_BY_2(0x0E);
-  
+
   if (P9 & 0x20) // LO of MC33199 (ISO9141) IS active
     jump funny_thing_with_ISO9141;
 
   SET_BIT_IN(P3, 1);  // TxD @ MC33199 (ISO9141)
 
   WAIT_MACHINE_CYCLES_BY_2(0x0E);
-  
+
   if (!(P9 & 0x20)) // LO of MC33199 (ISO9141) IS NOT active
     jump funny_thing_with_ISO9141;
-  
+
   jump FAED_trampoline; // fail control loop
 }
 
@@ -1613,7 +1175,7 @@ void MAIN_LOOP() {
 
   // _2983:
   // Timer0 overflowed
-  
+
   // IEN0.(!WDT) = 0
   SET_BIT_IN(IEN0, 6);
   SET_BIT_IN(IEN1, 6); // reset and activate watchdog timer
@@ -1787,7 +1349,7 @@ _2A32:
     byte Ram49 = COMPOSE_WORD(0xFF, 0xFF - DiffByte) < XramData ? 0xFF : HIGH(XramData + Diff);
     RAM[0x49] = Ram49;
   }
-  
+
   XRAM[0xF6BA] = RAM[0x49] < 0x1F ? 0x1F : RAM[0x49];
 
   RAM[0x4A] = InterpolateTableValue(0x83B0, XRAM[0xF6BC], XRAM[0xF6BB]); // TODO Table size?
@@ -1886,7 +1448,7 @@ _2B19:
     else
       SET_BIT_IN(RAM[0x28], 4);
   }
-  
+
   // _2BAF:
   // Throttle Position Sensor
   {
@@ -1964,14 +1526,14 @@ word MultiplySigned(byte M1, byte M2) {
   if (!CHECK_BIT_AT(M1, 7))
     return M1 * M2;
 
-  M1 = -M1;
+  M1 = NEGATE(M1);
   word P = M1 * M2;
-  
-  M1 = -LOW(P);
+
+  M1 = NEGATE(LOW(P));
   M2 = HIGH(P);
 
   if (!M1) {
-    M2 = -M2;
+    M2 = NEGATE(M2);
   } else {
     M2 = ~M2;
   }
@@ -2260,7 +1822,7 @@ void Xram_F69D_eq_20() {
 void ClearXram_F69A_F69B() {
   XRAM[0xF69A] = 0;
   // only zero low byte
-  SET_MEM_BYTE(XRAM, IGNITION_SW_VOLTAGE_SUM);
+  SET_MEM_BYTE(XRAM, IGNITION_SW_VOLTAGE_SUM, 0x00);
 }
 
 inline void ProcessEGO(pin EGOPin, byte *XramDiffSum,

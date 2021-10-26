@@ -1,9 +1,18 @@
 #pragma once
 
-#include "types.h"
+#include "defines.hpp"
+#include "mem-seg-helpers.hpp"
+#include "types.hpp"
 
 ////////////// RAM MAP
-byte RAM[0x100] = {
+extern byte RAM[0x100];
+
+#if __E591_HOST_COMPILATION
+static inline void INIT_RAM() {
+  DEF_ARRAY(byte, 0x00, 0xFF, full_range) = { 0 };
+  UNUSED(full_range);
+
+#if 0
   [0x00..0x07] = 0, // R0..R7 @ register bank 0
   [0x08..0x0F] = 0, // R0..R7 @ register bank 1
   [0x10..0x17] = 0, // R0..R7 @ register bank 2
@@ -70,7 +79,7 @@ byte RAM[0x100] = {
 
   [0x3B] = 0,     // Adjusted intake air temperature
   [0x3C] = 0,     // Adjusted ignition switch voltage
-  
+
   [0x3D] = 0,     // Adjusted coolant temperature (output from adjusting RAM[0x3A] with AdjustTemperature proc)
                   // packed offset and factor for FLASH[0xA2FD]
                   // factor - least significant three bits, will be SHL 5 = xxx0 0000
@@ -121,10 +130,10 @@ byte RAM[0x100] = {
   [0x7C..0x7D] = 0x00,
 
   [0x7E..0x7F] = 0x40, // HIP0045 configuration words
-  
+
 #define STACK = 0x00
   [0xB4..0xFF] = STACK
 #undef STACK
+#endif
 };
-
-
+#endif

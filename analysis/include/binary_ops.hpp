@@ -34,4 +34,4 @@ do {                          \
 
 #define IS_NEGATIVE(x) ((x) & (1 << (8 * sizeof(x) - 1))) /* x < 0 */
 
-
+#define NEGATE(x) ((~(x)) + 1)

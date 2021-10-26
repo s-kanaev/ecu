@@ -3,3 +3,5 @@
 ~*
 *~
 *.bak
+build
+*.kdev4

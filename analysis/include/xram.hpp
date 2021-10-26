@@ -1,23 +1,44 @@
 #pragma once
 
-#include "types.h"
+#include "defines.hpp"
+#include "mem-seg-helpers.hpp"
+#include "types.hpp"
 
 ////////////// XRAM MAP
-byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
-  [0xF400..0xF4FF] = 0,                       // Sum of XRAM[0xF5xx] + FLASH[0x9A1C + xx]
-  [0xF500..0xF5FF] = 0,                       // EGO calibration
-  [0xF600] = 0,
-  [0xF602] = FLASH[0x8761],                   // Set to FLASH[0x8761] if and only if watchdog triggered or xram checksum failed (power-on?)
-                                              // Signed byte value.
-                                              // Differentiated versus RAM[0x63].
-  [0xF603] = 0x01,                            // Set to 0x01 if and only if watchdog triggered or xram checksum failed (power-on?)
-  [0xF605..0xF657] = 0,
+extern byte XRAM[0x10000]; /* [0xF400..0x10000] address space */
 
-  [0xF658] = 0,                               // checksum low byte (for 0xFx00..0xF657)
-  [0xF659] = 0                                // checksum high byte (for 0xFx00..0xF657)
-  
-  [0xF679] = 0,                               // ??? TODO
+#if __E591_HOST_COMPILATION
+inline void INIT_XRAM() {
+  DEF_ARRAY(byte, 0x0000, 0xF3FF, unused) = { 0 };
+  DEF_ARRAY(byte, 0xF4FF, 0x10000, used) = { 0 };
 
+  UNUSED(unused);
+  UNUSED(used);
+
+#if 0
+  // Sum of XRAM[0xF5xx] + FLASH[0x9A1C + xx]
+  DEF_ARRAY(byte, 0xF400, 0xF4FF, sum_of_xram_f5xx_flash_9a1c_plus_xx) = { 0 };
+
+  // EGO calibration
+  DEF_ARRAY(byte, 0xF500, 0xF5FF, EGO_calibration) = { 0 };
+
+  XRAM[0xF600] = 0;
+  // Set to FLASH[0x8761] if and only if watchdog triggered or xram checksum failed (power-on?)
+  // Signed byte value.
+  // Differentiated versus RAM[0x63].
+  XRAM[0xF602] = FLASH[0x8761];
+
+  // Set to 0x01 if and only if watchdog triggered or xram checksum failed (power-on?)
+  XRAM[0xF603] = 0x01;
+
+  DEF_ARRAY(byte, 0xF605, 0xF657, unknown) = { 0 };
+
+  DEF_WORD_AT_BYTE_OFFSET(XRAM, 0xF658, checksum_Fx00_F657, 0);
+
+  // ??? TODO
+  XRAM[0xF679] = 0;
+
+#if 0
   [0xF681] = 0,                               // Adjusted CO potentiometer
   [0xF682] = 0,                               // ??? TODO
   [0xF683] = 0,                               // Adjusted coolant temperature, copy of RAM[0x3A]
@@ -69,7 +90,7 @@ byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
 
   [0xF6BF] = 0,                               // ??? TODO, compared to FLASH[0x805D]
 
-  
+
   [0xF675..0xF7D4] = 0x00,                    // 0x160 bytes
   [0xF7A4] = 0x00,                            // Filled in with FLASH[0x8789] or FLASH[0x878A] depending
                                               // on adjusted coolant temperature less than some limit,
@@ -95,10 +116,11 @@ byte XRAM[0xC00] = /* [0xF400..0x10000] address space */ {
   [0xF974] = 0x00,
 
   [0xF9B9] = 0,                               // counter?
-  
+
   [0xFF00..0xFF41] = EEPROM[0x00..0x41],
   [0xFF42..0xFF73] = EEPROM[0x41..0x73],
   [0xFF74..0xFF7F] = EEPROM[0x74..0x7F]
+#endif
+#endif
 };
-
-
+#endif
