@@ -6,6 +6,7 @@
 #include <ram.hpp>
 #include <flash.hpp>
 #include <xram.hpp>
+#include <registers.hpp>
 
 #define IGNITION_VOLTAGE_FACTOR BYTE(0x75)
 
@@ -18,6 +19,10 @@ word MultiplySigned(byte _M1, byte _M2);
 
 void Inputs_Part1_CoolantTemp();
 void Inputs_Part1_IgnitionSwitchVoltage();
+
+void mainLoopTrampoline();
+void MAIN_LOOP();
+void init_xram_f6bb_f6bc_and_ram_48_49_4a_4b_4c(bool SkipIntro)
 
 inline bool status_watchdog_triggerred() {
   return CHECK_BIT_AT(RAM[0x20], 6);
@@ -67,3 +72,28 @@ inline bool kitting_has_knock_sensor() {
 inline bool kitting_should_adapt_throttle_position_sensor() {
   return CHECK_BIT_AT(GET_RNG_START_PTR(FLASH, KITTING)[2], 6);
 }
+
+inline void TURN_OFF_IGNITION_COIL_1_4() {
+  CLEAR_BIT_IN(P5, 1);
+}
+
+inline void TURN_OFF_IGNITION_COIL_2_3() {
+  CLEAR_BIT_IN(P5, 0);
+}
+
+inline void TURN_OFF_INJECTOR_1() {
+  CLEAR_BIT_IN(P4, 0);
+}
+
+inline void TURN_OFF_INJECTOR_2() {
+  CLEAR_BIT_IN(P4, 1);
+}
+
+inline void TURN_OFF_INJECTOR_3() {
+  CLEAR_BIT_IN(P4, 2);
+}
+
+inline void TURN_OFF_INJECTOR_4() {
+  CLEAR_BIT_IN(P4, 3);
+}
+

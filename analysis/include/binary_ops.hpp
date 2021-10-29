@@ -1,5 +1,7 @@
 #pragma once
 
+#include "types.hpp"
+
 /* SET_BIT(3) = 0x08 */
 #define SET_BIT(bit) ((1) << (bit))
 #define SET_BIT_V(v, bit) ((!!(v)) << (bit))
@@ -35,3 +37,35 @@ do {                          \
 #define IS_NEGATIVE(x) ((x) & (1 << (8 * sizeof(x) - 1))) /* x < 0 */
 
 #define NEGATE(x) ((~(x)) + 1)
+
+#define COPY_BIT(Dst, DstBit, Src, SrcBit)  \
+do {                                        \
+  if (CHECK_BIT_AT(Src, SrcBit))            \
+    SET_BIT_IN(Dst, DstBit);                \
+  else                                      \
+    CLEAR_BIT_IN(Dst, DstBit);              \
+} while (0)
+
+inline bool CHECK_AND_CLEAR_BIT(byte RamPtr, bit Bit) {
+  bool Ret = false;
+
+  if (CHECK_BIT_AT(RAM[RamPtr], Bit)) {
+    /* bit is set */
+    /* clear bit atomically */
+    for (;;) {
+      byte Expected = RAM[RamPtr];
+      byte Desired = Expected;
+      CLEAR_BIT_IN(Expected, Bit);
+
+      if (CAS(&RAM[RamPtr], Expected, Desired)) {
+        Ret = true;
+        break;
+      }
+    }
+  } else {
+    /* bit is clear */
+    break;
+  }
+
+  return Ret;
+}

@@ -5,9 +5,10 @@
 #include "include/eeprom.hpp"
 #include "include/binary_ops.hpp"
 #include "include/undefined.hpp"
-#include "include/memory-locations.hpp"
+#include "e591/memory-locations.hpp"
 #include "include/pins.hpp"
 #include "e591/impl.hpp"
+#include "include/registers.hpp"
 
 //////////////////////////////// FUNCTIONS:
 #define WAIT_MACHINE_CYCLES_BY_2(x) /* waits for x*2 machine cycles, x = 0 is 0x100 */
@@ -26,9 +27,6 @@
 #define EEPROM_SELECT_PAGE_BLOCK(addr, block) (((addr) & 0xFD) | (((bl) & 0x01) << 1))
 // r = 1 - read, r = 0 - write
 #define I2C_READ_ADDRESS(addr, r) (((addr) & 0xFE) | ((r) & 0x01))
-
-
-
 
 //////////////////////////////// General purpose flags:
 /*
@@ -261,7 +259,7 @@ word sum_xram(word XramPtr, byte WordCount) {
   do {
     Sum += *(word *)(&XRAM[XramPtr++]);
     --WordCount;
-  } (WordCount != 0);
+  } while (WordCount != 0);
 
   return Sum;
 }
@@ -418,7 +416,7 @@ TableEntryT Lookup17ByteTableWithSaturation(byte Input, word FlashPtr) {
     ;
   }
 
-  if (TableLineLength - 1 = Idx) {
+  if (TableLineLength - 1 == Idx) {
     Result.TE.TableIdx = TableLineLength - 2; // can't be the last item as it is barrier value (sort of overflow?)
     Result.TE.InterpolationFraction = 0x0F;
     assert(0xFF == Result.ByteVal);
@@ -491,11 +489,11 @@ word ProfileTableValue(TableEntryT Difference, TableEntryT Template, word FlashP
               + ((        DiffProfFr  * (0x10 - TplProfFr)) * (Negation + FLASH[BasePtr + 1]))
               + (((0x10 - DiffProfFr) * (0x10 - TplProfFr)) * (Negation + FLASH[BasePtr]));
 
-  return COMPOSE_WORD(HIGH(RESULT) - Negation, LOW(Result));
+  return COMPOSE_WORD(HIGH(Result) - Negation, LOW(Result));
 }
 
 void UpdateRam63Impl() {
-  const byte TableBase = 0x8AFB;
+  const word TableBase = 0x8AFB;
   const byte TableLineLength = 0x11;
 
   byte TableLineIdx = RAM[0x4C];
@@ -524,7 +522,7 @@ void UpdateRam63Impl() {
   if (Sum < 0)
     Result = 0;
   else if (Sum > 0xFF)
-    Result = 0xFF
+    Result = 0xFF;
   else
     Result = LOW(Sum);
 
@@ -532,7 +530,7 @@ void UpdateRam63Impl() {
 }
 
 void InitRam5d() {
-  const byte TableBase = 0x8AFB;
+  const word TableBase = 0x8AFB;
   const byte TableLineLength = 0x11;
 
   word RamData = (sbyte)(RAM[0x63]);
@@ -573,7 +571,7 @@ void InitRam5d() {
   If saturation conditions are not met the difference value is preserved.
 */
 
-  XRAM[0xF779] = Result;
+  XRAM[0xF779] = DiffByte;
   word Profiled;
   {
     TableEntryT Diff, Tpl;
@@ -770,7 +768,7 @@ INTERRUPTS:
  - reset
  */
 
-void reset_interrupt() noreturn {
+void reset_interrupt() /*noreturn*/ {
   reset_init();
 
   if (PSW.F0) {
@@ -965,7 +963,7 @@ _2748:
 
   XRAM[0xF7BF] = 3;
   XRAM[0xF68D] = 0;
-  XRAM[0xF6B9] = 0xFF
+  XRAM[0xF6B9] = 0xFF;
   RAM[0x59] = FLASH[0x8753];
   XRAM[0xF770] = 0;
   XRAM[0xF67F] = 0;
@@ -1031,7 +1029,9 @@ _2801:
 
 _28CD:
   FinishInitPeripherals();
-  jump check_K_L_Line;
+
+  mainLoopSelector();
+  //goto check_K_L_Line;
   // ... TODO ...
 }
 
@@ -1045,36 +1045,40 @@ inline byte tripple_rotate_right(byte Data, byte Mask) {
   return Data & Mask;
 }
 
-check_K_L_Line:
-{
-  if (status_watchdog_triggerred() || !status_xram_checksum_invalid())
-    jump funny_thing_with_ISO9141;
+inline bool checkLO_MC33199() {
+  return (P9 & 0x20);
+}
 
-  if (!(P9 & 0x20)) // LO of MC33199 (ISO9141) IS NOT active
-    jump funny_thing_with_ISO9141;
-
-  CLEAR_BIT_IN(P3, 1);  // TxD @ MC33199 (ISO9141)
-
-  WAIT_MACHINE_CYCLES_BY_2(0x0E);
-
-  if (P9 & 0x20) // LO of MC33199 (ISO9141) IS active
-    jump funny_thing_with_ISO9141;
-
-  SET_BIT_IN(P3, 1);  // TxD @ MC33199 (ISO9141)
+inline bool setTxD_and_checkLO_MC33199(bool TxDVal) {
+  if (TxDVal)
+    SET_BIT_IN(P3, 1);
+  else
+    CLEAR_BIT_IN(P3, 1);  // TxD @ MC33199 (ISO9141)
 
   WAIT_MACHINE_CYCLES_BY_2(0x0E);
 
-  if (!(P9 & 0x20)) // LO of MC33199 (ISO9141) IS NOT active
-    jump funny_thing_with_ISO9141;
+  return checkLO_MC33199();
+}
 
-  jump FAED_trampoline; // fail control loop
+// check_K_L_Line:
+void mainLoopSelector() {
+  if (status_watchdog_triggerred())
+    mainLoopTrampoline();
+  else if (!checkLO_MC33199())
+    mainLoopTrampoline();
+  else if (setTxD_and_checkLO_MC33199(false))
+    mainLoopTrampoline();
+  else if (!setTxD_and_checkLO_MC33199(true))
+    mainLoopTrampoline();
+  else
+    goto FAED_trampoline;
 }
 
 // _2950:
 // K/L-line communication?
-funny_thing_with_ISO9141:
-MAIN_LOOP_TRAMPOLINE:
-{
+// funny_thing_with_ISO9141:
+// MAIN_LOOP_TRAMPOLINE:
+void mainLoopTrampoline() {
   SET_BIT_IN(P3, 1); // set high on TxD @ MC33199 (ISO9141) (TxD, serial channel0)
 
   CLEAR_BIT_IN(RAM[0x2F], 0);
@@ -1092,62 +1096,6 @@ MAIN_LOOP_TRAMPOLINE:
   SET_BIT_IN(IEN0, 7); // enable interrupts overall
 
   MAIN_LOOP();
-}
-
-inline bool CHECK_AND_CLEAR_BIT(byte RamPtr, bit Bit) {
-  bool Ret = false;
-
-  if (CHECK_BIT_AT(RAM[RamPtr], Bit)) {
-    /* bit is set */
-    /* clear bit atomically */
-    for (;;) {
-      byte Expected = RAM[RamPtr];
-      byte Desired = Expected;
-      CLEAR_BIT_IN(Expected, Bit);
-
-      if (CAS(&RAM[RamPtr], Expected, Desired)) {
-        Ret = true;
-        break;
-      }
-    }
-  } else {
-    /* bit is clear */
-    break;
-  }
-
-  return Ret;
-}
-
-#define COPY_BIT(Dst, DstBit, Src, SrcBit)  \
-do {                                        \
-  if (CHECK_BIT_AT(Src, SrcBit))            \
-    SET_BIT_IN(Dst, DstBit);                \
-  else                                      \
-    CLEAR_BIT_IN(Dst, DstBit);              \
-} while (0)
-
-inline void TURN_OFF_IGNITION_COIL_1_4() {
-  CLEAR_BIT_IN(P5, 1);
-}
-
-inline void TURN_OFF_IGNITION_COIL_2_3() {
-  CLEAR_BIT_IN(P5, 0);
-}
-
-inline void TURN_OFF_INJECTOR_1() {
-  CLEAR_BIT_IN(P4, 0);
-}
-
-inline void TURN_OFF_INJECTOR_2() {
-  CLEAR_BIT_IN(P4, 1);
-}
-
-inline void TURN_OFF_INJECTOR_3() {
-  CLEAR_BIT_IN(P4, 2);
-}
-
-inline void TURN_OFF_INJECTOR_4() {
-  CLEAR_BIT_IN(P4, 3);
 }
 
 // _2967:
@@ -1193,6 +1141,7 @@ void MAIN_LOOP() {
     XRAM[0xF7BC] = 0;
   }
 
+  bool InitProcDone = false;
   // _29B4:
   if (CHECK_BIT_AT(RAM[0x28], 5)) {
     // _29B7:
@@ -1200,8 +1149,8 @@ void MAIN_LOOP() {
   } else {
     // _29BF:
     if (CHECK_AND_CLEAR_BIT(0x25, 5)) {
-      init_xram_f6bb_f6bc_and_ram_48_49_4b_4c_49_4b_4c(false);
-      jump _2B19;
+      init_xram_f6bb_f6bc_and_ram_48_49_4a_4b_4c(false);
+      InitProcDone = true;
     }
 
     if (XRAM[0xF6B9] != 0xFF)
@@ -1209,42 +1158,48 @@ void MAIN_LOOP() {
   }
 
   // _29CD:
-  if (CHECK_BIT_AT(RAM[0x2A], 0))
-    init_xram_f6bb_f6bc_and_ram_48_49_4b_4c_49_4b_4c_49_4b_4c(true);
+  if (CHECK_BIT_AT(RAM[0x2A], 0)) {
+    init_xram_f6bb_f6bc_and_ram_48_49_4a_4b_4c(true);
+    InitProcDone = true;
+  }
 
-  if (XRAM[0xF6B9] < 0x05)
-    init_xram_f6bb_f6bc_and_ram_48_49_4b_4c_49_4b_4c_49_4b_4c(true);
+  if (XRAM[0xF6B9] < 0x05) {
+    init_xram_f6bb_f6bc_and_ram_48_49_4a_4b_4c(true);
+    InitProcDone = true;
+  }
 
-  // _29D9:
-  SET_BIT_IN(RAM[0x2A], 0);
-  CLEAR_BIT_IN(RAM[0x25], 1);
-  RAM[0x30] = RAM[0x44] = RAM[0x45] = RAM[0x48] = RAM[0x49] = RAM[0x4A] = RAM[0x4B] = RAM[0x4C] = 0
-  XRAM[0xF6BA] = XRAM[0xF6BB] = XRAM[0xF6BC] = 0;
+  if (!InitProcDone) {
+    // _29D9:
+    SET_BIT_IN(RAM[0x2A], 0);
+    CLEAR_BIT_IN(RAM[0x25], 1);
+    RAM[0x30] = RAM[0x44] = RAM[0x45] = RAM[0x48] = RAM[0x49] = RAM[0x4A] = RAM[0x4B] = RAM[0x4C] = 0;
+    XRAM[0xF6BA] = XRAM[0xF6BB] = XRAM[0xF6BC] = 0;
 
-  // _29FB:
-  // nullify set/clear masks for timer2 @ port5
-  SETMSK = 0;
-  CLRMSK = 0;
+    // _29FB:
+    // nullify set/clear masks for timer2 @ port5
+    SETMSK = 0;
+    CLRMSK = 0;
 
-  TURN_OFF_IGNITION_COIL_1_4();
-  TURN_OFF_IGNITION_COIL_2_3();
+    TURN_OFF_IGNITION_COIL_1_4();
+    TURN_OFF_IGNITION_COIL_2_3();
 
-  // Clear IEN2.ECR
-  // COMCLR register compare match interrupt enable
-  // If ECR = 0, the COMCLR compare match interrupt is disabled.
-  IEN2 &= 0xDF;
+    // Clear IEN2.ECR
+    // COMCLR register compare match interrupt enable
+    // If ECR = 0, the COMCLR compare match interrupt is disabled.
+    IEN2 &= 0xDF;
 
-  CMEN &= 0xFE;
-  TURN_OFF_INJECTOR_1();
-  CMEN &= 0xFB;
-  TURN_OFF_INJECTOR_3();
-  CMEN &= 0xF7;
-  TURN_OFF_INJECTOR_4();
-  CMEN &= 0xFD;
-  TURN_OFF_INJECTOR_2();
+    CMEN &= 0xFE;
+    TURN_OFF_INJECTOR_1();
+    CMEN &= 0xFB;
+    TURN_OFF_INJECTOR_3();
+    CMEN &= 0xF7;
+    TURN_OFF_INJECTOR_4();
+    CMEN &= 0xFD;
+    TURN_OFF_INJECTOR_2();
+  }
 
   // _2A1C:
-  jump _2B19;
+  _2B19();
 }
 
 // Returns FLASH[FlashPtr + TableIdx] + HIGH(DiffFactor * (FLASH[FlashPtr + TableIdx + 1] - FLASH[FlashPtr + TableIdx]))
@@ -1258,7 +1213,7 @@ byte InterpolateTableValue(word FlashPtr, byte TableIdx, byte DiffFactor) {
 
 // TODO memory map for memory locations used here
 // _2B19 should be called after this sub-proc
-void init_xram_f6bb_f6bc_and_ram_48_49_4b_4c_49_4b_4c_49_4b_4c(bool SkipIntro) {
+void init_xram_f6bb_f6bc_and_ram_48_49_4a_4b_4c(bool SkipIntro) {
   if (!SkipIntro) {
     if (CHECK_BIT_AT(RAM[0x2A], 0) && (XRAM[0xF6B9] < 2))
       CLEAR_BIT_IN(RAM[0x20], 2);
@@ -1355,8 +1310,6 @@ _2A32:
   RAM[0x4A] = InterpolateTableValue(0x83B0, XRAM[0xF6BC], XRAM[0xF6BB]); // TODO Table size?
   RAM[0x4B] = ((RAM[0x4A] + 4) >> 3) & 0x1F;
   RAM[0x4C] = ((RAM[0x4A] + 8) >> 4); // high nibble
-
-  // continue in _2B19
 }
 
 // _5FFB:
@@ -1383,8 +1336,7 @@ void addByteInXRAMWord(byte _V, word XramPtr) {
 }
 
 // TODO NAME
-_2B19:
-{
+inline void _2B19() {
   if (!CHECK_BIT_AT(RAM[0x28], 6) &&
       (XRAM[0xF679] >= FLASH[0x809B] && RAM[0x49] >= FLASH[0x809A])) {
     // _2B3A
