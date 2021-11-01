@@ -1,8 +1,9 @@
 #pragma once
 
 #include "types.hpp"
+#include "ram.hpp"
+#include "mem-seg-helpers.hpp"
 
-extern byte P0;
 extern byte P1;
 extern byte P2;
 extern byte P3;

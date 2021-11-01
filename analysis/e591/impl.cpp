@@ -1,5 +1,6 @@
 #include "impl.hpp"
 #include "memory-locations.hpp"
+#include "inlines.hpp"
 
 #include <types.hpp>
 #include <binary_ops.hpp>
@@ -378,24 +379,347 @@ byte AdjustTemperature(word TemperatureTableValue) {
   return Result;
 }
 
-word MultiplySigned(byte _M1, byte _M2) {
-  sbyte M1 = _M1;
-  sbyte M2 = _M2;
+// _5FE2:
+// M1 is signed
+// M2 is unsigned
+word MultiplySigned(byte M1, byte M2) {
   if (!CHECK_BIT_AT(M1, 7))
-    return WORD(M1) * M2;
+    return M1 * M2;
 
-  M1 = (~M1) + 1; //-M1; // M1 = (~M1) + 1;
-  word Result = WORD(M1) * M2;
+  M1 = NEGATE(M1);
+  word P = M1 * M2;
 
-  M1 = LOW(Result);
-  M2 = HIGH(Result);
+  M1 = NEGATE(LOW(P));
+  M2 = HIGH(P);
 
-  M1 = (~M1) + 1; //-M1; // M1 = (~M1) + 1;
-
-  if (M1)
+  if (!M1) {
+    M2 = NEGATE(M2);
+  } else {
     M2 = ~M2;
-  else
-    M2 = (~M2) + 1; //-M2; // M2 = (~M2) + 1;
+  }
 
-  return COMPOSE_WORD(M1, M2);
+  return COMPOSE_WORD(M2, M1);
+}
+
+// _5FFB:
+word scale10bitADCValue(word V, byte Factor) {
+  // calculus: (WORD(HIGH(V)) * Factor) + LOW(WORD(LOW(V)) * Factor)
+  return HIGH_W(QUAD(V) * Factor);
+}
+
+// _64A4:
+void addWordInXRAMWord(word V, word XramPtr) {
+  V += COMPOSE_WORD(XRAM[XramPtr + 1], XRAM[XramPtr]);
+
+  XRAM[XramPtr] = LOW(V);
+  XRAM[XramPtr + 1] = HIGH(V);
+}
+
+// _6498:
+void addByteInXRAMWord(byte _V, word XramPtr) {
+  word V = COMPOSE_WORD(XRAM[XramPtr + 1], XRAM[XramPtr]);
+  V += _V;
+
+  XRAM[XramPtr] = LOW(V);
+  XRAM[XramPtr + 1] = HIGH(V);
+}
+
+// TODO memory map for memory locations used here
+// _2B19 should be called after this sub-proc
+void init_xram_f6bb_f6bc_and_ram_48_49_4a_4b_4c(bool SkipIntro) {
+  if (!SkipIntro) {
+    if (CHECK_BIT_AT(RAM[0x2A], 0) && (XRAM[0xF6B9] < 2))
+      CLEAR_BIT_IN(RAM[0x20], 2);
+
+    // _2A2D:
+    XRAM[0xF6B9] = 0;
+  }
+
+_2A32:
+
+  CLEAR_BIT_IN(IEN0, 7); // disable all interrupts
+  byte Ram44 = RAM[0x44];
+  byte Ram45 = RAM[0x45];
+  SET_BIT_IN(IEN0, 7); // allow interrupts
+
+  quad Dividend;
+  word Divisor;
+  quad Quot;
+  bool DivisionSkipped = false;
+  word QuotW;
+
+  if (Ram44 || Ram45) {
+    // _2A7C:
+    CLEAR_BIT_IN(RAM[0x27], 2);
+    do {
+      Dividend = 0x01E84800;
+      Divisor = COMPOSE_WORD(Ram45, Ram44);
+      Quot = Dividend / Divisor;
+    } while (CHECK_AND_CLEAR_BIT(RAM[0x27], 2));
+    SET_BIT_IN(RAM[0x27], 2);
+  } else {
+    CLEAR_BIT_IN(IEN0, 7); // disable all interrupts
+    byte Ram30 = RAM[0x30];
+    byte Ram1C = RAM[0x1C];
+    byte Ram1D = RAM[0x1D];
+    SET_BIT_IN(IEN0, 7); // allow interrupts
+
+    if (Ram30 != 4) {
+      QuotW = 0;
+      DivisionSkipped = true;
+    } else {
+      // _2A4B:
+      CLEAR_BIT_IN(RAM[0x27], 2);
+      do {
+        Dividend = 0x00082300;
+        Divisor = COMPOSE_WORD(Ram1D, Ram1C);
+        Quot = Dividend / Divisor;
+      } while (CHECK_AND_CLEAR_BIT(RAM[0x27], 2));
+      SET_BIT_IN(RAM[0x27], 2);
+    }
+  }
+
+  if (!DivisionSkipped) {
+    if (!QUAD_BYTE(Quot, 3) && !QUAD_BYTE(Quot, 2)) {
+      // _high_word_of_quot_is_zero:
+      QuotW = LOW_W(Quot);
+    } else {
+      // _high_word_of_quot_is_not_zero:
+      QuotW = 0xFFFF; // saturate
+    }
+  }
+
+  // _calc_ram_48:
+  XRAM[0xF6BB] = LOW(QuotW);
+  XRAM[0xF6BC] = HIGH(QuotW);
+
+  {
+    quad X = QUAD(QuotW) + QUAD(0x0020);
+    byte Ram48Val = 0xFF;
+
+    if (X >= QUAD(0xFFFF)) {
+      X = LOW_W(X) << 2;
+
+      if (X >= QUAD(0xFFFF))
+        Ram48Val = QUAD_BYTE(X, 0);
+    }
+
+    RAM[0x48] = Ram48Val;
+  }
+
+  // _ram_48_filled:
+  {
+    word XramData = COMPOSE_WORD(XRAM[0xF6BC], XRAM[0xF6BB]);
+    const byte DiffByte = 0x80;
+    const word Diff = WORD(DiffByte);
+
+    byte Ram49 = COMPOSE_WORD(0xFF, 0xFF - DiffByte) < XramData ? 0xFF : HIGH(XramData + Diff);
+    RAM[0x49] = Ram49;
+  }
+
+  XRAM[0xF6BA] = RAM[0x49] < 0x1F ? 0x1F : RAM[0x49];
+
+  RAM[0x4A] = InterpolateTableValue(0x83B0, XRAM[0xF6BC], XRAM[0xF6BB]); // TODO Table size?
+  RAM[0x4B] = ((RAM[0x4A] + 4) >> 3) & 0x1F;
+  RAM[0x4C] = ((RAM[0x4A] + 8) >> 4); // high nibble
+}
+
+// Returns FLASH[FlashPtr + TableIdx] + HIGH(DiffFactor * (FLASH[FlashPtr + TableIdx + 1] - FLASH[FlashPtr + TableIdx]))
+// _62CE:
+byte InterpolateTableValue(word FlashPtr, byte TableIdx, byte DiffFactor) {
+  const byte Base = FLASH[FlashPtr + TableIdx];
+  const byte Diff = FLASH[FlashPtr + TableIdx + 1] - Base;
+  const word Offset = WORD(DiffFactor) * Diff;
+
+  return Base + HIGH(Offset);
+}
+
+// _695C
+void ClearXramF69E_0C_Bytes() {
+  for (word XramPtr = WORD_MEM_IDX(XRAM, COOLANT_TEMP_SUM);
+       XramPtr < WORD_MEM_IDX(XRAM, COOLANT_TEMP_SUM) + 0x0C; ++XramPtr)
+    XRAM[XramPtr] = 0x00;
+  XRAM[0xF69D] = 0;
+}
+
+// _2C09
+void Xram_F69D_eq_20() {
+  // Prerequisites:
+  // DPTR = 0xF69D
+  // XRAM[0xF69D] == 0x20
+
+  XRAM[0xF69D] = 0; // Reset counter
+
+  // Coolant Temperature
+  {
+    Xram_F69D_eq_20_CoolantTemperature();
+  }
+
+  // Intake Air Temperature
+  {
+    Xram_F69D_eq_20_IntakeAirTemperature();
+  }
+
+  // CO Potentiometer
+  {
+    Xram_F69D_eq_20_CO_Pot();
+  }
+
+  _2DD4:
+  xram_f682_initialized:
+  // Throttle Position Sensor
+  {
+    Xram_F69D_eq_20_ThrottlePosition();
+  }
+}
+
+// _C000:
+void init_xram_for_serial0() {
+  if (CHECK_BIT_AT(RAM[0x2F], 0)) {
+    _C006:
+    if (CHECK_BIT_AT(RAM[0x2F], 1)) {
+      _C07A:
+      XRAM[0xF983] = 0xFF;
+      XRAM[0xF984] = 0xFF;
+
+      XRAM[0xF989] = 0x02;
+      XRAM[0xF98A] = 0;
+      XRAM[0xF98B] = 0x14;
+      XRAM[0xF98C] = 0;
+
+      XRAM[0xF98D] = 0x14;
+      XRAM[0xF98E] = 0;
+      XRAM[0xF98F] = 0x88;
+      XRAM[0xF990] = 0x13;
+
+      XRAM[0xF991] = 0;
+      XRAM[0xF992] = 0;
+      XRAM[0xF993] = 0xC8;
+      XRAM[0xF994] = 0;
+
+      XRAM[0xF995] = 0;
+      XRAM[0xF996] = 0;
+      XRAM[0xF997] = 0x14;
+      XRAM[0xF998] = 0;
+
+      XRAM[0xF985] = 0x0A;
+      XRAM[0xF986] = 0;
+      XRAM[0xF987] = 0x02;
+      XRAM[0xF988] = 0;
+    } else {
+      _C009:
+      XRAM[0xF981] = 0x17;
+      XRAM[0xF982] = 0;
+      XRAM[0xF983] = 0x1B;
+      XRAM[0xF984] = 0;
+
+      XRAM[0xF989] = 0;
+      XRAM[0xF98A] = 0;
+      XRAM[0xF98B] = 0x13;
+      XRAM[0xF98C] = 0;
+
+      XRAM[0xF991] = 0x13;
+      XRAM[0xF992] = 0;
+      XRAM[0xF993] = 0x89;
+      XRAM[0xF994] = 0x13;
+
+      XRAM[0xF995] = 0x4;
+      XRAM[0xF996] = 0;
+      XRAM[0xF997] = 0x15;
+      XRAM[0xF998] = 0;
+
+      XRAM[0xF98D] = 0x1A;
+      XRAM[0xF98E] = 0;
+      XRAM[0xF98F] = 0x31;
+      XRAM[0xF990] = 0;
+
+      XRAM[0xF987] = 0;
+      XRAM[0xF988] = 0;
+    }
+  } else {
+    _C0EB:
+    if (CHECK_BIT_AT(RAM[0x2F], 1)) {
+      _C15E:
+      XRAM[0xF983] = 0xFF;
+      XRAM[0xF984] = 0xFF;
+
+      XRAM[0xF989] = 0x02;
+      XRAM[0xF98A] = 0;
+      XRAM[0xF98B] = 0x14;
+      XRAM[0xF98C] = 0;
+
+      XRAM[0xF98D] = 0xC8;
+      XRAM[0xF98E] = 0;
+      XRAM[0xF98F] = 0x88;
+      XRAM[0xF990] = 0x13;
+
+      XRAM[0xF991] = 0x02;
+      XRAM[0xF992] = 0;
+      XRAM[0xF993] = 0xC8;
+      XRAM[0xF994] = 0;
+
+      XRAM[0xF995] = 0;
+      XRAM[0xF996] = 0;
+      XRAM[0xF997] = 0x14;
+      XRAM[0xF998] = 0;
+
+      XRAM[0xF985] = 0x0A;
+      XRAM[0xF986] = 0;
+      XRAM[0xF987] = 0x02;
+      XRAM[0xF988] = 0;
+    } else {
+      _C0EE:
+      XRAM[0xF981] = 0x17;
+      XRAM[0xF982] = 0;
+      XRAM[0xF983] = 0x1B;
+      XRAM[0xF984] = 0;
+
+      XRAM[0xF989] = 0;
+      XRAM[0xF98A] = 0;
+      XRAM[0xF98B] = 0x14;
+      XRAM[0xF98C] = 0;
+
+      XRAM[0xF991] = 0;
+      XRAM[0xF992] = 0;
+      XRAM[0xF993] = 0x88;
+      XRAM[0xF994] = 0x13;
+
+      XRAM[0xF995] = 0;
+      XRAM[0xF996] = 0;
+      XRAM[0xF997] = 0x14;
+      XRAM[0xF998] = 0;
+
+      XRAM[0xF98D] = 0;
+      XRAM[0xF98E] = 0;
+      XRAM[0xF98F] = 0xF4;
+      XRAM[0xF990] = 0x01;
+
+      XRAM[0xF987] = 0;
+      XRAM[0xF988] = 0;
+    }
+  }
+
+_C1CC:
+  CLEAR_BIT_IN(RAM[0x2F], 2);
+  CLEAR_BIT_IN(RAM[0x2F], 4);
+  CLEAR_BIT_IN(RAM[0x2F], 5);
+  CLEAR_BIT_IN(RAM[0x2F], 6);
+
+  XRAM[0xFBB3] = 0;
+  XRAM[0xF9A3] = 0;
+  XRAM[0xF9A1] = 0;
+
+  if (CHECK_BIT_AT(RAM[0x2F], 1)) {
+    _C1F5:
+    CLEAR_BIT_IN(IEN0, 4); // disable serial0 interrupt
+    XRAM[0xF97F] = 0;
+    XRAM[0xF980] = 0;
+    RAM[0x77] = 0x04;
+  } else {
+    _C1E4:
+    XRAM[0xF97F] = 0;
+    XRAM[0xF980] = 0;
+    SET_BIT_IN(IEN0, 4); // enable serial0 interrupt
+    RAM[0x77] = 0xFF;
+  }
 }

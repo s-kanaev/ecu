@@ -19,3 +19,16 @@ void copy(T *Start, std::array<T, _Count> &Orig) {
     Start[Idx] = Orig[Idx];
 }
 
+
+namespace seg {
+  struct XRAM;
+  struct FLASH;
+  struct RAM;
+
+template <typename _Seg>
+  struct Segment {
+    using SelfSeg = _Seg;
+
+    static byte &get(std::size_t Idx);
+  };
+}

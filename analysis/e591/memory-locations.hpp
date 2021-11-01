@@ -204,8 +204,14 @@ namespace location {                                        \
 #define SET_MEM_WORD(segment, name, value)                    \
 do {                                                          \
   location::Word<seg::segment, location::tags::MEM_TAG(name)> \
-      ::set((value))                                          \
+      ::set((value));                                         \
 } while (0)
+
+#define WORD_MEM_IDX(segment, name) \
+location::Word<seg::segment, location::tags::MEM_TAG(name)>::Offset
+
+#define BYTE_MEM_IDX(segment, name) \
+location::Byte<seg::segment, location::tags::MEM_TAG(name)>::Offset
 
 ////////////////////////////////////////////////////////////
 // XRAM

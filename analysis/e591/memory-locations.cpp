@@ -132,22 +132,18 @@ namespace location {
 
 namespace seg {
   template <typename _Seg>
-  struct Segment {
-    using SelfSeg = _Seg;
-
-    static byte &get(std::size_t Idx) {
+  byte &Segment<_Seg>::get(std::size_t Idx) {
 #if __E591_HOST_COMPILATION
-      if (!::location::Registrar::checkRegisteredAccess<SelfSeg>(Idx)) {
-        fprintf(stderr, "Attempt to access unregistered range with Idx = %zu"
-                " in segment %s\n",
-                Idx,
-                SelfSeg::name());
-      }
+    if (!::location::Registrar::checkRegisteredAccess<SelfSeg>(Idx)) {
+      fprintf(stderr, "Attempt to access unregistered range with Idx = %zu"
+              " in segment %s\n",
+              Idx,
+              SelfSeg::name());
+    }
 #endif
 
-      return SelfSeg::get()[Idx];
-    }
-  };
+    return SelfSeg::get()[Idx];
+  }
 } // namespace seg
 
 

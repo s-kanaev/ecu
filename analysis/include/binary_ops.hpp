@@ -46,18 +46,18 @@ do {                                        \
     CLEAR_BIT_IN(Dst, DstBit);              \
 } while (0)
 
-inline bool CHECK_AND_CLEAR_BIT(byte RamPtr, bit Bit) {
+inline bool CHECK_AND_CLEAR_BIT(byte *Ptr, bit Bit) {
   bool Ret = false;
 
-  if (CHECK_BIT_AT(RAM[RamPtr], Bit)) {
+  if (CHECK_BIT_AT(*Ptr, Bit)) {
     /* bit is set */
     /* clear bit atomically */
     for (;;) {
-      byte Expected = RAM[RamPtr];
+      byte Expected = *Ptr;
       byte Desired = Expected;
       CLEAR_BIT_IN(Expected, Bit);
 
-      if (CAS(&RAM[RamPtr], Expected, Desired)) {
+      if (CAS(Ptr, Expected, Desired)) {
         Ret = true;
         break;
       }
