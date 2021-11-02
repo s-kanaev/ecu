@@ -28,13 +28,8 @@ void Inputs_Part1_IgnitionSwitchVoltage();
 
 void mainLoopTrampoline();
 void MAIN_LOOP();
-void init_xram_f6bb_f6bc_and_ram_48_49_4a_4b_4c(bool SkipIntro);
 
-// _695C
-void ClearXramF69E_0C_Bytes();
-// _2C09
-// Launched when XRAM[0xF69D] == 0x20
-void Xram_F69D_eq_20();
+void SelectMode();
 
 // Returns FLASH[FlashPtr + TableIdx] + HIGH(DiffFactor * (FLASH[FlashPtr + TableIdx + 1] - FLASH[FlashPtr + TableIdx]))
 // _62CE:
@@ -51,6 +46,9 @@ void addByteInXRAMWord(byte _V, word XramPtr);
 
 // _C000:
 void init_xram_for_serial0();
+
+// _6060:
+word AbsWordByMSB(word V);
 
 inline bool status_watchdog_triggerred() {
   return CHECK_BIT_AT(RAM[0x20], 6);
@@ -126,7 +124,7 @@ inline void TURN_OFF_INJECTOR_4() {
 }
 
 inline bool checkLO_MC33199() {
-  return (P9 & 0x20);
+  return CHECK_BIT_AT(P9, 5);
 }
 
 inline bool setTxD_and_checkLO_MC33199(bool TxDVal) {

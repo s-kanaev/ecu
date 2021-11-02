@@ -118,8 +118,8 @@ void Inputs_Part1_IntakeAirTemp() {
   RAM[0x3E] = AdjustTemperature(AdjustedIntakeAirTemp);
 }
 
-void Inputs_Part1_ModeSelection() {
-  if (CHECK_BIT_AT(P9, 5))  // test LO @ MC33199 (ISO9141)
+void SelectMode() {
+  if (checkLO_MC33199())  // test LO @ MC33199 (ISO9141)
     XRAM[0xF7BE] = 3;
   else
     XRAM[0xF7BE] = 0;
@@ -239,7 +239,7 @@ void Inputs_Part1() {
 
   // MODE SELECTION
   {
-    Inputs_Part1_ModeSelection();
+    SelectMode();
   }
 
   // CO POTENTIOMETER
@@ -424,106 +424,6 @@ void addByteInXRAMWord(byte _V, word XramPtr) {
   XRAM[XramPtr + 1] = HIGH(V);
 }
 
-// TODO memory map for memory locations used here
-// _2B19 should be called after this sub-proc
-void init_xram_f6bb_f6bc_and_ram_48_49_4a_4b_4c(bool SkipIntro) {
-  if (!SkipIntro) {
-    if (CHECK_BIT_AT(RAM[0x2A], 0) && (XRAM[0xF6B9] < 2))
-      CLEAR_BIT_IN(RAM[0x20], 2);
-
-    // _2A2D:
-    XRAM[0xF6B9] = 0;
-  }
-
-_2A32:
-
-  CLEAR_BIT_IN(IEN0, 7); // disable all interrupts
-  byte Ram44 = RAM[0x44];
-  byte Ram45 = RAM[0x45];
-  SET_BIT_IN(IEN0, 7); // allow interrupts
-
-  quad Dividend;
-  word Divisor;
-  quad Quot;
-  bool DivisionSkipped = false;
-  word QuotW;
-
-  if (Ram44 || Ram45) {
-    // _2A7C:
-    CLEAR_BIT_IN(RAM[0x27], 2);
-    do {
-      Dividend = 0x01E84800;
-      Divisor = COMPOSE_WORD(Ram45, Ram44);
-      Quot = Dividend / Divisor;
-    } while (CHECK_AND_CLEAR_BIT(RAM[0x27], 2));
-    SET_BIT_IN(RAM[0x27], 2);
-  } else {
-    CLEAR_BIT_IN(IEN0, 7); // disable all interrupts
-    byte Ram30 = RAM[0x30];
-    byte Ram1C = RAM[0x1C];
-    byte Ram1D = RAM[0x1D];
-    SET_BIT_IN(IEN0, 7); // allow interrupts
-
-    if (Ram30 != 4) {
-      QuotW = 0;
-      DivisionSkipped = true;
-    } else {
-      // _2A4B:
-      CLEAR_BIT_IN(RAM[0x27], 2);
-      do {
-        Dividend = 0x00082300;
-        Divisor = COMPOSE_WORD(Ram1D, Ram1C);
-        Quot = Dividend / Divisor;
-      } while (CHECK_AND_CLEAR_BIT(RAM[0x27], 2));
-      SET_BIT_IN(RAM[0x27], 2);
-    }
-  }
-
-  if (!DivisionSkipped) {
-    if (!QUAD_BYTE(Quot, 3) && !QUAD_BYTE(Quot, 2)) {
-      // _high_word_of_quot_is_zero:
-      QuotW = LOW_W(Quot);
-    } else {
-      // _high_word_of_quot_is_not_zero:
-      QuotW = 0xFFFF; // saturate
-    }
-  }
-
-  // _calc_ram_48:
-  XRAM[0xF6BB] = LOW(QuotW);
-  XRAM[0xF6BC] = HIGH(QuotW);
-
-  {
-    quad X = QUAD(QuotW) + QUAD(0x0020);
-    byte Ram48Val = 0xFF;
-
-    if (X >= QUAD(0xFFFF)) {
-      X = LOW_W(X) << 2;
-
-      if (X >= QUAD(0xFFFF))
-        Ram48Val = QUAD_BYTE(X, 0);
-    }
-
-    RAM[0x48] = Ram48Val;
-  }
-
-  // _ram_48_filled:
-  {
-    word XramData = COMPOSE_WORD(XRAM[0xF6BC], XRAM[0xF6BB]);
-    const byte DiffByte = 0x80;
-    const word Diff = WORD(DiffByte);
-
-    byte Ram49 = COMPOSE_WORD(0xFF, 0xFF - DiffByte) < XramData ? 0xFF : HIGH(XramData + Diff);
-    RAM[0x49] = Ram49;
-  }
-
-  XRAM[0xF6BA] = RAM[0x49] < 0x1F ? 0x1F : RAM[0x49];
-
-  RAM[0x4A] = InterpolateTableValue(0x83B0, XRAM[0xF6BC], XRAM[0xF6BB]); // TODO Table size?
-  RAM[0x4B] = ((RAM[0x4A] + 4) >> 3) & 0x1F;
-  RAM[0x4C] = ((RAM[0x4A] + 8) >> 4); // high nibble
-}
-
 // Returns FLASH[FlashPtr + TableIdx] + HIGH(DiffFactor * (FLASH[FlashPtr + TableIdx + 1] - FLASH[FlashPtr + TableIdx]))
 // _62CE:
 byte InterpolateTableValue(word FlashPtr, byte TableIdx, byte DiffFactor) {
@@ -534,43 +434,12 @@ byte InterpolateTableValue(word FlashPtr, byte TableIdx, byte DiffFactor) {
   return Base + HIGH(Offset);
 }
 
-// _695C
-void ClearXramF69E_0C_Bytes() {
-  for (word XramPtr = WORD_MEM_IDX(XRAM, COOLANT_TEMP_SUM);
-       XramPtr < WORD_MEM_IDX(XRAM, COOLANT_TEMP_SUM) + 0x0C; ++XramPtr)
-    XRAM[XramPtr] = 0x00;
-  XRAM[0xF69D] = 0;
-}
+// _6060:
+word AbsWordByMSB(word V) {
+  if (CHECK_BIT_AT(V, 15))
+    V = COMPOSE_WORD(0 - HIGH(V) - (!!(LOW(V) != 0)), 0 - LOW(V));
 
-// _2C09
-void Xram_F69D_eq_20() {
-  // Prerequisites:
-  // DPTR = 0xF69D
-  // XRAM[0xF69D] == 0x20
-
-  XRAM[0xF69D] = 0; // Reset counter
-
-  // Coolant Temperature
-  {
-    Xram_F69D_eq_20_CoolantTemperature();
-  }
-
-  // Intake Air Temperature
-  {
-    Xram_F69D_eq_20_IntakeAirTemperature();
-  }
-
-  // CO Potentiometer
-  {
-    Xram_F69D_eq_20_CO_Pot();
-  }
-
-  _2DD4:
-  xram_f682_initialized:
-  // Throttle Position Sensor
-  {
-    Xram_F69D_eq_20_ThrottlePosition();
-  }
+  return V;
 }
 
 // _C000:

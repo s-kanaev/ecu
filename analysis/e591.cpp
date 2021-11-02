@@ -5,10 +5,13 @@
 #include "include/eeprom.hpp"
 #include "include/binary_ops.hpp"
 #include "include/undefined.hpp"
-#include "e591/memory-locations.hpp"
 #include "include/pins.hpp"
-#include "e591/impl.hpp"
 #include "include/registers.hpp"
+
+#include "e591/memory-locations.hpp"
+#include "e591/impl.hpp"
+#include "e591/inlines.hpp"
+
 
 //////////////////////////////// CONSTANTS
 #define KNOCK_SENSOR_TEST_CONFIG_WORD ((byte)(0x00))
@@ -760,6 +763,21 @@ void FinishInitPeripherals() {
   SET_BIT_IN(IEN1, 6);
 }
 
+// check_K_L_Line:
+void mainLoopSelector() {
+  if (status_watchdog_triggerred() ||
+      !checkLO_MC33199() ||
+      setTxD_and_checkLO_MC33199(false) ||
+      !setTxD_and_checkLO_MC33199(true)) {
+    mainLoopTrampoline();
+  } else {
+    FAED_trampoline:
+    // TODO
+    ;
+  }
+}
+
+
 /*
 INTERRUPTS:
  - reset
@@ -1042,20 +1060,6 @@ inline byte tripple_rotate_right(byte Data, byte Mask) {
   return Data & Mask;
 }
 
-// check_K_L_Line:
-void mainLoopSelector() {
-  if (status_watchdog_triggerred())
-    mainLoopTrampoline();
-  else if (!checkLO_MC33199())
-    mainLoopTrampoline();
-  else if (setTxD_and_checkLO_MC33199(false))
-    mainLoopTrampoline();
-  else if (!setTxD_and_checkLO_MC33199(true))
-    mainLoopTrampoline();
-  else
-    goto FAED_trampoline;
-}
-
 // _2950:
 // K/L-line communication?
 // funny_thing_with_ISO9141:
@@ -1078,6 +1082,200 @@ void mainLoopTrampoline() {
   SET_BIT_IN(IEN0, 7); // enable interrupts overall
 
   MAIN_LOOP();
+}
+
+// TODO memory map for memory locations used here
+// _2B19 should be called after this sub-proc
+void init_xram_f6bb_f6bc_and_ram_48_49_4a_4b_4c(bool SkipIntro) {
+  if (!SkipIntro) {
+    if (CHECK_BIT_AT(RAM[0x2A], 0) && (XRAM[0xF6B9] < 2))
+      CLEAR_BIT_IN(RAM[0x20], 2);
+
+    // _2A2D:
+    XRAM[0xF6B9] = 0;
+  }
+
+_2A32:
+
+  CLEAR_BIT_IN(IEN0, 7); // disable all interrupts
+  byte Ram44 = RAM[0x44];
+  byte Ram45 = RAM[0x45];
+  SET_BIT_IN(IEN0, 7); // allow interrupts
+
+  quad Dividend;
+  word Divisor;
+  quad Quot;
+  bool DivisionSkipped = false;
+  word QuotW;
+
+  if (Ram44 || Ram45) {
+    // _2A7C:
+    CLEAR_BIT_IN(RAM[0x27], 2);
+    do {
+      Dividend = 0x01E84800;
+      Divisor = COMPOSE_WORD(Ram45, Ram44);
+      Quot = Dividend / Divisor;
+    } while (CHECK_AND_CLEAR_BIT(RAM[0x27], 2));
+    SET_BIT_IN(RAM[0x27], 2);
+  } else {
+    CLEAR_BIT_IN(IEN0, 7); // disable all interrupts
+    byte Ram30 = RAM[0x30];
+    byte Ram1C = RAM[0x1C];
+    byte Ram1D = RAM[0x1D];
+    SET_BIT_IN(IEN0, 7); // allow interrupts
+
+    if (Ram30 != 4) {
+      QuotW = 0;
+      DivisionSkipped = true;
+    } else {
+      // _2A4B:
+      CLEAR_BIT_IN(RAM[0x27], 2);
+      do {
+        Dividend = 0x00082300;
+        Divisor = COMPOSE_WORD(Ram1D, Ram1C);
+        Quot = Dividend / Divisor;
+      } while (CHECK_AND_CLEAR_BIT(RAM[0x27], 2));
+      SET_BIT_IN(RAM[0x27], 2);
+    }
+  }
+
+  if (!DivisionSkipped) {
+    if (!QUAD_BYTE(Quot, 3) && !QUAD_BYTE(Quot, 2)) {
+      // _high_word_of_quot_is_zero:
+      QuotW = LOW_W(Quot);
+    } else {
+      // _high_word_of_quot_is_not_zero:
+      QuotW = 0xFFFF; // saturate
+    }
+  }
+
+  // _calc_ram_48:
+  XRAM[0xF6BB] = LOW(QuotW);
+  XRAM[0xF6BC] = HIGH(QuotW);
+
+  {
+    quad X = QUAD(QuotW) + QUAD(0x0020);
+    byte Ram48Val = 0xFF;
+
+    if (X >= QUAD(0xFFFF)) {
+      X = LOW_W(X) << 2;
+
+      if (X >= QUAD(0xFFFF))
+        Ram48Val = QUAD_BYTE(X, 0);
+    }
+
+    RAM[0x48] = Ram48Val;
+  }
+
+  // _ram_48_filled:
+  {
+    word XramData = COMPOSE_WORD(XRAM[0xF6BC], XRAM[0xF6BB]);
+    const byte DiffByte = 0x80;
+    const word Diff = WORD(DiffByte);
+
+    byte Ram49 = COMPOSE_WORD(0xFF, 0xFF - DiffByte) < XramData ? 0xFF : HIGH(XramData + Diff);
+    RAM[0x49] = Ram49;
+  }
+
+  XRAM[0xF6BA] = RAM[0x49] < 0x1F ? 0x1F : RAM[0x49];
+
+  RAM[0x4A] = InterpolateTableValue(0x83B0, XRAM[0xF6BC], XRAM[0xF6BB]); // TODO Table size?
+  RAM[0x4B] = ((RAM[0x4A] + 4) >> 3) & 0x1F;
+  RAM[0x4C] = ((RAM[0x4A] + 8) >> 4); // high nibble
+}
+
+// _695C
+void ClearXramF69E_0C_Bytes() {
+  for (word XramPtr = WORD_MEM_IDX(XRAM, COOLANT_TEMP_SUM);
+       XramPtr < WORD_MEM_IDX(XRAM, COOLANT_TEMP_SUM) + 0x0C; ++XramPtr)
+    XRAM[XramPtr] = 0x00;
+  XRAM[0xF69D] = 0;
+}
+
+// _2C09
+void Xram_F69D_eq_20() {
+  // Prerequisites:
+  // DPTR = 0xF69D
+  // XRAM[0xF69D] == 0x20
+
+  XRAM[0xF69D] = 0; // Reset counter
+
+  // Coolant Temperature
+  {
+    Xram_F69D_eq_20_CoolantTemperature();
+  }
+
+  // Intake Air Temperature
+  {
+    Xram_F69D_eq_20_IntakeAirTemperature();
+  }
+
+  // CO Potentiometer
+  {
+    Xram_F69D_eq_20_CO_Pot();
+  }
+
+  _2DD4:
+  xram_f682_initialized:
+  // Throttle Position Sensor
+  {
+    Xram_F69D_eq_20_ThrottlePosition();
+  }
+}
+
+// _696B
+void ClearXram_F69A_F69B() {
+  XRAM[0xF69A] = 0;
+  // only zero low byte
+  XRAM[WORD_MEM_IDX(XRAM, IGNITION_SW_VOLTAGE_SUM)] = 0x00;
+}
+
+inline void ProcessEGO(pin EGOPin, byte *XramDiffSum,
+                       byte *RamPtrFlashValFlag, byte RamPtrFlashValFlagBit,
+                       bool KittingHasEgoSensor,
+                       byte *RamPtrEgoLessLowLimit, byte RamPtrEgoLessLowLimitBit,
+                       byte *RamPtrEgoLargerUpperLimit, byte RamPtrEgoLargerUpperLimitBit) {
+  byte EGO = ADC_8bit(EGOPin);
+
+  word EgoW = EGO * 0xFF;
+
+  if (HIGH(EgoW) >= 0x40)
+    EGO = 0xFF;
+  else
+    EGO = HIGH(EgoW) << 2;
+
+  byte Diff;
+
+  if (*XramDiffSum < EGO)
+    Diff = - HIGH(FLASH[0x8089] * (EGO - *XramDiffSum));
+  else
+    Diff = HIGH(FLASH[0x8089] * (*XramDiffSum - EGO));
+
+  byte FlashValue;
+
+  if (CHECK_BIT_AT(*RamPtrFlashValFlag, RamPtrFlashValFlagBit))
+    FlashValue = FLASH[0x808B];
+  else
+    FlashValue = FLASH[0x808A];
+
+  if (EGO < FlashValue)
+    CLEAR_BIT_IN(*RamPtrFlashValFlag, RamPtrFlashValFlagBit);
+  else
+    SET_BIT_IN(*RamPtrFlashValFlag, RamPtrFlashValFlagBit);
+
+  if (KittingHasEgoSensor) {
+    if (RAM[0x3A] >= FLASH[0x8781]) {
+      if (EGO < FLASH[0x8087])
+        SET_BIT_IN(*RamPtrEgoLessLowLimit, RamPtrEgoLessLowLimitBit);
+      else
+        CLEAR_BIT_IN(*RamPtrEgoLessLowLimit, RamPtrEgoLessLowLimitBit);
+
+      if (FLASH[0x8088] < EGO)
+        SET_BIT_IN(*RamPtrEgoLargerUpperLimit, RamPtrEgoLargerUpperLimitBit);
+      else
+        CLEAR_BIT_IN(*RamPtrEgoLargerUpperLimit, RamPtrEgoLargerUpperLimitBit);
+    }
+  }
 }
 
 // _2967:
@@ -1180,12 +1378,8 @@ void MAIN_LOOP() {
     TURN_OFF_INJECTOR_2();
   }
 
-  // _2A1C:
-  _2B19();
-}
-
-// TODO NAME
-inline void _2B19() {
+  // _2A1C: is goto _2B19
+  _2B19:
   if (!CHECK_BIT_AT(RAM[0x28], 6) &&
       (XRAM[0xF679] >= FLASH[0x809B] && RAM[0x49] >= FLASH[0x809A])) {
     // _2B3A
@@ -1285,78 +1479,13 @@ inline void _2B19() {
     Xram_F69D_eq_20();
   }
 
-  goto _2ED3;
-}
+  // goto _2ED3;
+  _2ED3:
 
-// _696B
-void ClearXram_F69A_F69B() {
-  XRAM[0xF69A] = 0;
-  // only zero low byte
-  SET_MEM_BYTE(XRAM, IGNITION_SW_VOLTAGE_SUM, 0x00);
-}
-
-inline void ProcessEGO(pin EGOPin, byte *XramDiffSum,
-                       byte *RamPtrFlashValFlag, byte RamPtrFlashValFlagBit,
-                       bool KittingHasEgoSensor,
-                       byte *RamPtrEgoLessLowLimit, byte RamPtrEgoLessLowLimitBit,
-                       byte *RamPtrEgoLargerUpperLimit, byte RamPtrEgoLargerUpperLimitBit) {
-  byte EGO = ADC_8bit(EGOPin);
-
-  word EgoW = EGO * 0xFF;
-
-  if (HIGH(EgoW) >= 0x40)
-    EGO = 0xFF;
-  else
-    EGO = HIGH(EgoW) << 2;
-
-  byte Diff;
-
-  if (*XramDiffSum < EGO)
-    Diff = - HIGH(FLASH[0x8089] * (EGO - *XramDiffSum));
-  else
-    Diff = HIGH(FLASH[0x8089] * (*XramDiffSum - EGO));
-
-  byte FlashValue;
-
-  if (CHECK_BIT_AT(*RamPtrFlashValFlag, RamPtrFlashValFlagBit))
-    FlashValue = FLASH[0x808B];
-  else
-    FlashValue = FLASH[0x808A];
-
-  if (EGO < FlashValue)
-    CLEAR_BIT_IN(*RamPtrFlashValFlag, RamPtrFlashValFlagBit);
-  else
-    SET_BIT_IN(*RamPtrFlashValFlag, RamPtrFlashValFlagBit);
-
-  if (KittingHasEgoSensor) {
-    if (RAM[0x3A] >= FLASH[0x8781]) {
-      if (EGO < FLASH[0x8087])
-        SET_BIT_IN(*RamPtrEgoLessLowLimit, RamPtrEgoLessLowLimitBit);
-      else
-        CLEAR_BIT_IN(*RamPtrEgoLessLowLimit, RamPtrEgoLessLowLimitBit);
-
-      if (FLASH[0x8088] < EGO)
-        SET_BIT_IN(*RamPtrEgoLargerUpperLimit, RamPtrEgoLargerUpperLimitBit);
-      else
-        CLEAR_BIT_IN(*RamPtrEgoLargerUpperLimit, RamPtrEgoLargerUpperLimitBit);
-    }
-  }
-}
-
-// _6060:
-word AbsWordByMSB(word V) {
-  if (CHECK_BIT_AT(V, 15))
-    V = COMPOSE_WORD(0 - HIGH(V) - (!!(LOW(V) != 0)), 0 - LOW(V));
-
-  return V;
-}
-
-_2ED3:
-{
   if (++XRAM[0xF69A] == 4) {
     _2EDC:
     XRAM[0xF69A] = 0; // Reset counter
-    word IgnVoltage = GET_MEM_WORD(XROM, IGNITION_SW_VOLTAGE_SUM);
+    word IgnVoltage = GET_MEM_WORD(XRAM, IGNITION_SW_VOLTAGE_SUM);
     IgnVoltage >>= 2;
     IgnVoltage = LOW(IgnVoltage) * 0x75;
     byte IgnVoltageByte;
@@ -1397,51 +1526,38 @@ _2ED3:
 
   _2F31:
   check_L_line:
-  {
-    // MODE SELECTION
-    {
-      if (CHECK_BIT_AT(P9, 5))  // test LO @ MC33199 (ISO9141)
-        XRAM[0xF7BE] = 3;
-      else
-        XRAM[0xF7BE] = 0;
-    }
-  }
+  // MODE SELECTION
+  SelectMode();
 
   _2F41:
   // EGO #1 Sensor (8bit ADC)
-  {
-    ProcessEGO(EGO1_PIN, &XRAM[0xF68B], &RAM[0x2B], 4, kitting_has_ego_sensor(),
-               &RAM[0x22], 6, &RAM[0x22], 7);
-  }
+  ProcessEGO(EGO1_PIN, &XRAM[0xF68B], &RAM[0x2B], 4, kitting_has_ego_sensor(),
+             &RAM[0x22], 6, &RAM[0x22], 7);
 
   _2FD0:
   ego2_sensor_start:
   // EGO #2 Sensor (8bit ADC)
-  {
-    ProcessEGO(EGO2_PIN, &XRAM[0xF68C], &RAM[0x2B], 5,
-               kitting_has_ego_sensor() && kitting_has_additional_ego_sensor(),
-               &RAM[0x23], 0, &RAM[0x23], 1);
-  }
+  ProcessEGO(EGO2_PIN, &XRAM[0xF68C], &RAM[0x2B], 5,
+             kitting_has_ego_sensor() && kitting_has_additional_ego_sensor(),
+             &RAM[0x23], 0, &RAM[0x23], 1);
 
   _3067:
   no_additional_ego_sensor:
-  {
-    if (kitting_has_additional_ego_sensor()) {
-      _306F:
-      if (CHECK_BIT_AT(RAM[0x2B], 4)) {
-        _3079:
-        if (CHECK_BIT_AT(RAM[0x2B], 5))
-          CLEAR_BIT_IN(RAM[0x2E], 2);
-      } else {
-        _3072:
-        if (!CHECK_BIT_AT(RAM[0x2B], 5))
-          SET_BIT_IN(RAM[0x2E], 2);
-      }
+  if (kitting_has_additional_ego_sensor()) {
+    _306F:
+    if (CHECK_BIT_AT(RAM[0x2B], 4)) {
+      _3079:
+      if (CHECK_BIT_AT(RAM[0x2B], 5))
+        CLEAR_BIT_IN(RAM[0x2E], 2);
     } else {
-      _3080:
-      no_additional_ego_sensor_2:
-      COPY_BIT(RAM[0x2B], 4, RAM[0x2E], 2);
+      _3072:
+      if (!CHECK_BIT_AT(RAM[0x2B], 5))
+        SET_BIT_IN(RAM[0x2E], 2);
     }
+  } else {
+    _3080:
+    no_additional_ego_sensor_2:
+    COPY_BIT(RAM[0x2B], 4, RAM[0x2E], 2);
   }
 
   _3084:
@@ -1463,7 +1579,7 @@ _2ED3:
     RAM[0x40] = Ram40Val;
 
     SET_MEM_WORD(XRAM, THROTTLE_POSITION_LESS_THRESHOLD, COMPOSE_WORD(Ram40Val, 0));
-    SET_MEM_WORD(XRAM, THROTTLE_POSITION_THRESHOLD, COMPONSE_WORD(Ram40Val, 0));
+    SET_MEM_WORD(XRAM, THROTTLE_POSITION_THRESHOLD, COMPOSE_WORD(Ram40Val, 0));
 
     SET_MEM_WORD(XRAM, THROTTLE_POSITION_1, COMPOSE_WORD(FLASH[0x807C], 0));
     SET_MEM_WORD(XRAM, THROTTLE_POSITION_2, COMPOSE_WORD(FLASH[0x807C], 0));
@@ -1511,5 +1627,6 @@ _2ED3:
 
   _3124:
   // TODO
+  ;
 }
 
