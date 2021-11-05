@@ -1,4 +1,4 @@
-﻿; Input SHA256 : 7F5E7B859D5A58D22C873EBBFE2C063401490FBABE63097AA7E4B81ADB8BDABA
+; Input SHA256 : 7F5E7B859D5A58D22C873EBBFE2C063401490FBABE63097AA7E4B81ADB8BDABA
 ; Input MD5    : 3F181C3C4B148D967845BB4113666A0D
 ; Input CRC32  : 5CF810FF
 
@@ -5627,6 +5627,8 @@ code_1934:                              ; CODE XREF: IE0_0:code_1927↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     R0, #0
                 mov     R1, A
                 mov     DPTR, #0F6BAh
@@ -5660,6 +5662,8 @@ code_195A:                              ; CODE XREF: IE0_0+5C9↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     R0, #0
                 mov     R1, A
                 ljmp    code_19AA
@@ -5704,6 +5708,8 @@ code_1988:                              ; CODE XREF: IE0_0+5F3↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     R0, #0
                 mov     R1, A
 
@@ -5979,6 +5985,8 @@ code_1AD5:                              ; CODE XREF: IE0_0+742↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, #0           ; B-Register
                 clr     C
                 rlc     A
@@ -6076,6 +6084,8 @@ code_1B33:                              ; CODE XREF: IE0_0+7A0↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
                 mov     DPTR, #0AFF7h
                 mov     A, RAM_3E
@@ -6085,6 +6095,8 @@ code_1B33:                              ; CODE XREF: IE0_0+7A0↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 add     A, B            ; B-Register
                 rrc     A
                 mov     B, A            ; B-Register
@@ -6167,6 +6179,8 @@ code_1B78:                              ; CODE XREF: IE0_0+7E5↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
                 mov     DPTR, #0B17Bh
                 mov     A, RAM_3E
@@ -6176,6 +6190,8 @@ code_1B78:                              ; CODE XREF: IE0_0+7E5↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 add     A, B            ; B-Register
                 rrc     A
                 mov     B, A            ; B-Register
@@ -6494,6 +6510,8 @@ code_1D1C:                              ; CODE XREF: IE0_0:code_1D08↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 sjmp    code_1D31
 ; ---------------------------------------------------------------------------
 
@@ -6506,6 +6524,8 @@ code_1D29:                              ; CODE XREF: IE0_0:code_1D1C↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
 
 code_1D31:                              ; CODE XREF: IE0_0+999↑j
                 mov     DPTR, #0F745h
@@ -6519,6 +6539,8 @@ code_1D31:                              ; CODE XREF: IE0_0+999↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 sjmp    code_1D4A
 ; ---------------------------------------------------------------------------
 
@@ -6531,6 +6553,8 @@ code_1D42:                              ; CODE XREF: IE0_0+9A7↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
 
 code_1D4A:                              ; CODE XREF: IE0_0+9B2↑j
                 mov     DPTR, #0F754h
@@ -6544,6 +6568,8 @@ code_1D4A:                              ; CODE XREF: IE0_0+9B2↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 sjmp    code_1D63
 ; ---------------------------------------------------------------------------
 
@@ -6556,6 +6582,8 @@ code_1D5B:                              ; CODE XREF: IE0_0+9C0↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
 
 code_1D63:                              ; CODE XREF: IE0_0+9CB↑j
                 mov     DPTR, #0F763h
@@ -8656,6 +8684,8 @@ neither_watchdog_nor_xram_checksum_failed:
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 lcall   init_ram_63     ; INPUT:
                                         ;  - Accumulator - high byte of table lookup
                                         ;
@@ -9667,7 +9697,7 @@ code_2BF3:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    @DPTR, A        ; ++XRAM[0xF69D]
                                         ; A = XRAM[0xF69D]
                 cjne    A, #20h, _2ED3_trampoline ; ' ' ; if (++XRAM[0xF69D] != 0x20) jump ...
-                sjmp    code_2C09
+                sjmp    xram_F69D_eq_20
 ; ---------------------------------------------------------------------------
 
 
@@ -9686,7 +9716,7 @@ _2ED3_trampoline:                       ; CODE XREF: power_on__ignition_key_turn
 PREREQUISITES: DPTR = 0xF69D
 Got here iff (XRAM[0xF69D] == 0x20)
 
-code_2C09:                              ; CODE XREF: power_on__ignition_key_turned_+872↑j
+xram_F69D_eq_20:                        ; CODE XREF: power_on__ignition_key_turned_+872↑j
                 clr     A
                 movx    @DPTR, A        ; XRAM[0xF69D] = 0
                 mov     A, RAM_72       ; A = RAM[0x72]
@@ -10357,8 +10387,7 @@ code_2EC9:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    @DPTR, A        ; XRAM[0xF6AC] = R0 // low byte of difference
                 lcall   clear_xram_f69e_0c_bytes
                 setb    RAM_28.3
-finished some parts
-
+finished some parts (Xram_F69D_eq_20)
 
 code_2ED3:                              ; CODE XREF: power_on__ignition_key_turned_:_2ED3_trampoline↑j
                 mov     DPTR, #0F69Ah
@@ -10922,7 +10951,7 @@ code_3124:                              ; CODE XREF: power_on__ignition_key_turn
                                         ; OUTPUT:
                                         ;  - Acc - table value
                 mov     RAM_43, A       ; RAM[0x43] = Interpolated value
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = RAM[0x43] = Interpolated value
                 add     A, #4
                 swap    A
                 rl      A
@@ -10932,7 +10961,7 @@ code_3124:                              ; CODE XREF: power_on__ignition_key_turn
                 add     A, #8
                 swap    A
                 anl     A, #0Fh
-                mov     RAM_41, A       ; RAM[0x41] = ((A + 1) & 0xF0) >> 4
+                mov     RAM_41, A       ; RAM[0x41] = ((A + 8) & 0xF0) >> 4
 
 
 !!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!
@@ -12608,6 +12637,8 @@ code_3993:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 lcall   init_ram_63     ; INPUT:
                                         ;  - Accumulator - high byte of table lookup
                                         ;
@@ -12707,6 +12738,8 @@ code_3A2C:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
                 mov     A, RAM_48
                 clr     C
@@ -12799,6 +12832,8 @@ code_3A97:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 lcall   init_ram_63     ; INPUT:
                                         ;  - Accumulator - high byte of table lookup
                                         ;
@@ -13084,6 +13119,8 @@ code_3BF0:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     R4, A
                 mov     R0, #0
                 mov     DPTR, #0F683h
@@ -13111,6 +13148,8 @@ code_3BF0:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     R1, A
                 mov     DPTR, #0B8B2h
                 mov     A, R4
@@ -13120,6 +13159,8 @@ code_3BF0:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
                 mov     DPTR, #0F6BFh
                 movx    A, @DPTR
@@ -13247,7 +13288,17 @@ code_3CC8:                              ; CODE XREF: power_on__ignition_key_turn
                 jnb     ACC.2, code_3CEA ; Accumulator
                 mov     DPTR, #0A2DEh
                 mov     R2, RAM_4A
-                lcall   get_value_from_table_no_negate ; Redirects call to table_lookup procedure
+                lcall   get_value_from_table_no_negate ; Redirects call to table_lookup procedure (PSW.F1 = 0)
+                                        ;
+                                        ; INPUT
+                                        ;  - DPTR table address in FLASH
+                                        ;  - R2 - packed offset and factor (factor - least significant three bits, will be SHL 5; offset - most significant five bits, will be SHR 3)
+                                        ;
+                                        ; OUTPUT
+                                        ;  - result: word R1:R0, R1 - high, R0 - low
+                                        ;      T[N] in R1 and zero in R0 if factor eq nil,
+                                        ;      factor*(T[N+1] - T[N]), otherwise
+                                        ;  - Accumulator = R1
                 mov     R0, A
                 mov     R1, #0FFh
                 mov     DPTR, #0A29Ch
@@ -13258,6 +13309,8 @@ code_3CC8:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 lcall   code_5F97
                 mov     DPTR, #0F778h
                 movx    @DPTR, A
@@ -13458,6 +13511,8 @@ code_3E17:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
                 mov     A, RAM_48
                 clr     C
@@ -13684,6 +13739,8 @@ code_3F45:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 lcall   init_ram_63     ; INPUT:
                                         ;  - Accumulator - high byte of table lookup
                                         ;
@@ -14459,6 +14516,8 @@ code_4334:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
                 mov     DPTR, #0F76Ah
                 movx    A, @DPTR
@@ -18344,7 +18403,7 @@ get_2values_for_throttle:               ; CODE XREF: filter_throttle_poistion?�
                 mov     R3, A           ; R3 = interpolate_table_value(R1, R0, DPTR)
                 mov     R2, RAM_4A      ; R2 = RAM[0x4A]
                 mov     DPTR, #8C0Bh
-R1:R0 = profile_table_value_no_negate_table_size_0x10(R2, R3, DPTR)
+R1:R0 = profile_table_value_no_negate_table_size_0x10(R2, R3, 0x856C)
 A = R1
                 lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
                                         ;  - R2 = low byte of difference = RAM[0x4A]
@@ -18382,15 +18441,17 @@ A = R1
                                         ; A = R1
                 mov     DPTR, #900Bh
                 mov     A, RAM_3D
-A = table_lookup_0(DPTR, RAM[0x3D])
+A = table_lookup_0(0x900B, RAM[0x3D])
                 lcall   table_lookup_0  ; INPUT:
                                         ;  - DPTR - flash location of table
                                         ;  - A - packed offset and factor (factor - least significant three bits, will be SHL 5; offset - most significant five bits, will be SHR 3)
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B = A = table_lookup_0(DPTR, RAM[0x3D])
-R1:R0 = scale_ADC_10bit_value(table_lookup_0(DPTR, RAM[0x3D]), R1:R0)
+R1:R0 = scale_ADC_10bit_value(table_lookup_0(0x900B, RAM[0x3D]), R1:R0)
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
@@ -18405,8 +18466,10 @@ R1:R0 = scale_ADC_10bit_value(table_lookup_0(DPTR, RAM[0x3D]), R1:R0)
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
-R1:R0 = scale_ADC_10bit_value(table_lookup_0(DPTR, RAM[0x3E]), R1:R0)
+R1:R0 = scale_ADC_10bit_value(table_lookup_0(0xB80D, RAM[0x3E]), R1:R0)
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
@@ -18423,7 +18486,7 @@ R1:R0 >>= 1
                 mov     R3, B           ; R3 = interpolated value
                 mov     R2, RAM_4A      ; R2 = RAM[0x4A]
                 mov     DPTR, #8D0Bh
-R1:R0 = profile_table_value_no_negate_table_size_0x10(R2, R3, DPTR)
+R1:R0 = profile_table_value_no_negate_table_size_0x10(R2, R3, 0x8D0B)
                 lcall   profile_table_value_no_negate_table_size_0x10 ; INPUT:
                                         ;  - R2 = low byte of difference = RAM[0x4A]
                                         ;  - R3 = table entry = interpolated value
@@ -18460,15 +18523,17 @@ R1:R0 = profile_table_value_no_negate_table_size_0x10(R2, R3, DPTR)
                                         ; A = R1
                 mov     DPTR, #900Bh
                 mov     A, RAM_3D
-A = table_lookup_0(DPTR, RAM[0x3D])
+A = table_lookup_0(0x900B, RAM[0x3D])
                 lcall   table_lookup_0  ; INPUT:
                                         ;  - DPTR - flash location of table
                                         ;  - A - packed offset and factor (factor - least significant three bits, will be SHL 5; offset - most significant five bits, will be SHR 3)
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
-R1:R0 = scale_ADC_10bit_value(R1:R0, table_lookup_0(DPTR, RAM[0x3D]))
+R1:R0 = scale_ADC_10bit_value(R1:R0, table_lookup_0(0x900B, RAM[0x3D]))
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
@@ -18483,8 +18548,10 @@ R1:R0 = scale_ADC_10bit_value(R1:R0, table_lookup_0(DPTR, RAM[0x3D]))
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
-R1:R0 = scale_ADC_10bit_value(R1:R0, table_lookup_0(DPTR, RAM[0x3E]))
+R1:R0 = scale_ADC_10bit_value(R1:R0, table_lookup_0(0xB80D, RAM[0x3E]))
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
@@ -18740,6 +18807,8 @@ code_5649:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
@@ -18755,6 +18824,8 @@ code_5649:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
@@ -18844,6 +18915,8 @@ code_56C7:                              ; CODE XREF: IE0_0:code_1651↑p
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mul     AB
                 mov     R0, A
                 mov     R1, B           ; B-Register
@@ -18855,6 +18928,8 @@ code_56C7:                              ; CODE XREF: IE0_0:code_1651↑p
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
@@ -19121,6 +19196,8 @@ code_57FA:                              ; CODE XREF: IE0_0+67B↑p
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     R1, A
                 mov     DPTR, #0B8B2h
                 mov     A, RAM_3D
@@ -19130,6 +19207,8 @@ code_57FA:                              ; CODE XREF: IE0_0+67B↑p
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 jz      code_581B
                 mov     DPTR, #0B891h
                 mov     A, RAM_3D
@@ -19139,6 +19218,8 @@ code_57FA:                              ; CODE XREF: IE0_0+67B↑p
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 clr     C
                 subb    A, R1
                 jc      code_581B
@@ -19222,6 +19303,8 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
@@ -19237,6 +19320,8 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
@@ -19297,6 +19382,8 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
@@ -19312,6 +19399,8 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
@@ -19332,6 +19421,8 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - Accumulator - holds high byte of table lookup routine
+                                        ;
+                                        ;  Returns result of get_valude_from_table_no_negate
                 mov     B, A            ; B-Register
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
@@ -22107,6 +22198,8 @@ code_62EF:                              ; CODE XREF: code_5649+B↑p
 ;
 ; OUTPUT:
 ;  - Accumulator - holds high byte of table lookup routine
+;
+;  Returns result of get_valude_from_table_no_negate
 
 table_lookup_0:                         ; CODE XREF: IE0_0+5AB↑p
                                         ; IE0_0+5D8↑p ...
@@ -22121,7 +22214,17 @@ table_lookup_0:                         ; CODE XREF: IE0_0+5AB↑p
                 mov     A, R3
                 push    ACC             ; Accumulator
                 mov     R2, B           ; R2 = B
-                lcall   get_value_from_table_no_negate ; Redirects call to table_lookup procedure
+                lcall   get_value_from_table_no_negate ; Redirects call to table_lookup procedure (PSW.F1 = 0)
+                                        ;
+                                        ; INPUT
+                                        ;  - DPTR table address in FLASH
+                                        ;  - R2 - packed offset and factor (factor - least significant three bits, will be SHL 5; offset - most significant five bits, will be SHR 3)
+                                        ;
+                                        ; OUTPUT
+                                        ;  - result: word R1:R0, R1 - high, R0 - low
+                                        ;      T[N] in R1 and zero in R0 if factor eq nil,
+                                        ;      factor*(T[N+1] - T[N]), otherwise
+                                        ;  - Accumulator = R1
                 mov     B, A            ; B-Register
                 pop     ACC             ; Accumulator
                 mov     R3, A
@@ -22177,7 +22280,17 @@ inline byte tripple_rotate_right(byte Data, byte Mask) {
 
 ; =============== S U B R O U T I N E =======================================
 
-; Redirects call to table_lookup procedure
+; Redirects call to table_lookup procedure (PSW.F1 = 0)
+;
+; INPUT
+;  - DPTR table address in FLASH
+;  - R2 - packed offset and factor (factor - least significant three bits, will be SHL 5; offset - most significant five bits, will be SHR 3)
+;
+; OUTPUT
+;  - result: word R1:R0, R1 - high, R0 - low
+;      T[N] in R1 and zero in R0 if factor eq nil,
+;      factor*(T[N+1] - T[N]), otherwise
+;  - Accumulator = R1
 
 get_value_from_table_no_negate:         ; CODE XREF: power_on__ignition_key_turned_+1943↑p
                                         ; table_lookup_0+12↑p
