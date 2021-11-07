@@ -1131,7 +1131,7 @@
  00000000:000055BE       get_flash_8e0b_plus_swapped_ram41_plus_ram4c
  00000000:000055C0       get_flash_8e0b_plus_swapped_acc_plus_ram4c
  00000000:000055CC       code_55CC
- 00000000:000055DE       filter_throttle_poistion?
+ 00000000:000055DE       filter_throttle_position?
  00000000:000055F7       sum_xram_f602_and_f779_larger_ff
  00000000:000055FF       sum_xram_f602_and_f779_less_80
  00000000:00005605       sum_xram_f602_and_f779_less_80_no_overflow
