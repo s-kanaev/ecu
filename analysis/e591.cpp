@@ -572,13 +572,8 @@ void InitRam5d() {
 */
 
   XRAM[0xF779] = DiffByte;
-  word Profiled;
-  {
-    TableEntryT Diff, Tpl;
-    Diff.ByteVal = DiffByte;
-    Tpl.ByteVal = RAM[0x4A];
-    Profiled = ProfileTableValue(Diff, Tpl, TableBase, TableLineLength, false);
-  }
+  word Profiled = ProfileTableValue(
+      DiffByte, RAM[0x4A], TableBase, TableLineLength, false);
 
   RAM[0x5D] = HIGH(Profiled);
 }
@@ -1001,7 +996,7 @@ _2748:
   RAM[0x70] = 0;
 
   if (!CHECK_BIT_AT(RAM[0x73], 2))
-    DPTR[0xF7A3] = 0;
+    XRAM[0xF7A3] = 0;
 
   if (!CHECK_BIT_AT(RAM[0x73], 1)) {
     CLEAR_BIT_IN(RAM[0x2E], 5);
@@ -1179,7 +1174,8 @@ _2A32:
 
   XRAM[0xF6BA] = RAM[0x49] < 0x1F ? 0x1F : RAM[0x49];
 
-  RAM[0x4A] = InterpolateTableValue(0x83B0, XRAM[0xF6BC], XRAM[0xF6BB]); // TODO Table size?
+  // TODO table length
+  RAM[0x4A] = InterpolateTableValue(0x83B0, XRAM[0xF6BC], XRAM[0xF6BB]);
   RAM[0x4B] = ((RAM[0x4A] + 4) >> 3) & 0x1F;
   RAM[0x4C] = ((RAM[0x4A] + 8) >> 4); // high nibble
 }
@@ -1587,9 +1583,6 @@ void MAIN_LOOP() {
     _308A:
     word Throttle = ADC_10bit(THROTTLE_POSITION_PIN);
 
-    if (Throttle < GET_MEM_WORD(XRAM, THROTTLE_POSITION_1))
-      goto throttle_position_less_than_threshold; // => _30B8
-
     if (Throttle >= GET_MEM_WORD(XRAM, THROTTLE_POSITION_1)) {
       _309D:
       Throttle = scale10bitADCValue(Throttle, FLASH[0x807D]);
@@ -1626,7 +1619,61 @@ void MAIN_LOOP() {
   }
 
   _3124:
+  {
+    word ThrottlePositionLessThreshold = GET_MEM_WORD(XRAM, THROTTLE_POSITION_LESS_THRESHOLD);
+    RAM[0x43] = InterpolateTableValue(
+        0x865C,
+        HIGH(ThrottlePositionLessThreshold),
+        LOW(ThrottlePositionLessThreshold));
+    // _3134:
+    // TODO
+  }
   // TODO
   ;
 }
 
+// _62FC:
+byte tableLookup0(word FlashPtr, OffsetAndFactorT OffAndFactor) {
+  return GetValueFromTableImpl(
+      FlashPtr, OffAndFactor.Offset, OffAndFactor.Factor, false);
+}
+
+struct TwoValuesForThrottle {
+  word V1;  // R3:R2
+  word V2;  // R1:R0
+};
+
+// _5555:
+TwoValuesForThrottle getTwoValuesForThrottle(word ScaledThrottlePosition) {
+  byte Interpolated = InterpolateTableValue(
+      0x856C, HIGH(ScaledThrottlePosition), LOW(ScaledThrottlePosition));
+  word Profiled;
+  // TODO table length, see RAM[0x3D]
+  const byte Factor1 = tableLookup0(0x900B, RAM[0x3D]);
+  // TODO table length, see RAM[0x3E]
+  const byte Factor2 = tableLookup0(0xB80D, RAM[0x3E]);
+  word Scaled;
+
+  TwoValuesForThrottle Result;
+
+  // TableEntryT Difference, TableEntryT Template, word FlashPtr, byte TableLineLength, bool Negate
+  {
+    // TODO table length (see RAM[0x4A] values)
+    Profiled = ProfileTableValue(RAM[0x4A], Interpolated, 0x856C, 0x10, false);
+    Scaled = scale10bitADCValue(Profiled, Factor1);
+    Scaled = scale10bitADCValue(Scaled, Factor2);
+    Scaled >>= 1;
+    Result.V1 = Scaled;
+  }
+
+  {
+    // TODO table length (see RAM[0x4A] values)
+    Profiled = ProfileTableValue(RAM[0x4A], Interpolated, 0x8D0B, 0x10, false);
+    Scaled = scale10bitADCValue(Profiled, Factor1);
+    Scaled = scale10bitADCValue(Scaled, Factor2);
+    Scaled >>= 1;
+    Result.V2 = Scaled;
+  }
+
+  return Result;
+}

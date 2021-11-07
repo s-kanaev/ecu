@@ -113,17 +113,30 @@ enum Pin : pin {
 };
 
 #define PACKED __attribute__((__packed__))
-struct PACKED TableEntryS {
-  byte TableIdx : 4;
-  byte InterpolationFraction : 4; // Used for interpolation / profiling.
+
+struct TableEntryT {
+  const byte Val;
+  const byte TableIdx;
+  const byte InterpolationFraction;
+
+  TableEntryT(byte V)
+    : Val{V},
+      TableIdx{static_cast<byte>((Val & 0xF0) >> 4)},
+      InterpolationFraction{static_cast<byte>((Val & 0x0F))}
+  {}
 };
 
-union TableEntryU {
-  TableEntryS TE;
-  byte ByteVal;
-};
+struct OffsetAndFactorT {
+  const byte Val;
+  const byte Offset;
+  const byte Factor;
 
-typedef union TableEntryU TableEntryT;
+  OffsetAndFactorT(byte V)
+    : Val{V},
+      Offset{static_cast<byte>((Val & 0xF8) >> 3)},
+      Factor{static_cast<byte>((Val & 0x07) << 5)}
+  {}
+};
 
 #define BYTE(x) (byte)(x)
 #define WORD(x) (word)(x)

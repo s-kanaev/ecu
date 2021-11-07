@@ -98,7 +98,7 @@ static inline void INIT_RAM() {
   [0x48] = 0,     // ???
   [0x49] = 0,     // XRAM[0xF6BC] + 0x80, saturated at 0xFF
   [0x4A] = 0,     // interpolated value of XRAM[0xF6BC/0xF6BB], table at FLASH[0x83B0], size unknown, TODO
-  [0x4B] = 0,     // ((RAM[0x4A] + 4) >> 3) & 0x1F
+  [0x4B] = 0,     // ((RAM[0x4A] + 4) >> 3) & 0x1F, range = 0x00 .. 0x1F
   [0x4C] = 0,     // ((RAM[0x4A] + 8) >> 4) = offset div 0x11 for table at FLASH[0x8AFB]
   [0x4D..0x5C] = 0,
   [0x5D] = 0,     // ???

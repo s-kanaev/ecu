@@ -404,7 +404,8 @@ word MultiplySigned(byte M1, byte M2) {
 // _5FFB:
 word scale10bitADCValue(word V, byte Factor) {
   // calculus: (WORD(HIGH(V)) * Factor) + LOW(WORD(LOW(V)) * Factor)
-  return HIGH_W(QUAD(V) * Factor);
+  return (WORD(HIGH(V)) * Factor) + LOW(WORD(LOW(V)) * Factor);
+  //HIGH_W(QUAD(V) * Factor);
 }
 
 // _64A4:
@@ -424,7 +425,10 @@ void addByteInXRAMWord(byte _V, word XramPtr) {
   XRAM[XramPtr + 1] = HIGH(V);
 }
 
-// Returns FLASH[FlashPtr + TableIdx] + HIGH(DiffFactor * (FLASH[FlashPtr + TableIdx + 1] - FLASH[FlashPtr + TableIdx]))
+// Returns
+// FLASH[FlashPtr + TableIdx] +
+//    HIGH(DiffFactor *
+//         (FLASH[FlashPtr + TableIdx + 1] - FLASH[FlashPtr + TableIdx]))
 // _62CE:
 byte InterpolateTableValue(word FlashPtr, byte TableIdx, byte DiffFactor) {
   const byte Base = FLASH[FlashPtr + TableIdx];
