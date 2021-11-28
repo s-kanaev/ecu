@@ -4910,7 +4910,9 @@ code_163B:                              ; CODE XREF: IE0_0+29C↑j
                 inc     DPTR
                 movx    A, @DPTR
                 mov     R1, A
-                lcall   filter_throttle_position?
+                lcall   filter_throttle_position? ; INPUT - R1:R0 - throttle position less threshold
+                                        ;
+                                        ; OUTPUT - R1:R0
                 ljmp    code_1772
 ; ---------------------------------------------------------------------------
 
@@ -5094,7 +5096,15 @@ code_16F1:                              ; CODE XREF: IE0_0+35D↑j
                                         ;
                                         ; OUTPUT:
                                         ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
-                lcall   code_60BA
+                lcall   mul_word_16_saturate_to_ffff ; INPUT: R1:R0 - word
+                                        ;
+                                        ; OUTPUT: R1:R0
+                                        ;   R1 = ((R0 & 0xF0) >> 4) | (R1 << 4)
+                                        ;   R0 = (R0 & 0x0F) << 4
+                                        ;   R1:R0 = FF:FF if R1 > 0x0F
+                                        ;
+                                        ;   R1:R0 = R1:R0 * 0x10, or 0xFFFF if overflow
+                                        ;
                 mov     DPTR, #0F67Fh
                 movx    A, @DPTR
                 mov     R2, A
@@ -6488,6 +6498,7 @@ code_1D0E:                              ; CODE XREF: IE0_0+971↑j
                                         ;
                                         ; OUTPUT:
                                         ;  R1:R0 = R1:R0 - Acc
+                                        ;  Acc = R1
                 mov     A, R1
                 jnz     code_1D1A
                 mov     A, R0
@@ -10859,11 +10870,14 @@ scaled_throttle_position_less_flash_807e:
                                         ;
                                         ; OUTPUT:
                                         ;  - R1:R0
+                                        ;    Acc = R1
                                         ;
-                                        ; if (R1 & (1<<7)) return R1:R0
-                                        ;
-                                        ; R0 = 0 - R0
-                                        ; R1 = 0 - R1
+                                        ; if (!(R1 & (1<<7))) return R1:R0
+                                        ; else {
+                                        ;   R0 = 0 - R0
+                                        ;   R1 = 0 - R1 - CY
+                                        ;   return R1:R0
+                                        ; }
                                         ;
                 mov     A, R1
                 clr     C
@@ -10956,20 +10970,12 @@ code_3124:                              ; CODE XREF: power_on__ignition_key_turn
                 swap    A
                 rl      A
                 anl     A, #1Fh
-                mov     RAM_42, A       ; RAM[0x42] = ((A + 4) & 0xF8) >> 3
+                mov     RAM_42, A       ; RAM[0x42] = ((RAM[0x43] + 4) & 0xF8) >> 3
                 mov     A, B            ; B-Register
                 add     A, #8
                 swap    A
                 anl     A, #0Fh
-                mov     RAM_41, A       ; RAM[0x41] = ((A + 8) & 0xF0) >> 4
-
-
-!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!
-
-/// BRANCH
-
-
-
+                mov     RAM_41, A       ; RAM[0x41] = ((RAM[0x41] + 8) & 0xF0) >> 4
                 jnb     RAM_27.4, code_31A5 ; if (RAM[0x27] & (1 << 4)) jump ...
                 mov     DPTR, #0F6ADh
                 movx    A, @DPTR
@@ -10977,6 +10983,7 @@ code_3124:                              ; CODE XREF: power_on__ignition_key_turn
                 inc     DPTR
                 movx    A, @DPTR
                 mov     R1, A           ; R1:R0 = COMPOSE_WORD(XRAM[0xF6AE], XRAM[0xF6AD])
+                                        ; Throttle position less threshold
                 mov     DPTR, #0F6B1h
                 mov     A, R0
                 movx    @DPTR, A
@@ -10986,91 +10993,102 @@ code_3124:                              ; CODE XREF: power_on__ignition_key_turn
                                         ; XRAM[0xF6B2] = XRAM[0xF6AE]
 
 
-!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!
 
+CONTINUE REVERSING HERE
 
 
 
 R1:R0 = COMPOSE_WORD(XRAM[0xF6AE], XRAM[0xF6AD]) // latest throttle position which is less than threshold
-                lcall   filter_throttle_position?
+                lcall   filter_throttle_position? ; INPUT - R1:R0 - throttle position less threshold
+                                        ;
+                                        ; OUTPUT - R1:R0
                 mov     DPTR, #0F6D6h
                 mov     A, R0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6D6] = R0
                 inc     DPTR
                 mov     A, R1
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6D7] = R1
                 mov     DPTR, #0F6D8h
                 mov     A, R0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6D8] = R0
                 inc     DPTR
                 mov     A, R1
-                movx    @DPTR, A
-                clr     IEN0.0          ; Interrupt Enable Register 0
+                movx    @DPTR, A        ; XRAM[0xF6D9] = R1
+                clr     IEN0.0          ; Disable external interrupt 0
                 mov     DPTR, #0F6DAh
                 mov     A, R0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6DA] = R0
                 inc     DPTR
                 mov     A, R1
-                movx    @DPTR, A
-                setb    IEN0.0          ; Interrupt Enable Register 0
+                movx    @DPTR, A        ; XRAM[0xF6DB] = R1
+                setb    IEN0.0          ; Enable external interrupt 0
                 mov     DPTR, #0F6CCh
                 movx    A, @DPTR
-                mov     R0, A
+                mov     R0, A           ; R0 = XRAM[0xF6CC]
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
-                mov     B, RAM_49       ; B-Register
+                mov     R1, A           ; R1 = XRAM[0xF6CD]
+                mov     B, RAM_49       ; B = RAM[0x49]
+scale_ADC_10bit_value(XRAM[0xF6CD]:XRAM[0xF6CC], RAM[0x49])
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
                                         ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
-                lcall   code_60BA
+                lcall   mul_word_16_saturate_to_ffff ; INPUT: R1:R0 - word
+                                        ;
+                                        ; OUTPUT: R1:R0
+                                        ;   R1 = ((R0 & 0xF0) >> 4) | (R1 << 4)
+                                        ;   R0 = (R0 & 0x0F) << 4
+                                        ;   R1:R0 = FF:FF if R1 > 0x0F
+                                        ;
+                                        ;   R1:R0 = R1:R0 * 0x10, or 0xFFFF if overflow
+                                        ;
                 mov     DPTR, #0F6E4h
                 mov     A, R0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6E4] = R0
                 inc     DPTR
                 mov     A, R1
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6E5] = R1
                 mov     R0, #0
                 mov     R1, #0
-                clr     IEN0.0          ; Interrupt Enable Register 0
+                clr     IEN0.0          ; disable external interrupt 0
                 mov     DPTR, #0F6DCh
                 mov     A, R0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6DC] = XRAM[0xF6DD] = 0
                 inc     DPTR
                 mov     A, R1
                 movx    @DPTR, A
-                setb    IEN0.0          ; Interrupt Enable Register 0
+                setb    IEN0.0          ; enable external interrupt 0
                 ljmp    code_3514
 ; ---------------------------------------------------------------------------
 
 code_31A5:                              ; CODE XREF: power_on__ignition_key_turned_+DB5↑j
                 mov     DPTR, #874Dh
                 clr     A
-                movc    A, @A+DPTR
-                mov     B, RAM_49       ; B-Register
-                mul     AB
-                mov     A, #4Bh ; 'K'
+                movc    A, @A+DPTR      ; A = FLASH[0x874D]
+                mov     B, RAM_49       ; B = RAM[0x49]
+                mul     AB              ; B:A = FLASH[0x874D] * RAM[0x49]
+                mov     A, #4Bh ; 'K'   ; A = 0x4B
                 clr     C
                 subb    A, RAM_59
-                add     A, B            ; B-Register
+                add     A, B            ; A = (0x4B - RAM[0x59]) + HIGH(FLASH[0x874D] * RAM[0x49])
                 mov     B, #4           ; B-Register
-                mul     AB
+                mul     AB              ; B:A = 4 * ((0x4B - RAM[0x59]) + HIGH(FLASH[0x874D] * RAM[0x49]))
                 mov     R0, A
-                mov     R1, B           ; B-Register
+                mov     R1, B           ; R1:R0 = 4 * ((0x4B - RAM[0x59]) + HIGH(FLASH[0x874D] * RAM[0x49]))
                 mov     DPTR, #87BBh
                 clr     A
                 movc    A, @A+DPTR
                 mov     B, #4           ; B-Register
-                mul     AB
+                mul     AB              ; B:A = 4 * FLASH[0x87BB]
                 add     A, R0
                 mov     R0, A
                 mov     A, B            ; B-Register
                 addc    A, R1
-                mov     R1, A
-                clr     RAM_27.2
+                mov     R1, A           ; R1:R0 += 4 * FLASH[0x87BB]
+                clr     RAM_27.2        ; RAM[0x27] &= ~(1 << 2)
 
 code_31CD:                              ; CODE XREF: power_on__ignition_key_turned_+E5E↓j
                 mov     MD0, #0         ; Multiplication/Division Register 0
@@ -11090,7 +11108,8 @@ code_31CD:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     R2, MD2         ; Multiplication/Division Register 2
                 mov     R2, MD3         ; Multiplication/Division Register 3
                 mov     R2, MD4         ; Multiplication/Division Register 4
-                mov     R2, MD5         ; Multiplication/Division Register 5
+                mov     R2, MD5         ; Quot (32-bit), Rem (16-bit) = 00:R1:R0:00 / 00:78
+                                        ; B:A = LOW_WORD(Quot)
                 jbc     RAM_27.2, code_31CD
                 setb    RAM_27.2
                 add     A, #80h
@@ -11102,29 +11121,40 @@ code_31FB:                              ; CODE XREF: power_on__ignition_key_turn
                 jnz     code_3203
                 mov     A, #0FFh
                 dec     B               ; B-Register
+if (A < 0x80) {
+  A ^= 0x80;
+  ++B;
+} else if (A == 0x80) {
+  A = 0xFF;
+  ++B;
+} else /* if (A > 0x80) */ {
+  A ^= 0x80;
+  B += 2;
+}
 
 code_3203:                              ; CODE XREF: power_on__ignition_key_turned_+E6B↑j
                 mov     DPTR, #0F6ECh
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6EC] = A
                 mov     A, B            ; B-Register
                 mov     DPTR, #0F6EDh
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6ED] = B
                 mov     DPTR, #0F6EEh
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6EE] = B
                 mov     A, RAM_49
-                jz      code_328B
+                jz      ram_49_eq_zero  ; if (!RAM[0x49]) jump ...
+RAM[0x49] != 0
                 mov     DPTR, #0F6ADh
                 movx    A, @DPTR
                 mov     R0, A
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
+                mov     R1, A           ; R1:R0 = XRAM[0xF6AE]:XRAM[0xF6AD]
                 mov     DPTR, #0F6B1h
                 movx    A, @DPTR
                 mov     R2, A
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R3, A
+                mov     R3, A           ; R3:R2 = XRAM[0xF6B2]:XRAM[0xF6B1]
                 lcall   subtract_word   ; INPUT - R1:R0
                                         ;         R3:R2
                                         ;
@@ -11134,17 +11164,20 @@ code_3203:                              ; CODE XREF: power_on__ignition_key_turn
                                         ; R1 - high, R0 - low
                                         ; R3 - high, R2 - low
                 mov     C, ACC.7        ; Accumulator
-                mov     PSW.5, C        ; Program Status Word
+                mov     PSW.5, C        ; PSW.F0 = R1.7 // Store flag
                 lcall   abs_word_by_msb ; INPUT:
                                         ;  - R1:R0 - input word
                                         ;
                                         ; OUTPUT:
                                         ;  - R1:R0
+                                        ;    Acc = R1
                                         ;
-                                        ; if (R1 & (1<<7)) return R1:R0
-                                        ;
-                                        ; R0 = 0 - R0
-                                        ; R1 = 0 - R1
+                                        ; if (!(R1 & (1<<7))) return R1:R0
+                                        ; else {
+                                        ;   R0 = 0 - R0
+                                        ;   R1 = 0 - R1 - CY
+                                        ;   return R1:R0
+                                        ; }
                                         ;
                 mov     B, #25h ; '%'   ; B-Register
                 lcall   scale_ADC_10bit_value ; INPUT:
@@ -11168,7 +11201,9 @@ code_3237:                              ; CODE XREF: power_on__ignition_key_turn
                 nop
                 nop
                 nop
-                mov     R2, MD0         ; Multiplication/Division Register 0
+                mov     R2, MD0         ; Quot (32-bit), Rem (16-bit) = 00:R1::R0::0x25 / 00:RAM[0x49]
+                                        ;
+                                        ; R4:R3:R2 = lower 4 bytes of Quot
                 mov     R3, MD1         ; Multiplication/Division Register 1
                 mov     R4, MD2         ; Multiplication/Division Register 2
                 mov     A, MD3          ; Multiplication/Division Register 3
@@ -11177,24 +11212,25 @@ code_3237:                              ; CODE XREF: power_on__ignition_key_turn
                 jbc     RAM_27.2, code_3237
                 setb    RAM_27.2
                 mov     A, R4
-                jnz     code_3265
+                jnz     code_3265       ; if (R4) jump ...
                 mov     A, R3
-                jnb     ACC.7, code_3269 ; Accumulator
+                jnb     ACC.7, code_3269 ; if (!(R3 & (1 << 7))) jump ...
 
 code_3265:                              ; CODE XREF: power_on__ignition_key_turned_+ECD↑j
                 mov     R2, #0FFh
-                mov     R3, #7Fh
+                mov     R3, #7Fh        ; R3:R2 = 7F:FF
 
 code_3269:                              ; CODE XREF: power_on__ignition_key_turned_+ED0↑j
                 mov     R0, RAM_2
-                mov     R1, RAM_3
-                jnb     PSW.5, code_3273 ; Program Status Word
+                mov     R1, RAM_3       ; R1:R0 = R3:R2
+                jnb     PSW.5, code_3273 ; if (!stored flag) jump ...  // Check the flag
                 lcall   subtract_acc_from_word ; INPUT:
                                         ;  R1:R0
                                         ;  Acc
                                         ;
                                         ; OUTPUT:
                                         ;  R1:R0 = R1:R0 - Acc
+                                        ;  Acc = R1
 
 code_3273:                              ; CODE XREF: power_on__ignition_key_turned_+EDB↑j
                 mov     DPTR, #0F6EAh
@@ -11202,34 +11238,37 @@ code_3273:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, R1
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6EB]:XRAM[0xF6EA] = R1:R0
                 mov     DPTR, #807Fh
                 clr     A
                 movc    A, @A+DPTR
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = FLASH[0x807F]
                 lcall   abs_word_by_msb ; INPUT:
                                         ;  - R1:R0 - input word
                                         ;
                                         ; OUTPUT:
                                         ;  - R1:R0
+                                        ;    Acc = R1
                                         ;
-                                        ; if (R1 & (1<<7)) return R1:R0
-                                        ;
-                                        ; R0 = 0 - R0
-                                        ; R1 = 0 - R1
+                                        ; if (!(R1 & (1<<7))) return R1:R0
+                                        ; else {
+                                        ;   R0 = 0 - R0
+                                        ;   R1 = 0 - R1 - CY
+                                        ;   return R1:R0
+                                        ; }
                                         ;
                 mov     A, R1
                 cjne    A, B, code_3289 ; B-Register
 
 code_3289:                              ; CODE XREF: power_on__ignition_key_turned_+EF4↑j
-                jnc     code_3294
+                jnc     code_3294       ; if (R1 >= B) jump ...
 
-code_328B:                              ; CODE XREF: power_on__ignition_key_turned_+E81↑j
+ram_49_eq_zero:                         ; CODE XREF: power_on__ignition_key_turned_+E81↑j
                 clr     A
                 mov     DPTR, #0F6EAh
                 movx    @DPTR, A
                 mov     DPTR, #0F6EBh
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6EB]:XRAM[0xF6EA] = 0
 
 code_3294:                              ; CODE XREF: power_on__ignition_key_turned_:code_3289↑j
                 mov     DPTR, #0F6ADh
@@ -11237,18 +11276,18 @@ code_3294:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     R0, A
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
+                mov     R1, A           ; R1:R0 = XRAM[0xF6AE]:XRAM[0xF6AD]
                 mov     DPTR, #0F6B1h
                 movx    A, @DPTR
                 mov     R2, A
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R3, A
+                mov     R3, A           ; R3:R2 = XRAM[0xF6B2]:XRAM[0xF6B1]
                 mov     DPTR, #0F6B1h
                 mov     A, R0
                 movx    @DPTR, A
                 inc     DPTR
-                mov     A, R1
+                mov     A, R1           ; XRAM[0xF6B2]:XRAM[0xF6B1] = XRAM[0xF6AE]:XRAM[0xF6AD]
                 movx    @DPTR, A
                 lcall   subtract_word   ; INPUT - R1:R0
                                         ;         R3:R2
@@ -11262,15 +11301,15 @@ code_3294:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     R1, A
                 mov     A, R0
                 rrc     A
-                mov     R0, A
+                mov     R0, A           ; R1:R0 >>= 1
                 mov     R2, RAM_0
-                mov     R3, RAM_1
+                mov     R3, RAM_1       ; R3:R2 = R1:R0
                 mov     DPTR, #0F6ADh
                 movx    A, @DPTR
                 mov     R0, A
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
+                mov     R1, A           ; R1:R0 = XRAM[0xF6AE]:XRAM[0xF6AD]
                 lcall   add_word        ; Add words
                                         ;
                                         ; INPUT:
@@ -11284,21 +11323,21 @@ code_3294:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;    CY - if overflowed
                                         ;
                 mov     A, R3
-                jb      ACC.7, code_32D3 ; Accumulator
+                jb      ACC.7, code_32D3 ; if (R3 & (1 << 7)) jump ...
                 mov     A, R1
                 cjne    A, #64h, code_32CB ; 'd'
 
 code_32CB:                              ; CODE XREF: power_on__ignition_key_turned_+F36↑j
-                jc      code_32D9
+                jc      code_32D9       ; if (R1 < 0x64) jump ...
                 mov     R0, #0
-                mov     R1, #64h ; 'd'
+                mov     R1, #64h ; 'd'  ; R1:R0 = 64:00 // lower limit
                 sjmp    code_32D9
 ; ---------------------------------------------------------------------------
 
 code_32D3:                              ; CODE XREF: power_on__ignition_key_turned_+F32↑j
-                jc      code_32D9
+                jc      code_32D9       ; if (R1:R0 + R3:R2 > FF:FF) jump ...
                 mov     R0, #0
-                mov     R1, #0
+                mov     R1, #0          ; R1:R0 = 00:00
 
 code_32D9:                              ; CODE XREF: power_on__ignition_key_turned_:code_32CB↑j
                                         ; power_on__ignition_key_turned_+F3F↑j ...
@@ -11307,34 +11346,35 @@ code_32D9:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, R1
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6E9]:XRAM[0xF6E8] = R1:R0
                 mov     DPTR, #0F6EAh
                 movx    A, @DPTR
                 mov     R0, A
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
+                mov     R1, A           ; R1:R0 = XRAM[0xF6EA]:XRAM[0xF6EB]
                 mov     A, R1
                 mov     C, ACC.7        ; Accumulator
                 rrc     A
                 mov     R1, A
                 mov     A, R0
                 rrc     A
-                mov     R0, A
+                mov     R0, A           ; R1:R0 >>= 1 // with sign = CY = R1.7
                 lcall   subtract_acc_from_word ; INPUT:
                                         ;  R1:R0
                                         ;  Acc
                                         ;
                                         ; OUTPUT:
                                         ;  R1:R0 = R1:R0 - Acc
+                                        ;  Acc = R1
                 mov     R2, RAM_0
-                mov     R3, RAM_1
+                mov     R3, RAM_1       ; R3:R2 = R1:R0
                 mov     DPTR, #0F6E8h
                 movx    A, @DPTR
                 mov     R0, A
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
+                mov     R1, A           ; R1:R0 = XRAM[0xF6E9]:XRAM[0xF6E8]
                 lcall   add_word        ; Add words
                                         ;
                                         ; INPUT:
@@ -11348,21 +11388,21 @@ code_32D9:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;    CY - if overflowed
                                         ;
                 mov     A, R3
-                jb      ACC.7, code_3313 ; Accumulator
+                jb      ACC.7, code_3313 ; if (R3 & (1 << 7)) jump ...
                 mov     A, R1
                 cjne    A, #64h, code_330B ; 'd'
 
 code_330B:                              ; CODE XREF: power_on__ignition_key_turned_+F76↑j
-                jc      code_3319
+                jc      code_3319       ; if (R1 < 0x64) jump ...
                 mov     R0, #0
-                mov     R1, #64h ; 'd'
+                mov     R1, #64h ; 'd'  ; R1:R0 = 00:64 // lower limit
                 sjmp    code_3319
 ; ---------------------------------------------------------------------------
 
 code_3313:                              ; CODE XREF: power_on__ignition_key_turned_+F72↑j
-                jc      code_3319
+                jc      code_3319       ; if (R1:R0 + R3:R2 > FF:FF) jump ...
                 mov     R0, #0
-                mov     R1, #0
+                mov     R1, #0          ; R1:R0 = 00:00
 
 code_3319:                              ; CODE XREF: power_on__ignition_key_turned_:code_330B↑j
                                         ; power_on__ignition_key_turned_+F7F↑j ...
@@ -11371,16 +11411,20 @@ code_3319:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, R1
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6E9]:XRAM[0xF6E8] = R1:R0
                 mov     A, R1
                 mov     DPTR, #0F6D4h
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6D4] = R1
                 mov     DPTR, #0F6D8h
+
+          CONTINUE REVERSING HERE
+
+
                 movx    A, @DPTR
                 mov     R0, A
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
+                mov     R1, A           ; R1:R0 = XRAM[0xF6D9]:XRAM[0xF6D8]
                 mov     DPTR, #0F6E2h
                 mov     A, R0
                 movx    @DPTR, A
@@ -11407,7 +11451,9 @@ code_3346:                              ; CODE XREF: power_on__ignition_key_turn
                 inc     DPTR
                 movx    A, @DPTR
                 mov     R1, A
-                lcall   filter_throttle_position?
+                lcall   filter_throttle_position? ; INPUT - R1:R0 - throttle position less threshold
+                                        ;
+                                        ; OUTPUT - R1:R0
                 mov     DPTR, #0F6EEh
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -11510,7 +11556,15 @@ code_33D7:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ; OUTPUT:
                                         ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
-                lcall   code_60BA
+                lcall   mul_word_16_saturate_to_ffff ; INPUT: R1:R0 - word
+                                        ;
+                                        ; OUTPUT: R1:R0
+                                        ;   R1 = ((R0 & 0xF0) >> 4) | (R1 << 4)
+                                        ;   R0 = (R0 & 0x0F) << 4
+                                        ;   R1:R0 = FF:FF if R1 > 0x0F
+                                        ;
+                                        ;   R1:R0 = R1:R0 * 0x10, or 0xFFFF if overflow
+                                        ;
                 mov     DPTR, #0F6EEh
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -18633,6 +18687,9 @@ code_55CC:                              ; CODE XREF: get_flash_8e0b_plus_swapped
 
 ; =============== S U B R O U T I N E =======================================
 
+; INPUT - R1:R0 - throttle position less threshold
+;
+; OUTPUT - R1:R0
 
 filter_throttle_position?:              ; CODE XREF: IE0_0+2BD↑p
                                         ; power_on__ignition_key_turned_+DC8↑p ...
@@ -18650,9 +18707,9 @@ filter_throttle_position?:              ; CODE XREF: IE0_0+2BD↑p
                 mov     DPTR, #0F779h
                 movx    A, @DPTR        ; A = XRAM[0xF779]
                 add     A, B            ; A = XRAM[0xF602] + XRAM[0xF779]
-                jb      B.7, sum_xram_f602_and_f779_less_80 ; if ((XRAM[0xF602] + XRAM[0xF779]) > 0x80) jump ...
-                mov     B, A            ; B-Register
-                jnc     sum_xram_f602_and_f779_larger_ff ; if ((XRAM[0xF602] + XRAM[0xF779]) > 0xFF) jump ...
+                jb      B.7, xram_f602_larger_7f ; if (XRAM[0xF602] >= 0x80) jump ...
+                mov     B, A            ; B = A
+                jnc     sum_xram_f602_and_f779_less_or_equal_ff ; if ((XRAM[0xF602] + XRAM[0xF779]) <= 0xFF) jump ...
                 lcall   add_word_R3_R2  ; INPUT
                                         ;  - R1:R0
                                         ;  - R3:R2
@@ -18660,7 +18717,8 @@ filter_throttle_position?:              ; CODE XREF: IE0_0+2BD↑p
                                         ; OUTPUT
                                         ;  R3:R2 += R1:R0
 
-sum_xram_f602_and_f779_larger_ff:       ; CODE XREF: filter_throttle_position?+14↑j
+sum_xram_f602_and_f779_less_or_equal_ff:
+                                        ; CODE XREF: filter_throttle_position?+14↑j
                                         ; filter_throttle_position?+25↓j
                 lcall   scale_ADC_10bit_value ; INPUT:
                                         ;  - B - factor
@@ -18683,14 +18741,14 @@ sum_xram_f602_and_f779_larger_ff:       ; CODE XREF: filter_throttle_position?+1
                 sjmp    code_5619
 ; ---------------------------------------------------------------------------
 
-sum_xram_f602_and_f779_less_80:         ; CODE XREF: filter_throttle_position?+F↑j
-                jnc     sum_xram_f602_and_f779_less_80_no_overflow
+xram_f602_larger_7f:                    ; CODE XREF: filter_throttle_position?+F↑j
+                jnc     xram_f602_larger_7f_sum_xram_f602_and_f779_less_or_equal_ff
                 mov     B, A            ; B-Register
-                sjmp    sum_xram_f602_and_f779_larger_ff
+                sjmp    sum_xram_f602_and_f779_less_or_equal_ff
 ; ---------------------------------------------------------------------------
 
-sum_xram_f602_and_f779_less_80_no_overflow:
-                                        ; CODE XREF: filter_throttle_position?:sum_xram_f602_and_f779_less_80↑j
+xram_f602_larger_7f_sum_xram_f602_and_f779_less_or_equal_ff:
+                                        ; CODE XREF: filter_throttle_position?:xram_f602_larger_7f↑j
                 cpl     A
                 inc     A
                 mov     B, A            ; B = -A
@@ -18714,6 +18772,7 @@ sum_xram_f602_and_f779_less_80_no_overflow:
                                         ;
                                         ; OUTPUT:
                                         ;  R1:R0 = R1:R0 - Acc
+                                        ;  Acc = R1
                 jnb     ACC.7, code_5619 ; Accumulator
                 mov     R0, #0
                 mov     R1, #0
@@ -20628,6 +20687,7 @@ code_5E9A:                              ; CODE XREF: code_5D9F:code_5E95↑j
                                         ;
                                         ; OUTPUT:
                                         ;  R1:R0 = R1:R0 - Acc
+                                        ;  Acc = R1
 
 code_5EA8:                              ; CODE XREF: code_5D9F+103↑j
                 mov     A, R1
@@ -21090,6 +21150,7 @@ code_602A:                              ; CODE XREF: IE0_0+780↑p
 ;
 ; OUTPUT:
 ;  R1:R0 = R1:R0 - Acc
+;  Acc = R1
 
 subtract_acc_from_word:                 ; CODE XREF: IE0_0:code_1D0E↑p
                                         ; power_on__ignition_key_turned_+EDE↑p ...
@@ -21111,11 +21172,14 @@ subtract_acc_from_word:                 ; CODE XREF: IE0_0:code_1D0E↑p
 ;
 ; OUTPUT:
 ;  - R1:R0
+;    Acc = R1
 ;
-; if (R1 & (1<<7)) return R1:R0
-;
-; R0 = 0 - R0
-; R1 = 0 - R1
+; if (!(R1 & (1<<7))) return R1:R0
+; else {
+;   R0 = 0 - R0
+;   R1 = 0 - R1 - CY
+;   return R1:R0
+; }
 ;
 
 abs_word_by_msb:                        ; CODE XREF: power_on__ignition_key_turned_+D40↑p
@@ -21276,23 +21340,35 @@ code_60B2:                              ; CODE XREF: code_60AE+8↓j
 
 ; =============== S U B R O U T I N E =======================================
 
+; INPUT: R1:R0 - word
+;
+; OUTPUT: R1:R0
+;   R1 = ((R0 & 0xF0) >> 4) | (R1 << 4)
+;   R0 = (R0 & 0x0F) << 4
+;   R1:R0 = FF:FF if R1 > 0x0F
+;
+;   R1:R0 = R1:R0 * 0x10, or 0xFFFF if overflow
+;
 
-code_60BA:                              ; CODE XREF: IE0_0+370↑p
+mul_word_16_saturate_to_ffff:           ; CODE XREF: IE0_0+370↑p
                                         ; power_on__ignition_key_turned_+DF5↑p ...
                 mov     A, R1
                 anl     A, #0F0h
-                jnz     saturate_r0_r1_to_ff_ff
+                jnz     saturate_r0_r1_to_ff_ff ; if (R1 & 0xF0) jump ...
+                                        ; if (R1 > 0x0F) jump ...
                 mov     A, R0
                 anl     A, #0F0h
-                orl     A, R1
+                orl     A, R1           ; A = (R0 & 0xF0) | R1
                 swap    A
-                mov     R1, A
+                mov     R1, A           ; // R1 <= 0x0F
+                                        ; // R1 = SWAP_NIBBLES((R0 & 0xF0) | R1)
+                                        ; R1 = ((R0 & 0xF0) >> 4) | (R1 << 4)
                 mov     A, R0
                 anl     A, #0Fh
                 swap    A
-                mov     R0, A
+                mov     R0, A           ; R0 = (R0 & 0x0F) << 4
                 ret
-; End of function code_60BA
+; End of function mul_word_16_saturate_to_ffff
 
 
 ; =============== S U B R O U T I N E =======================================

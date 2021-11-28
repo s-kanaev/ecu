@@ -668,7 +668,7 @@
  00000000:00003269       code_3269
  00000000:00003273       code_3273
  00000000:00003289       code_3289
- 00000000:0000328B       code_328B
+ 00000000:0000328B       ram_49_eq_zero
  00000000:00003294       code_3294
  00000000:000032CB       code_32CB
  00000000:000032D3       code_32D3
@@ -1132,9 +1132,9 @@
  00000000:000055C0       get_flash_8e0b_plus_swapped_acc_plus_ram4c
  00000000:000055CC       code_55CC
  00000000:000055DE       filter_throttle_position?
- 00000000:000055F7       sum_xram_f602_and_f779_larger_ff
- 00000000:000055FF       sum_xram_f602_and_f779_less_80
- 00000000:00005605       sum_xram_f602_and_f779_less_80_no_overflow
+ 00000000:000055F7       sum_xram_f602_and_f779_less_or_equal_ff
+ 00000000:000055FF       xram_f602_larger_7f
+ 00000000:00005605       xram_f602_larger_7f_sum_xram_f602_and_f779_less_or_equal_ff
  00000000:00005619       code_5619
  00000000:00005620       code_5620
  00000000:00005644       code_5644
@@ -1282,7 +1282,7 @@
  00000000:000060A4       code_60A4
  00000000:000060AE       code_60AE
  00000000:000060B2       code_60B2
- 00000000:000060BA       code_60BA
+ 00000000:000060BA       mul_word_16_saturate_to_ffff
  00000000:000060CB       shift_right_word
  00000000:000060D3       shr_word_twice
  00000000:000060D6       code_60D6
