@@ -9,25 +9,34 @@
 
 #include <cstdlib>
 #include <cassert>
-#include <iostream>
+#include <sstream>
 #include <list>
 #include <vector>
 #include <map>
 #include <string>
 #include <sstream>
 
+#define TEMPERATURE_CHARACTERISTIC(temp)  \
+  ((double)((double)(10.0f) * ((temp) + 273) / (double)(1000.0f)))
+
+#define REVERSE_TEMP_CHAR(voltage)  \
+  ((((double)(voltage) * 1000.0f) / 10.0f) - 273)
+
+
 namespace ADC_Mocks {
+  static const double VoltageRail = 5.0f;
+
   void prepare() {
     {
       ADCMockT IgnitionSwitchADC;
-      VectorWithIdx<word> Values{6};
-      Values.V().push_back(makeADCValue(0.0, 5.0));
-      Values.V().push_back(makeADCValue(1.0, 5.0));
-      Values.V().push_back(makeADCValue(2.0, 5.0));
-      Values.V().push_back(makeADCValue(2.57, 5.0));
-      Values.V().push_back(makeADCValue(3.0, 5.0));
-      Values.V().push_back(makeADCValue(4.0, 5.0));
-      Values.V().push_back(makeADCValue(5.0, 5.0));
+      VectorWithIdx<word> Values{7};
+      Values.V().push_back(makeADCValue(0.0, VoltageRail));
+      Values.V().push_back(makeADCValue(1.0, VoltageRail));
+      Values.V().push_back(makeADCValue(2.0, VoltageRail));
+      Values.V().push_back(makeADCValue(2.57, VoltageRail));
+      Values.V().push_back(makeADCValue(4.0, VoltageRail));
+      Values.V().push_back(makeADCValue(3.0, VoltageRail));
+      Values.V().push_back(makeADCValue(5.0, VoltageRail));
       auto It = IgnitionSwitchADC.emplace(
         std::make_pair(IGNITION_VOLTAGE_PIN, Values)
       );
@@ -35,6 +44,43 @@ namespace ADC_Mocks {
       die(It.second, "Couldn't insert ADC Mock");
 
       ADCMock[TestName::IgnitionSwitchADC] = IgnitionSwitchADC;
+    }
+
+    {
+      ADCMockT CoolantTemperatrueADC;
+      VectorWithIdx<word> Values{130 - (-45) + 2};
+
+      for (int T = -70; T <= 200; ++T) {
+        Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(T), VoltageRail));
+      }
+
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(-45), VoltageRail));
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(-20), VoltageRail));
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(-10), VoltageRail));
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(0), VoltageRail));
+//
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(8), VoltageRail));
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(10), VoltageRail));
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(20), VoltageRail));
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(40), VoltageRail));
+//
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(60), VoltageRail));
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(71), VoltageRail));
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(80), VoltageRail));
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(85), VoltageRail));
+//
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(90), VoltageRail));
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(100), VoltageRail));
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(102), VoltageRail));
+//       Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(125), VoltageRail));
+
+      auto It = CoolantTemperatrueADC.emplace(
+        std::make_pair(COOLANT_TEMP_PIN, Values)
+      );
+
+      die(It.second, "Couldn't insert ADC Mock");
+
+      ADCMock[TestName::CoolantTempADC2] = CoolantTemperatrueADC;
     }
   }
 
@@ -99,12 +145,20 @@ void testMultiplySigned() {
 
 template <typename _TesterF, typename _CheckerF>
 void testADC(_TesterF TesterF, _CheckerF CheckerF,
-             size_t Count, std::initializer_list<pin> Pins) {
+             std::initializer_list<pin> Pins) {
   std::map<pin, VectorWithIdx<word> *> CurrentMocks;
-  for (pin P : Pins)
+  ssize_t Size = -1;
+  for (pin P : Pins) {
     CurrentMocks[P] = &ADC_Mocks::getAllCurrentADCMocks(P);
 
-  while (Count) {
+    die(Size != static_cast<ssize_t>(CurrentMocks[P]->V().size()) || Size >= 0,
+        "Sizes for mock ADC values should be the same");
+
+    if (Size < 0)
+      Size = CurrentMocks[P]->V().size();
+  }
+
+  while (Size) {
     TesterF();
 
     std::map<pin, word> ToTest;
@@ -113,15 +167,9 @@ void testADC(_TesterF TesterF, _CheckerF CheckerF,
       ToTest[P] = CurrentMocks[P]->get();
 
     CheckerF(ToTest);
-    --Count;
+    --Size;
   }
 }
-
-#define TEMPERATURE_CHARACTERISTIC(temp)  \
-  ((double)((double)(10.0f) * ((temp) + 273) / (double)(1000.0f)))
-
-#define REVERSE_TEMP_CHAR(voltage)  \
-  ((((double)(voltage) * 1000.0f) / 10.0f) - 273)
 
 template <typename _ResT>
 struct ADCPreparedTemp {
@@ -150,7 +198,7 @@ struct Temp {
 };
 
 void testGetAdcValueFromTable(FILE *OutF) {
-  static const double VoltageRail = 5.0f;
+  static const double VoltageRail = ADC_Mocks::VoltageRail;
 
   fprintf(OutF, "%i = %g = %04x = %g\n%i = %g = %04x = %g\n%i = %g = %04x = %g\n",
           8, TEMPERATURE_CHARACTERISTIC(8),
@@ -195,8 +243,49 @@ void testGetAdcValueFromTable(FILE *OutF) {
             (unsigned)PrepADCVal.Result.AdjustedForCalculus,
             (unsigned)PrepADCVal.Result.Adjusted);
   }
+}
 
-  // TODO
+void test_60BA() {
+  byte InputHigh, InputLow;
+  byte OutputHigh, OutputLow;
+
+  std::list<std::pair<word, word>> FuncTable;
+
+  auto Test = [&] {
+    word Input = COMPOSE_WORD(InputHigh, InputLow);
+    OutputHigh = ((InputLow & 0xF0) >> 4) | (InputHigh << 4);
+    OutputLow = (InputLow & 0x0F) << 4;
+    word Output = COMPOSE_WORD(OutputHigh, OutputLow);
+
+    FuncTable.emplace_back(Input, Output);
+  };
+
+  for (InputHigh = 0x00; InputHigh < 0x10; ++InputHigh) {
+    for (InputLow = 0x00; InputLow < 0xFF; ++InputLow) {
+      Test();
+    }
+    die(InputLow == 0xFF, "Fail!");
+    Test(); // InputLow == 0xFF
+  }
+
+  std::stringstream InputS, OutputS;
+  InputS << "Input = [";
+  OutputS << "Output = [";
+
+  auto It = FuncTable.begin();
+  InputS << It->first;
+  OutputS << It->second;
+
+  for (; It != FuncTable.end(); ++It) {
+    InputS << ", " << It->first;
+    OutputS << ", " << It->second;
+  }
+
+  InputS << "];\n";
+  OutputS << "];\n";
+
+  fprintf(stderr, "%s", InputS.str().data());
+  fprintf(stderr, "%s", OutputS.str().data());
 }
 
 int main() {
@@ -230,14 +319,74 @@ int main() {
       fprintf(OutF, "Ignition switch V = %g, ADC = %04x, RAM[0x3F] = %02x, "
               "RAM[0x22].4 = %u, RAM[0x22].5 = %u, RAM[0x3C] = %02x, "
               "thresholds: %02x .. %02x\n",
-              unADCValue(IgnPinADCV, 5.0), (unsigned)(IgnPinADCV),
+              unADCValue(IgnPinADCV, ADC_Mocks::VoltageRail), (unsigned)(IgnPinADCV),
               (unsigned)(RAM[0x3F]), (unsigned)(CHECK_BIT_AT(RAM[0x22], 4)),
               (unsigned)(CHECK_BIT_AT(RAM[0x22], 5)), (unsigned)(RAM[0x3C]),
               (unsigned)GET_MEM_BYTE(FLASH, MINIMUM_IGNITION_VOLTAGE),
               (unsigned)GET_MEM_BYTE(FLASH, MAXIMUM_IGNITION_VOLTAGE)
       );
-    }, 6, { IGNITION_VOLTAGE_PIN });
+    }, { IGNITION_VOLTAGE_PIN });
   }
+
+  switchToTest(TestName::CoolantTempADC2);
+
+  {
+    std::vector<double> Temperature;
+    std::vector<byte> Ram3A;
+    std::vector<byte> Ram3D;
+
+    FILE *OutF = stderr;
+    testADC(&Inputs_Part1_CoolantTemp, [&, OutF](const std::map<pin, word> &Test) {
+      word ADCV = Test.at(COOLANT_TEMP_PIN);
+
+      Temperature.push_back(REVERSE_TEMP_CHAR(unADCValue(ADCV, ADC_Mocks::VoltageRail)));
+      Ram3A.push_back(RAM[0x3A]);
+      Ram3D.push_back(RAM[0x3D]);
+
+      fprintf(OutF, "Coolant temp = %g, Coolant temp V = %g, ADC = %04x, RAM[0x3A] = %02x = %u, "
+              "RAM[0x3D] = %02x = %u, RAM[0x23].2 = %u, RAM[0x23].3 = %u\n",
+              REVERSE_TEMP_CHAR(unADCValue(ADCV, ADC_Mocks::VoltageRail)),
+              unADCValue(ADCV, ADC_Mocks::VoltageRail), (unsigned)(ADCV),
+              (unsigned)(RAM[0x3A]), (unsigned)(RAM[0x3A]),
+              (unsigned)(RAM[0x3D]), (unsigned)(RAM[0x3D]),
+              (unsigned)(CHECK_BIT_AT(RAM[0x23], 2)),
+              (unsigned)(CHECK_BIT_AT(RAM[0x23], 3))
+      );
+    }, { COOLANT_TEMP_PIN });
+
+    {
+      auto It = Temperature.begin();
+
+      die(It != Temperature.end(), "Empty vector of temperatures");
+
+      fprintf(OutF, "temp = [ %g", *It);
+      for (++It; It != Temperature.end(); ++It)
+        fprintf(OutF, ", %g", *It);
+      fprintf(OutF, "];\n");
+    }
+    {
+      auto It = Ram3A.begin();
+
+      die(It != Ram3A.end(), "Empty vector of RAM[0x3A] values");
+
+      fprintf(OutF, "ram_3a = [ %u", (unsigned)(*It));
+      for (++It; It != Ram3A.end(); ++It)
+        fprintf(OutF, ", %u", (unsigned)(*It));
+      fprintf(OutF, "];\n");
+    }
+    {
+      auto It = Ram3D.begin();
+
+      die(It != Ram3D.end(), "Empty vector of RAM[0x3D] values");
+
+      fprintf(OutF, "ram_3d = [ %u", (unsigned)(*It));
+      for (++It; It != Ram3D.end(); ++It)
+        fprintf(OutF, ", %u", (unsigned)(*It));
+      fprintf(OutF, "];\n");
+    }
+  }
+
+  test_60BA();
 
   return 0;
 }

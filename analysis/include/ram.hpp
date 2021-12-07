@@ -50,7 +50,7 @@ static inline void INIT_RAM() {
                   // bit 6 - ??
 
   [0x27] = 0x00,  // ???
-                  // bit 2 (bit address 0x3A) ???
+                  // bit 2 (bit address 0x3A), 1 if MDU was used by interrupt etc.
                   // bit 3 (bit address 0x3B) = copy of PSW.F0
                   // bit 4 ???
 
@@ -75,7 +75,8 @@ static inline void INIT_RAM() {
 
   [0x30] = 0,     // Some counter?, can be changed by some interrupt along with 0x1C/0x1D?
 
-  [0x3A] = 0,     // Adjusted coolant temperature
+  [0x3A] = 0,     // Adjusted coolant temperature,
+                  // saturated to 0 at -38..-39C, saturated to 204 at 165C
 
   [0x3B] = 0,     // Adjusted intake air temperature
   [0x3C] = 0,     // Adjusted ignition switch voltage
@@ -84,6 +85,7 @@ static inline void INIT_RAM() {
                   // packed offset and factor for FLASH[0xA2FD]
                   // factor - least significant three bits, will be SHL 5 = xxx0 0000
                   // offset - most significant five bits, will be SHR 3, max value = 0x1F
+                  // saturated to 0 at -40C, saturated to 0xFF at 120C
 
   [0x3E] = 0,     // Adjusted intake air temperature (after RAM[0x3B])
   [0x3F] = 0,     // Adjusted ignition switch voltage

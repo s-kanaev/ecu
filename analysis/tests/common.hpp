@@ -31,7 +31,7 @@ public:
 
   Type next() { return MV[MIdx++]; }
 
-  Type get() const { return MV[MIdx]; }
+  Type get() const { return MV[MIdx ? MIdx - 1 : MIdx]; }
 
   List &V() { return MV; }
 };
@@ -41,6 +41,7 @@ public:
 enum class TestName : int {
   INIT = 0,
   CoolantTempADC = INIT,
+  CoolantTempADC2,
   IntakeAirTempADC,
   IgnitionSwitchADC,
   TESTS_COUNT,

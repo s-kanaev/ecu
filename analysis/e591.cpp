@@ -1055,6 +1055,30 @@ inline byte tripple_rotate_right(byte Data, byte Mask) {
   return Data & Mask;
 }
 
+inline bool CHECK_AND_CLEAR_BIT(byte *Ptr, bit Bit) {
+  bool Ret = false;
+
+  if (CHECK_BIT_AT(*Ptr, Bit)) {
+    /* bit is set */
+    /* clear bit atomically */
+    for (;;) {
+      byte Expected = *Ptr;
+      byte Desired = Expected;
+      CLEAR_BIT_IN(Expected, Bit);
+
+      if (CAS(Ptr, Expected, Desired)) {
+        Ret = true;
+        break;
+      }
+    }
+  } else {
+    /* bit is clear */
+    break;
+  }
+
+  return Ret;
+}
+
 // _2950:
 // K/L-line communication?
 // funny_thing_with_ISO9141:
@@ -1180,14 +1204,6 @@ _2A32:
   RAM[0x4C] = ((RAM[0x4A] + 8) >> 4); // high nibble
 }
 
-// _695C
-void ClearXramF69E_0C_Bytes() {
-  for (word XramPtr = WORD_MEM_IDX(XRAM, COOLANT_TEMP_SUM);
-       XramPtr < WORD_MEM_IDX(XRAM, COOLANT_TEMP_SUM) + 0x0C; ++XramPtr)
-    XRAM[XramPtr] = 0x00;
-  XRAM[0xF69D] = 0;
-}
-
 // _2C09
 void Xram_F69D_eq_20() {
   // Prerequisites:
@@ -1272,6 +1288,111 @@ inline void ProcessEGO(pin EGOPin, byte *XramDiffSum,
         CLEAR_BIT_IN(*RamPtrEgoLargerUpperLimit, RamPtrEgoLargerUpperLimitBit);
     }
   }
+}
+
+
+// _60BA:
+word multiply16WithSaturation(word V) {
+  if (V & 0xF000)
+    V = 0xFFFF;
+  else
+    V *= 16;
+}
+
+// _62FC:
+byte tableLookup0(word FlashPtr, OffsetAndFactorT OffAndFactor) {
+  return GetValueFromTableImpl(
+      FlashPtr, OffAndFactor.Offset, OffAndFactor.Factor, false);
+}
+
+struct TwoValuesForThrottle {
+  word V1;  // R3:R2
+  word V2;  // R1:R0
+};
+
+// _5555:
+TwoValuesForThrottle getTwoValuesForThrottle(word ScaledThrottlePosition) {
+  byte Interpolated = InterpolateTableValue(
+      0x856C, HIGH(ScaledThrottlePosition), LOW(ScaledThrottlePosition));
+  word Profiled;
+  // TODO table length, see RAM[0x3D]
+  const byte Factor1 = tableLookup0(0x900B, RAM[0x3D]);
+  // TODO table length, see RAM[0x3E]
+  const byte Factor2 = tableLookup0(0xB80D, RAM[0x3E]);
+  word Scaled;
+
+  TwoValuesForThrottle Result;
+
+  // TableEntryT Difference, TableEntryT Template, word FlashPtr, byte TableLineLength, bool Negate
+  {
+    // TODO table length (see RAM[0x4A] values)
+    Profiled = ProfileTableValue(RAM[0x4A], Interpolated, 0x856C, 0x10, false);
+    Scaled = scale10bitADCValue(Profiled, Factor1);
+    Scaled = scale10bitADCValue(Scaled, Factor2);
+    Scaled >>= 1;
+    Result.V1 = Scaled;
+  }
+
+  {
+    // TODO table length (see RAM[0x4A] values)
+    Profiled = ProfileTableValue(RAM[0x4A], Interpolated, 0x8D0B, 0x10, false);
+    Scaled = scale10bitADCValue(Profiled, Factor1);
+    Scaled = scale10bitADCValue(Scaled, Factor2);
+    Scaled >>= 1;
+    Result.V2 = Scaled;
+  }
+
+  return Result;
+}
+
+// _55BE:
+word get_flash_8e0b_plus_swapped_ram41_plus_ram4c() {
+  word FlashPtr = 0x8E0B + SWAP_NIBBLES(RAM[0x41]) + RAM[0x4C];
+
+  return COMPOSE_WORD(FLASH[FlashPtr + 1], FLASH[FlashPtr]);
+}
+
+// _55DE:
+word filterThrottlePosition(word ThrottlePositionLessThreshold) {
+  word Result;
+
+  // A
+  TwoValuesForThrottle V = getTwoValuesForThrottle(ThrottlePositionLessThreshold);
+
+  byte Factor = XRAM[0xF602] + XRAM[0xF779];
+
+  if (IS_NEGATIVE(XRAM[0xF602])) {
+    // xram_f602_larger_7f
+    // C
+    if (Factor <= 0xFF) {
+      // xram_f602_larger_7f_sum_xram_f602_and_f779_less_or_equal_ff
+      // F
+      Result = scale10bitADCValue(V.V2, NEGATE(Factor)) - V.V1 - Factor;
+      if (CHECK_BIT_AT(T, 15)) {
+        // 5615
+        // H
+        Result = 0;
+      }
+    } else {
+      // sum_xram_f602_and_f779_less_or_equal_ff
+      // copy(G)
+      Result = scale10bitADCValue(V.V2, Factor) + V.V1;
+    }
+  } else {
+    // 55F0
+    // B
+    if ((WORD(XRAM[0xF602]) + XRAM[0xF779]) > 0xFF) {
+      // 55F4
+      // D
+      V.V1 += V.V2;
+    }
+    // copy(G)
+    Result = scale10bitADCValue(V.V2, Factor) + V.V1;
+  }
+  // 5619
+  // J
+  Result += get_flash_8e0b_plus_swapped_ram41_plus_ram4c();
+  return Result;
 }
 
 // _2967:
@@ -1625,55 +1746,193 @@ void MAIN_LOOP() {
         0x865C,
         HIGH(ThrottlePositionLessThreshold),
         LOW(ThrottlePositionLessThreshold));
-    // _3134:
-    // TODO
+    RAM[0x42] = ((RAM[0x43] + 4) & 0xF8) >> 3;
+    RAM[0x41] = ((RAM[0x41] + 8) & 0xF0) >> 4;
   }
+
+  // _3147:
+  if (CHECK_BIT_AT(RAM[0x27], 4)) {
+    // _31A5:
+    // TODO
+  } else {
+    // _314A:
+    word ThrottlePositionLessThreshold =
+        GET_MEM_WORD(XRAM, THROTTLE_POSITION_LESS_THRESHOLD);
+    SET_MEM_WORD(XRAM, THROTTLE_POSITION_LESS_THRESHOLD_2,
+                 ThrottlePositionLessThreshold);
+    word Filtered = filterThrottlePosition(ThrottlePositionLessThreshold);
+
+    SET_MEM_WORD(XRAM, FILTERED_THROTTLE_POSITION_LESS_THRESHOLD_1, Filtered);
+    SET_MEM_WORD(XRAM, FILTERED_THROTTLE_POSITION_LESS_THRESHOLD_2, Filtered);
+
+    CLEAR_BIT_IN(IEN0, 0); // disable external interrupt 0
+    SET_MEM_WORD(XRAM, FILTERED_THROTTLE_POSITION_LESS_THRESHOLD_3, Filtered);
+    SET_BIT_IN(IEN0, 0); // enable external interrupt 0
+
+    word Scaled =
+        scale10bitADCValue(COMPOSE_WORD(XRAM[0xF6CD],XRAM[0xF6CC]), RAM[0x49]);
+    Scaled = multiply16WithSaturation(Scaled);
+    XRAM[0xF6E4] = LOW(Scaled);
+    XRAM[0xF6E5] = HIGH(Scaled);
+
+    CLEAR_BIT_IN(IEN0, 0);
+    XRAM[0xF6DC] = XRAM[0xF6DD] = 0;
+    SET_BIT_IN(IEN0, 0);
+  }
+
+  // _3514:
   // TODO
   ;
 }
 
-// _62FC:
-byte tableLookup0(word FlashPtr, OffsetAndFactorT OffAndFactor) {
-  return GetValueFromTableImpl(
-      FlashPtr, OffAndFactor.Offset, OffAndFactor.Factor, false);
-}
 
-struct TwoValuesForThrottle {
-  word V1;  // R3:R2
-  word V2;  // R1:R0
-};
+// _C000:
+void init_xram_for_serial0() {
+  if (CHECK_BIT_AT(RAM[0x2F], 0)) {
+    _C006:
+    if (CHECK_BIT_AT(RAM[0x2F], 1)) {
+      _C07A:
+      XRAM[0xF983] = 0xFF;
+      XRAM[0xF984] = 0xFF;
 
-// _5555:
-TwoValuesForThrottle getTwoValuesForThrottle(word ScaledThrottlePosition) {
-  byte Interpolated = InterpolateTableValue(
-      0x856C, HIGH(ScaledThrottlePosition), LOW(ScaledThrottlePosition));
-  word Profiled;
-  // TODO table length, see RAM[0x3D]
-  const byte Factor1 = tableLookup0(0x900B, RAM[0x3D]);
-  // TODO table length, see RAM[0x3E]
-  const byte Factor2 = tableLookup0(0xB80D, RAM[0x3E]);
-  word Scaled;
+      XRAM[0xF989] = 0x02;
+      XRAM[0xF98A] = 0;
+      XRAM[0xF98B] = 0x14;
+      XRAM[0xF98C] = 0;
 
-  TwoValuesForThrottle Result;
+      XRAM[0xF98D] = 0x14;
+      XRAM[0xF98E] = 0;
+      XRAM[0xF98F] = 0x88;
+      XRAM[0xF990] = 0x13;
 
-  // TableEntryT Difference, TableEntryT Template, word FlashPtr, byte TableLineLength, bool Negate
-  {
-    // TODO table length (see RAM[0x4A] values)
-    Profiled = ProfileTableValue(RAM[0x4A], Interpolated, 0x856C, 0x10, false);
-    Scaled = scale10bitADCValue(Profiled, Factor1);
-    Scaled = scale10bitADCValue(Scaled, Factor2);
-    Scaled >>= 1;
-    Result.V1 = Scaled;
+      XRAM[0xF991] = 0;
+      XRAM[0xF992] = 0;
+      XRAM[0xF993] = 0xC8;
+      XRAM[0xF994] = 0;
+
+      XRAM[0xF995] = 0;
+      XRAM[0xF996] = 0;
+      XRAM[0xF997] = 0x14;
+      XRAM[0xF998] = 0;
+
+      XRAM[0xF985] = 0x0A;
+      XRAM[0xF986] = 0;
+      XRAM[0xF987] = 0x02;
+      XRAM[0xF988] = 0;
+    } else {
+      _C009:
+      XRAM[0xF981] = 0x17;
+      XRAM[0xF982] = 0;
+      XRAM[0xF983] = 0x1B;
+      XRAM[0xF984] = 0;
+
+      XRAM[0xF989] = 0;
+      XRAM[0xF98A] = 0;
+      XRAM[0xF98B] = 0x13;
+      XRAM[0xF98C] = 0;
+
+      XRAM[0xF991] = 0x13;
+      XRAM[0xF992] = 0;
+      XRAM[0xF993] = 0x89;
+      XRAM[0xF994] = 0x13;
+
+      XRAM[0xF995] = 0x4;
+      XRAM[0xF996] = 0;
+      XRAM[0xF997] = 0x15;
+      XRAM[0xF998] = 0;
+
+      XRAM[0xF98D] = 0x1A;
+      XRAM[0xF98E] = 0;
+      XRAM[0xF98F] = 0x31;
+      XRAM[0xF990] = 0;
+
+      XRAM[0xF987] = 0;
+      XRAM[0xF988] = 0;
+    }
+  } else {
+    _C0EB:
+    if (CHECK_BIT_AT(RAM[0x2F], 1)) {
+      _C15E:
+      XRAM[0xF983] = 0xFF;
+      XRAM[0xF984] = 0xFF;
+
+      XRAM[0xF989] = 0x02;
+      XRAM[0xF98A] = 0;
+      XRAM[0xF98B] = 0x14;
+      XRAM[0xF98C] = 0;
+
+      XRAM[0xF98D] = 0xC8;
+      XRAM[0xF98E] = 0;
+      XRAM[0xF98F] = 0x88;
+      XRAM[0xF990] = 0x13;
+
+      XRAM[0xF991] = 0x02;
+      XRAM[0xF992] = 0;
+      XRAM[0xF993] = 0xC8;
+      XRAM[0xF994] = 0;
+
+      XRAM[0xF995] = 0;
+      XRAM[0xF996] = 0;
+      XRAM[0xF997] = 0x14;
+      XRAM[0xF998] = 0;
+
+      XRAM[0xF985] = 0x0A;
+      XRAM[0xF986] = 0;
+      XRAM[0xF987] = 0x02;
+      XRAM[0xF988] = 0;
+    } else {
+      _C0EE:
+      XRAM[0xF981] = 0x17;
+      XRAM[0xF982] = 0;
+      XRAM[0xF983] = 0x1B;
+      XRAM[0xF984] = 0;
+
+      XRAM[0xF989] = 0;
+      XRAM[0xF98A] = 0;
+      XRAM[0xF98B] = 0x14;
+      XRAM[0xF98C] = 0;
+
+      XRAM[0xF991] = 0;
+      XRAM[0xF992] = 0;
+      XRAM[0xF993] = 0x88;
+      XRAM[0xF994] = 0x13;
+
+      XRAM[0xF995] = 0;
+      XRAM[0xF996] = 0;
+      XRAM[0xF997] = 0x14;
+      XRAM[0xF998] = 0;
+
+      XRAM[0xF98D] = 0;
+      XRAM[0xF98E] = 0;
+      XRAM[0xF98F] = 0xF4;
+      XRAM[0xF990] = 0x01;
+
+      XRAM[0xF987] = 0;
+      XRAM[0xF988] = 0;
+    }
   }
 
-  {
-    // TODO table length (see RAM[0x4A] values)
-    Profiled = ProfileTableValue(RAM[0x4A], Interpolated, 0x8D0B, 0x10, false);
-    Scaled = scale10bitADCValue(Profiled, Factor1);
-    Scaled = scale10bitADCValue(Scaled, Factor2);
-    Scaled >>= 1;
-    Result.V2 = Scaled;
-  }
+_C1CC:
+  CLEAR_BIT_IN(RAM[0x2F], 2);
+  CLEAR_BIT_IN(RAM[0x2F], 4);
+  CLEAR_BIT_IN(RAM[0x2F], 5);
+  CLEAR_BIT_IN(RAM[0x2F], 6);
 
-  return Result;
+  XRAM[0xFBB3] = 0;
+  XRAM[0xF9A3] = 0;
+  XRAM[0xF9A1] = 0;
+
+  if (CHECK_BIT_AT(RAM[0x2F], 1)) {
+    _C1F5:
+    CLEAR_BIT_IN(IEN0, 4); // disable serial0 interrupt
+    XRAM[0xF97F] = 0;
+    XRAM[0xF980] = 0;
+    RAM[0x77] = 0x04;
+  } else {
+    _C1E4:
+    XRAM[0xF97F] = 0;
+    XRAM[0xF980] = 0;
+    SET_BIT_IN(IEN0, 4); // enable serial0 interrupt
+    RAM[0x77] = 0xFF;
+  }
 }

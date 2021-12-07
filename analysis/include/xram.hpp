@@ -85,8 +85,8 @@ inline void INIT_XRAM() {
   [0xF6B9] = 0,                               // ??? TODO
 
   [0xF6BA] = 0,                               // RAM[0x49], but no less than 0x1F
-  [0xF6BB] = 0,                               // quotient from dividng smth on RAM[0x44..0x45] or RA<[0x1C/0x1D], low byte
-  [0xF6BC] = 0,                               // quotient from dividng smth on RAM[0x44..0x45] or RA<[0x1C/0x1D], high byte
+  [0xF6BB] = 0,                               // quotient from dividng smth on RAM[0x44..0x45] or RAM[0x1C/0x1D], low byte
+  [0xF6BC] = 0,                               // quotient from dividng smth on RAM[0x44..0x45] or RAM[0x1C/0x1D], high byte
 
   [0xF6BF] = 0,                               // ??? TODO, compared to FLASH[0x805D]
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <types.hpp>
+
 inline word makeADCValue(double Voltage, double VoltageRail) {
   static const int ADCLimit = 0x03FF;
   static const int Shift = 6;

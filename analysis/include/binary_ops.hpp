@@ -45,27 +45,3 @@ do {                                        \
   else                                      \
     CLEAR_BIT_IN(Dst, DstBit);              \
 } while (0)
-
-inline bool CHECK_AND_CLEAR_BIT(byte *Ptr, bit Bit) {
-  bool Ret = false;
-
-  if (CHECK_BIT_AT(*Ptr, Bit)) {
-    /* bit is set */
-    /* clear bit atomically */
-    for (;;) {
-      byte Expected = *Ptr;
-      byte Desired = Expected;
-      CLEAR_BIT_IN(Expected, Bit);
-
-      if (CAS(Ptr, Expected, Desired)) {
-        Ret = true;
-        break;
-      }
-    }
-  } else {
-    /* bit is clear */
-    break;
-  }
-
-  return Ret;
-}

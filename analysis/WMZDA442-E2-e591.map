@@ -677,7 +677,7 @@
  00000000:00003313       code_3313
  00000000:00003319       code_3319
  00000000:00003346       code_3346
- 00000000:00003366       code_3366
+ 00000000:00003366       xram_f6ee_ne_xram_f6ed
  00000000:00003388       code_3388
  00000000:000033B8       code_33B8
  00000000:000033BE       code_33BE
@@ -1140,7 +1140,7 @@
  00000000:00005644       code_5644
  00000000:00005646       code_5646
  00000000:00005648       code_5648
- 00000000:00005649       code_5649
+ 00000000:00005649       filter?
  00000000:00005688       code_5688
  00000000:000056B8       code_56B8
  00000000:000056BA       code_56BA
@@ -1262,7 +1262,7 @@
  00000000:00005FE2       multiply_signed
  00000000:00005FE7       code_5FE7
  00000000:00005FF4       code_5FF4
- 00000000:00005FFB       scale_ADC_10bit_value
+ 00000000:00005FFB       get_B_256_fraction_of_R1_R0
  00000000:0000600D       code_600D
  00000000:00006019       code_6019
  00000000:0000601F       code_601F
@@ -1345,7 +1345,7 @@
  00000000:000062AF       code_62AF
  00000000:000062CE       interpolate_table_value
  00000000:000062DC       get_adc_value_from_table
- 00000000:000062EF       code_62EF
+ 00000000:000062EF       get_value_from_table_offset_and_factor_in_acc_no_negate
  00000000:000062FC       table_lookup_0
  00000000:00006324       code_6324
  00000000:0000634C       get_value_from_table_no_negate

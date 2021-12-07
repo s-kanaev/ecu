@@ -4517,12 +4517,15 @@ code_1431:                              ; CODE XREF: IE0_0:code_1420↑j
                 clr     A
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   code_60EB
                 mov     A, R1
                 jz      code_1443
@@ -4989,12 +4992,15 @@ code_1661:                              ; CODE XREF: IE0_0+28B↑j
                 inc     DPTR
                 movx    A, @DPTR
                 mov     R1, A
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     A, R2
                 jnb     ACC.7, code_16A5 ; Accumulator
                 mov     DPTR, #0F6C8h
@@ -5090,12 +5096,15 @@ code_16F1:                              ; CODE XREF: IE0_0+35D↑j
                 movc    A, @A+DPTR
                 jz      code_1731
                 mov     B, RAM_49       ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   mul_word_16_saturate_to_ffff ; INPUT: R1:R0 - word
                                         ;
                                         ; OUTPUT: R1:R0
@@ -5405,12 +5414,15 @@ code_1825:                              ; CODE XREF: IE0_0+42A↑j
                 mov     DPTR, #0F600h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   code_6076
                 jnb     RAM_2B.1, code_1856
                 mov     DPTR, #0F6CCh
@@ -5436,12 +5448,15 @@ code_1825:                              ; CODE XREF: IE0_0+42A↑j
 
 code_1856:                              ; CODE XREF: IE0_0+4AB↑j
                 mov     B, R4           ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     R2, RAM_8
                 mov     R3, RAM_9
                 mov     DPTR, #0F6CEh
@@ -5454,12 +5469,15 @@ code_1856:                              ; CODE XREF: IE0_0+4AB↑j
                 cpl     A
                 inc     A
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   add_word        ; Add words
                                         ;
                                         ; INPUT:
@@ -5547,31 +5565,40 @@ code_1890:                              ; CODE XREF: IE0_0+4C6↑j
                 movx    A, @DPTR
                 mov     R1, A
                 mov     B, RAM_49       ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     B, #40h ; '@'   ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   shr_word_twice  ; INPUT:
                                         ;   R1:R0
                                         ;
                                         ; OUTPUT:
                                         ;   R1:R0 >>= 2
                 mov     B, #0D2h        ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     A, R1
                 jnz     code_18F3
                 mov     A, R0
@@ -5648,12 +5675,15 @@ code_1934:                              ; CODE XREF: IE0_0:code_1927↑j
                 mov     A, B            ; B-Register
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 jnb     RAM_2B.7, code_19AA
                 mov     DPTR, #0F6C2h
                 movx    A, @DPTR
@@ -5729,12 +5759,15 @@ code_19AA:                              ; CODE XREF: IE0_0+5C2↑j
                 mov     A, RAM_41
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     DPTR, #0F6C5h
                 movx    A, @DPTR
                 rr      A
@@ -5750,21 +5783,27 @@ code_19C4:                              ; CODE XREF: IE0_0:code_19C0↑j
                 mov     DPTR, #0A4A1h
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     DPTR, #0F600h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   code_6076
                 mov     R2, RAM_8
                 mov     R3, RAM_9
@@ -6110,12 +6149,15 @@ code_1B33:                              ; CODE XREF: IE0_0+7A0↑j
                 add     A, B            ; B-Register
                 rrc     A
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   shr_word_twice  ; INPUT:
                                         ;   R1:R0
                                         ;
@@ -6205,12 +6247,15 @@ code_1B78:                              ; CODE XREF: IE0_0+7E5↑j
                 add     A, B            ; B-Register
                 rrc     A
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   shr_word_twice  ; INPUT:
                                         ;   R1:R0
                                         ;
@@ -6608,12 +6653,15 @@ code_1D63:                              ; CODE XREF: IE0_0+9CB↑j
                 mov     DPTR, #0F745h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     R4, B           ; B-Register
                 mov     A, R0
                 mov     R2, A
@@ -6628,12 +6676,15 @@ code_1D63:                              ; CODE XREF: IE0_0+9CB↑j
                 mov     DPTR, #0F754h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     A, R4
                 add     A, B            ; B-Register
                 mov     R4, A
@@ -6652,12 +6703,15 @@ code_1D63:                              ; CODE XREF: IE0_0+9CB↑j
                 mov     DPTR, #0F763h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     A, R4
                 add     A, B            ; B-Register
                 mov     A, R2
@@ -6710,12 +6764,15 @@ code_1DBE:                              ; CODE XREF: IE0_0+A50↓j
                 mov     DPTR, #0F745h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     DPTR, #0F748h
                 mov     A, R0
                 movx    @DPTR, A
@@ -6731,12 +6788,15 @@ code_1DBE:                              ; CODE XREF: IE0_0+A50↓j
                 mov     DPTR, #0F754h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     DPTR, #0F757h
                 mov     A, R0
                 movx    @DPTR, A
@@ -6752,12 +6812,15 @@ code_1DBE:                              ; CODE XREF: IE0_0+A50↓j
                 mov     DPTR, #0F763h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     DPTR, #0F766h
                 mov     A, R0
                 movx    @DPTR, A
@@ -6927,12 +6990,15 @@ code_1DBE:                              ; CODE XREF: IE0_0+A50↓j
                 mov     DPTR, #0F742h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     A, R1
                 jnz     code_1F35
                 mov     A, R2
@@ -6976,12 +7042,15 @@ code_1F39:                              ; CODE XREF: IE0_0+BA5↑j
                 mov     DPTR, #0F751h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     A, R1
                 jnz     code_1F71
                 mov     A, R2
@@ -7025,12 +7094,15 @@ code_1F75:                              ; CODE XREF: IE0_0+BE1↑j
                 mov     DPTR, #0F760h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     A, R1
                 jnz     code_1FAD
                 mov     A, R2
@@ -9465,12 +9537,15 @@ query_inputs:                           ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #0F686h
                 movx    @DPTR, A        ; XRAM[0xF686] = HIGH(ADC(CoolantTemperatureSensor))
                 mov     B, #8           ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     DPTR, #0F69Eh
                 lcall   add_word_in_xram_word ; INPUT:
                                         ;  - DPTR - address of low byte of word, DPTR+1 - address of high byte
@@ -9502,12 +9577,15 @@ INTAKE AIR TEMPERATURE SENSOR
                 mov     DPTR, #0F687h
                 movx    @DPTR, A        ; XRAM[0xF686] = HIGH(ADC(IntakeAirTemp))
                 mov     B, #8           ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     DPTR, #0F6A0h
                 lcall   add_word_in_xram_word ; INPUT:
                                         ;  - DPTR - address of low byte of word, DPTR+1 - address of high byte
@@ -9629,12 +9707,15 @@ THROTTLE POSITION SENSOR
                 mov     DPTR, #0F685h
                 movx    @DPTR, A        ; XRAM[0xF685] = HIGH(ADC(ThrottlePositionSensor))
                 mov     B, #8           ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     DPTR, #0F6A6h
                 lcall   add_word_in_xram_word ; INPUT:
                                         ;  - DPTR - address of low byte of word, DPTR+1 - address of high byte
@@ -10817,12 +10898,15 @@ R1:R0 = ADC_10bit(Throttle Position)
                 clr     A
                 movc    A, @A+DPTR
                 mov     B, A            ; B = A = FLASH[0x807D]
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     DPTR, #807Eh
                 clr     A
                 movc    A, @A+DPTR      ; A = FLASH[0x807E]
@@ -11030,12 +11114,15 @@ R1:R0 = COMPOSE_WORD(XRAM[0xF6AE], XRAM[0xF6AD]) // latest throttle position whi
                 mov     R1, A           ; R1 = XRAM[0xF6CD]
                 mov     B, RAM_49       ; B = RAM[0x49]
 scale_ADC_10bit_value(XRAM[0xF6CD]:XRAM[0xF6CC], RAM[0x49])
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   mul_word_16_saturate_to_ffff ; INPUT: R1:R0 - word
                                         ;
                                         ; OUTPUT: R1:R0
@@ -11180,12 +11267,15 @@ RAM[0x49] != 0
                                         ; }
                                         ;
                 mov     B, #25h ; '%'   ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 clr     RAM_27.2
 
 code_3237:                              ; CODE XREF: power_on__ignition_key_turned_+EC7↓j
@@ -11416,10 +11506,6 @@ code_3319:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     DPTR, #0F6D4h
                 movx    @DPTR, A        ; XRAM[0xF6D4] = R1
                 mov     DPTR, #0F6D8h
-
-          CONTINUE REVERSING HERE
-
-
                 movx    A, @DPTR
                 mov     R0, A
                 inc     DPTR
@@ -11430,7 +11516,7 @@ code_3319:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, R1
-                movx    @DPTR, A
+                movx    @DPTR, A        ; R1:R0 = XRAM[0xF6E3]:XRAM[0xF6E2] = XRAM[0xF6D9]:XRAM[0xF6D8]
                 mov     DPTR, #0F6E4h
                 movx    A, @DPTR
                 mov     R0, A
@@ -11442,7 +11528,7 @@ code_3319:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, R1
-                movx    @DPTR, A
+                movx    @DPTR, A        ; R1:R0 = XRAM[0xF6E7]:XRAM[0xF6E6] = XRAM[0xF6D5]:XRAM[0xF6D4]
 
 code_3346:                              ; CODE XREF: power_on__ignition_key_turned_+114C↓j
                 mov     DPTR, #0F6E8h
@@ -11450,46 +11536,67 @@ code_3346:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     R0, A
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
+                mov     R1, A           ; R1:R0 = XRAM[0xF6E9]:XRAM[0xF6E8]
                 lcall   filter_throttle_position? ; INPUT - R1:R0 - throttle position less threshold
                                         ;
                                         ; OUTPUT - R1:R0
                 mov     DPTR, #0F6EEh
                 movx    A, @DPTR
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = XRAM[0xF6EE]
                 mov     DPTR, #0F6EDh
-                movx    A, @DPTR
-                cjne    A, B, code_3366 ; B-Register
+                movx    A, @DPTR        ; A = XRAM[0xF6ED]
+                cjne    A, B, xram_f6ee_ne_xram_f6ed ; if (XRAM[0xF6EE] != XRAM[0xF6ED]) jump ...
                 mov     DPTR, #0F6D6h
                 mov     A, R0
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, R1
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF6D7]:XRAM[0xF6D6] = R1:R0
 
-code_3366:                              ; CODE XREF: power_on__ignition_key_turned_+FC9↑j
+xram_f6ee_ne_xram_f6ed:                 ; CODE XREF: power_on__ignition_key_turned_+FC9↑j
                 push    RAM_0
-                push    RAM_1
-                lcall   code_5649
-                mov     R4, A
+                push    RAM_1           ; store R1:R0
+
+
+      CONTINUE REVERSING HERE
+
+
+
+                lcall   filter?         ; INPUT:
+                                        ;  - R1:R0
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = ?
+                                        ;  - B = ?
+                                        ;  - Acc = R1
+                mov     R4, A           ; R4 = A = R1
                 mov     DPTR, #0F6E2h
                 movx    A, @DPTR
                 mov     R0, A
                 inc     DPTR
                 movx    A, @DPTR
-                mov     R1, A
-                lcall   code_5649
-                mov     R2, RAM_4
-                mov     R4, B           ; B-Register
+                mov     R1, A           ; R1:R0 = XRAM[0xF6E3]:XRAM[0xF6E2]
+                lcall   filter?         ; INPUT:
+                                        ;  - R1:R0
+                                        ;
+                                        ; OUTPUT:
+                                        ;  - R1:R0 = ?
+                                        ;  - B = ?
+                                        ;  - Acc = R1
+                mov     R2, RAM_4       ; R2 = R4
+                mov     R4, B           ; R4 = B
                 pop     RAM_1
-                pop     RAM_0
+                pop     RAM_0           ; restore R1:R0
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 clr     RAM_27.2
 
 code_3388:                              ; CODE XREF: power_on__ignition_key_turned_+1019↓j
@@ -11505,7 +11612,9 @@ code_3388:                              ; CODE XREF: power_on__ignition_key_turn
                 nop
                 nop
                 nop
-                mov     DPL, MD0        ; Data Pointer, Low Byte
+                mov     DPL, MD0        ; Quot (32-bit), Rem (16-bit) = 00:R1:R0:B / 00:R2
+                                        ;
+                                        ; Quot = xx:R3:DPH:DPL
                 mov     DPH, MD1        ; Data Pointer, High Byte
                 mov     R3, MD2         ; Multiplication/Division Register 2
                 mov     A, MD3          ; Multiplication/Division Register 3
@@ -11514,9 +11623,9 @@ code_3388:                              ; CODE XREF: power_on__ignition_key_turn
                 jbc     RAM_27.2, code_3388
                 setb    RAM_27.2
                 mov     A, R3
-                jnz     code_33B8
+                jnz     code_33B8       ; if (R3) jump ...
                 mov     A, DPH          ; Data Pointer, High Byte
-                jnb     ACC.7, code_33BE ; Accumulator
+                jnb     ACC.7, code_33BE ; if (!(DPH & (1 << 7))) jump ...
 
 code_33B8:                              ; CODE XREF: power_on__ignition_key_turned_+101F↑j
                 mov     DPL, #0FFh      ; Data Pointer, Low Byte
@@ -11524,7 +11633,7 @@ code_33B8:                              ; CODE XREF: power_on__ignition_key_turn
 
 code_33BE:                              ; CODE XREF: power_on__ignition_key_turned_+1023↑j
                 mov     R0, DPL         ; Data Pointer, Low Byte
-                mov     R1, DPH         ; Data Pointer, High Byte
+                mov     R1, DPH         ; R1:R0 = DPTR
                 mov     DPTR, #0F6EEh
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -11550,12 +11659,15 @@ code_33D7:                              ; CODE XREF: power_on__ignition_key_turn
                 movc    A, @A+DPTR
                 jz      code_3434
                 mov     B, RAM_49       ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   mul_word_16_saturate_to_ffff ; INPUT: R1:R0 - word
                                         ;
                                         ; OUTPUT: R1:R0
@@ -14579,12 +14691,15 @@ code_4334:                              ; CODE XREF: power_on__ignition_key_turn
                 inc     DPTR
                 movx    A, @DPTR
                 mov     R1, A
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 clr     IEN0.7          ; Interrupt Enable Register 0
                 mov     DPTR, #0F76Ah
                 mov     A, R0
@@ -15675,12 +15790,15 @@ code_491E:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     B, A            ; B-Register
                 mov     R0, #41h ; 'A'
                 mov     R1, #3
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     R2, RAM_0
                 mov     R3, RAM_1
                 mov     R0, #41h ; 'A'
@@ -15768,12 +15886,15 @@ code_499D:                              ; CODE XREF: power_on__ignition_key_turn
                 movx    A, @DPTR
                 mov     R1, A
                 mov     B, RAM_49       ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     A, RAM_58
                 add     A, #80h
                 mov     R2, A
@@ -15803,12 +15924,15 @@ code_499D:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     R2, RAM_0
                 mov     R3, RAM_1
                 cpl     B.7             ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     A, RAM_67
                 jnb     ACC.7, code_49EC ; Accumulator
                 lcall   add_word        ; Add words
@@ -15826,12 +15950,15 @@ code_499D:                              ; CODE XREF: power_on__ignition_key_turn
 
 code_49EC:                              ; CODE XREF: power_on__ignition_key_turned_+2654↑j
                 mov     B, #2Fh ; '/'   ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
 
 code_49F2:                              ; CODE XREF: power_on__ignition_key_turned_+2607↑j
                 mov     DPTR, #0F79Eh
@@ -15841,12 +15968,15 @@ code_49F2:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     A, R1
                 movx    @DPTR, A
                 mov     B, #0CDh        ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 clr     RAM_27.2
 
 code_4A02:                              ; CODE XREF: power_on__ignition_key_turned_+2692↓j
@@ -17896,12 +18026,15 @@ code_5305:                              ; CODE XREF: power_on__ignition_key_turn
                 mov     A, R3
                 movx    @DPTR, A
                 mov     B, #17h         ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     A, R0
                 mov     DPTR, #0F971h
                 movx    @DPTR, A
@@ -18506,12 +18639,15 @@ A = table_lookup_0(0x900B, RAM[0x3D])
                                         ;  Returns result of get_value_from_table_no_negate
                 mov     B, A            ; B = A = table_lookup_0(DPTR, RAM[0x3D])
 R1:R0 = scale_ADC_10bit_value(table_lookup_0(0x900B, RAM[0x3D]), R1:R0)
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     DPTR, #0B80Dh
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -18524,12 +18660,15 @@ R1:R0 = scale_ADC_10bit_value(table_lookup_0(0x900B, RAM[0x3D]), R1:R0)
                                         ;  Returns result of get_value_from_table_no_negate
                 mov     B, A            ; B-Register
 R1:R0 = scale_ADC_10bit_value(table_lookup_0(0xB80D, RAM[0x3E]), R1:R0)
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
 R1:R0 >>= 1
                 lcall   shift_right_word ; INPUT:
                                         ;   R1:R0
@@ -18592,12 +18731,15 @@ A = table_lookup_0(0x900B, RAM[0x3D])
                                         ;  Returns result of get_value_from_table_no_negate
                 mov     B, A            ; B-Register
 R1:R0 = scale_ADC_10bit_value(R1:R0, table_lookup_0(0x900B, RAM[0x3D]))
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     DPTR, #0B80Dh
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -18610,12 +18752,15 @@ R1:R0 = scale_ADC_10bit_value(R1:R0, table_lookup_0(0x900B, RAM[0x3D]))
                                         ;  Returns result of get_value_from_table_no_negate
                 mov     B, A            ; B-Register
 R1:R0 = scale_ADC_10bit_value(R1:R0, table_lookup_0(0xB80D, RAM[0x3E]))
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
 R1:R0 >>= 1
                 lcall   shift_right_word ; INPUT:
                                         ;   R1:R0
@@ -18639,7 +18784,7 @@ R1:R0 >>= 1
 ;   R3 = FLASH[Ptr + 1]
 
 get_flash_8e0b_plus_swapped_0f_plus_ram4c:
-                                        ; CODE XREF: code_5649+2B↓p
+                                        ; CODE XREF: filter?+2B↓p
                 mov     A, #0Fh         ; A = 0x0F
                 sjmp    get_flash_8e0b_plus_swapped_acc_plus_ram4c
 ; End of function get_flash_8e0b_plus_swapped_0f_plus_ram4c
@@ -18720,12 +18865,15 @@ filter_throttle_position?:              ; CODE XREF: IE0_0+2BD↑p
 sum_xram_f602_and_f779_less_or_equal_ff:
                                         ; CODE XREF: filter_throttle_position?+14↑j
                                         ; filter_throttle_position?+25↓j
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   add_word        ; Add words
                                         ;
                                         ; INPUT:
@@ -18752,12 +18900,15 @@ xram_f602_larger_7f_sum_xram_f602_and_f779_less_or_equal_ff:
                 cpl     A
                 inc     A
                 mov     B, A            ; B = -A
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   subtract_word   ; INPUT - R1:R0
                                         ;         R3:R2
                                         ;
@@ -18831,12 +18982,15 @@ code_5620:                              ; CODE XREF: IE0_0+2E6↑p
                                         ;
                                         ; OUTPUT:
                                         ;   R1:R0 >>= 3
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     A, R1
                 jnz     code_5646
                 mov     A, R0
@@ -18856,16 +19010,32 @@ code_5648:                              ; CODE XREF: code_5620+E↑j
 
 ; =============== S U B R O U T I N E =======================================
 
+; INPUT:
+;  - R1:R0
+;
+; OUTPUT:
+;  - R1:R0 = ?
+;  - B = ?
+;  - Acc = R1
 
-code_5649:                              ; CODE XREF: power_on__ignition_key_turned_+FD8↑p
+filter?:                                ; CODE XREF: power_on__ignition_key_turned_+FD8↑p
                                         ; power_on__ignition_key_turned_+FE4↑p
                 mov     A, R0
                 push    ACC             ; Accumulator
                 mov     A, R1
-                push    ACC             ; Accumulator
-                mov     A, RAM_4A
+                push    ACC             ; store R1:R0
+                mov     A, RAM_4A       ; A = RAM[0x4A]
                 mov     DPTR, #8CFBh
-                lcall   code_62EF
+                lcall   get_value_from_table_offset_and_factor_in_acc_no_negate ; INPUT:
+                                        ;   - DPTR - table address
+                                        ;   - Acc - High nibble >> 4 = offset; Low nibble << 4 = factor.
+                                        ;
+                                        ; Output:
+                                        ;  - R1 = DPTR[Offset], R0 = 0 if factor = 0
+                                        ;  - R1:R0 = factor * (DPTR[Offset + 1] - DPTR[Offset]), otherwise
+                                        ;  - Acc = R1
+                                        ;
+                                        ;  Calls get_value_from_table_impl
                 mov     DPTR, #900Bh
                 mov     A, RAM_3D
                 lcall   table_lookup_0  ; INPUT:
@@ -18877,12 +19047,15 @@ code_5649:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ;  Returns result of get_value_from_table_no_negate
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     DPTR, #0B80Dh
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -18894,12 +19067,15 @@ code_5649:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ;  Returns result of get_value_from_table_no_negate
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   shift_right_word ; INPUT:
                                         ;   R1:R0
                                         ;
@@ -18919,17 +19095,20 @@ code_5649:                              ; CODE XREF: power_on__ignition_key_turn
                 pop     ACC             ; Accumulator
                 mov     R1, A
                 pop     ACC             ; Accumulator
-                mov     R0, A
+                mov     R0, A           ; restore R1:R0
                 mov     B, #0F0h        ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 clr     RAM_27.2
 
-code_5688:                              ; CODE XREF: code_5649+61↓j
+code_5688:                              ; CODE XREF: filter?+61↓j
                 mov     MD0, B          ; Multiplication/Division Register 0
                 mov     MD1, R0         ; Multiplication/Division Register 1
                 mov     MD2, R1         ; Multiplication/Division Register 2
@@ -18942,7 +19121,9 @@ code_5688:                              ; CODE XREF: code_5649+61↓j
                 nop
                 nop
                 nop
-                mov     DPL, MD0        ; Data Pointer, Low Byte
+                mov     DPL, MD0        ; Quot (32-bit), Rem (16-bit) = 00:R1:R0:B / R3:R2
+                                        ;
+                                        ; DPTR = LOW_WORD(Quot)
                 mov     DPH, MD1        ; Data Pointer, High Byte
                 mov     A, MD2          ; Multiplication/Division Register 2
                 mov     A, MD3          ; Multiplication/Division Register 3
@@ -18951,23 +19132,32 @@ code_5688:                              ; CODE XREF: code_5649+61↓j
                 jbc     RAM_27.2, code_5688
                 setb    RAM_27.2
                 mov     A, DPH          ; Data Pointer, High Byte
-                jnz     code_56BA
+                jnz     code_56BA       ; if (HIGH(DPTR)) jump ...
                 mov     A, DPL          ; Data Pointer, Low Byte
                 cjne    A, #0F0h, code_56B8
 
-code_56B8:                              ; CODE XREF: code_5649+6C↑j
-                jc      code_56BC
+code_56B8:                              ; CODE XREF: filter?+6C↑j
+                jc      code_56BC       ; if (LOW(DPTR) < 0xF0) jump ...
 
-code_56BA:                              ; CODE XREF: code_5649+68↑j
-                mov     A, #0F0h
+code_56BA:                              ; CODE XREF: filter?+68↑j
+                mov     A, #0F0h        ; A = 0xF0
 
-code_56BC:                              ; CODE XREF: code_5649:code_56B8↑j
-                push    ACC             ; Accumulator
+code_56BC:                              ; CODE XREF: filter?:code_56B8↑j
+                push    ACC             ; store either 0xF0 or LOW(DPTR)
                 mov     DPTR, #0B2DEh
-                lcall   code_62EF
-                pop     B               ; B-Register
+                lcall   get_value_from_table_offset_and_factor_in_acc_no_negate ; INPUT:
+                                        ;   - DPTR - table address
+                                        ;   - Acc - High nibble >> 4 = offset; Low nibble << 4 = factor.
+                                        ;
+                                        ; Output:
+                                        ;  - R1 = DPTR[Offset], R0 = 0 if factor = 0
+                                        ;  - R1:R0 = factor * (DPTR[Offset + 1] - DPTR[Offset]), otherwise
+                                        ;  - Acc = R1
+                                        ;
+                                        ;  Calls get_value_from_table_impl
+                pop     B               ; pop stored value in B
                 ret
-; End of function code_5649
+; End of function filter?
 
 
 ; =============== S U B R O U T I N E =======================================
@@ -19002,12 +19192,15 @@ code_56C7:                              ; CODE XREF: IE0_0:code_1651↑p
                                         ;
                                         ;  Returns result of get_value_from_table_no_negate
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   code_60EB
                 ret
 ; End of function code_56C7
@@ -19377,12 +19570,15 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;
                                         ;  Returns result of get_value_from_table_no_negate
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     DPTR, #0B80Dh
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -19394,12 +19590,15 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;
                                         ;  Returns result of get_value_from_table_no_negate
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   shift_right_word ; INPUT:
                                         ;   R1:R0
                                         ;
@@ -19460,12 +19659,15 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;
                                         ;  Returns result of get_value_from_table_no_negate
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     DPTR, #0B80Dh
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -19477,12 +19679,15 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;
                                         ;  Returns result of get_value_from_table_no_negate
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   shift_right_word ; INPUT:
                                         ;   R1:R0
                                         ;
@@ -19503,12 +19708,15 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;
                                         ;  Returns result of get_value_from_table_no_negate
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   add_word        ; Add words
                                         ;
                                         ; INPUT:
@@ -19603,12 +19811,15 @@ code_58E4:                              ; CODE XREF: code_58D1+8↑j
                 mov     A, R1
                 mov     R3, A
                 cpl     B.7             ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 pop     ACC             ; Accumulator
                 jnb     ACC.7, code_5913 ; Accumulator
                 lcall   code_615A
@@ -19638,12 +19849,15 @@ code_5926:                              ; CODE XREF: code_58D1+4E↑j
                 mov     R3, A
                 mov     B, RAM_67       ; B-Register
                 cpl     B.7             ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     A, RAM_67
                 jnb     ACC.7, code_593A ; Accumulator
                 lcall   code_615A
@@ -19653,12 +19867,15 @@ code_593A:                              ; CODE XREF: code_58D1+63↑j
                 clr     A
                 movc    A, @A+DPTR
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 jb      RAM_29.4, code_594A
                 lcall   shift_right_word ; INPUT:
                                         ;   R1:R0
@@ -19711,12 +19928,15 @@ code_597A:                              ; CODE XREF: code_58D1+DA↓j
                 movx    A, @DPTR
                 mov     R1, A
                 mov     B, #80h         ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     MD0, B          ; Multiplication/Division Register 0
                 mov     MD1, R0         ; Multiplication/Division Register 1
                 mov     MD2, R1         ; Multiplication/Division Register 2
@@ -20694,12 +20914,15 @@ code_5EA8:                              ; CODE XREF: code_5D9F+103↑j
                 clr     C
                 rlc     A
                 mov     B, A            ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 clr     C
                 mov     DPTR, #0F78Ch
                 movx    A, @DPTR
@@ -21045,9 +21268,12 @@ code_5FF4:                              ; CODE XREF: multiply_signed+A↑j
 ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
 ;
 ; OUTPUT:
-;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+;    R1:R0 = X3:X2
+;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
 
-scale_ADC_10bit_value:                  ; CODE XREF: IE0_0+AA↑p
+get_B_256_fraction_of_R1_R0:            ; CODE XREF: IE0_0+AA↑p
                                         ; IE0_0+2FF↑p ...
                 mov     A, B            ; A = B
                 xch     A, R1           ; Store value of B in R1
@@ -21063,7 +21289,7 @@ scale_ADC_10bit_value:                  ; CODE XREF: IE0_0+AA↑p
                 addc    A, #0
                 mov     R1, A           ; R1:R0 = Prod_MSB + HIGH(Prod_LSB)
                 ret
-; End of function scale_ADC_10bit_value
+; End of function get_B_256_fraction_of_R1_R0
 
 
 ; =============== S U B R O U T I N E =======================================
@@ -21720,7 +21946,7 @@ code_617E:                              ; CODE XREF: add_signed_word_with_satura
 ;  R3:R2 += R1:R0
 
 add_word_R3_R2:                         ; CODE XREF: filter_throttle_position?+16↑p
-                                        ; code_5649+2E↑p
+                                        ; filter?+2E↑p
                 mov     A, R0
                 add     A, R2
                 mov     R2, A           ; R2 += R0
@@ -22276,19 +22502,30 @@ get_adc_value_from_table:               ; CODE XREF: get_adc_value_from_table_an
 
 ; =============== S U B R O U T I N E =======================================
 
+; INPUT:
+;   - DPTR - table address
+;   - Acc - High nibble >> 4 = offset; Low nibble << 4 = factor.
+;
+; Output:
+;  - R1 = DPTR[Offset], R0 = 0 if factor = 0
+;  - R1:R0 = factor * (DPTR[Offset + 1] - DPTR[Offset]), otherwise
+;  - Acc = R1
+;
+;  Calls get_value_from_table_impl
 
-code_62EF:                              ; CODE XREF: code_5649+B↑p
-                                        ; code_5649+78↑p
-                mov     R2, A
+get_value_from_table_offset_and_factor_in_acc_no_negate:
+                                        ; CODE XREF: filter?+B↑p
+                                        ; filter?+78↑p
+                mov     R2, A           ; R2 = A
                 swap    A
                 anl     A, #0Fh
-                mov     R3, A
+                mov     R3, A           ; R3 = (A & 0xF0) >> 4
                 mov     A, R2
                 swap    A
-                anl     A, #0F0h
+                anl     A, #0F0h        ; A = (A & 0x0F) << 4
                 clr     PSW.1           ; Program Status Word
                 sjmp    get_value_from_table_impl ; INPUT
-; End of function code_62EF             ;  - DPTR table address in FLASH
+; End of function get_value_from_table_offset_and_factor_in_acc_no_negate ;  - DPTR table address in FLASH
                                         ;  - Acc - Factor
                                         ;  - R3 - Offset
                                         ;  - PSW.F1 - should table data be XOR'ed with 0x80 (negate?)
@@ -22442,7 +22679,7 @@ get_value_from_table:                   ; CODE XREF: get_value_from_table_no_neg
                 anl     A, #0E0h        ; A = operate(R2, 0xE0)
 
 get_value_from_table_impl:              ; CODE XREF: get_adc_value_from_table+11↑j
-                                        ; code_62EF+B↑j
+                                        ; get_value_from_table_offset_and_factor_in_acc_no_negate+B↑j
                 mov     R2, A           ; INPUT
                                         ;  - DPTR table address in FLASH
                                         ;  - Acc - Factor
@@ -22537,12 +22774,15 @@ code_63A5:                              ; CODE XREF: code_638E+D↑j
                 movc    A, @A+DPTR
                 mov     R1, A
                 mov     B, R2           ; B-Register
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 mov     A, R2
                 cpl     A
                 inc     A
@@ -22558,12 +22798,15 @@ code_63A5:                              ; CODE XREF: code_638E+D↑j
                 inc     A
                 movc    A, @A+DPTR
                 mov     R1, A
-                lcall   scale_ADC_10bit_value ; INPUT:
+                lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
-                                        ;  - R1:R0 = WORD(R1 * B) + HIGH(R0 * B)
+                                        ;    X = R1:R0 * B should be 3 bytes wide: X3:X2:X1, X3 - high, X1 - low
+                                        ;    R1:R0 = X3:X2
+                                        ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
+                                        ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
                 lcall   add_word        ; Add words
                                         ;
                                         ; INPUT:

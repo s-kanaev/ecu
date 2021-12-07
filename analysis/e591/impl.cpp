@@ -2,6 +2,10 @@
 #include "memory-locations.hpp"
 #include "inlines.hpp"
 
+#if __E591_HOST_COMPILATION
+#include <assert.h>
+#endif
+
 #include <types.hpp>
 #include <binary_ops.hpp>
 
@@ -35,7 +39,6 @@ void Inputs_Part1_CoolantTemp() {
   bool CoolantTempNotInLimits = false;
 
   if (!FLASH[0x805D]) {
-
     if (HIGH(CoolantTemp) < FLASH[0x8057]) {
       // coolant_temp_less_than_low_limit
       SET_BIT_IN(RAM[0x23], 2);
@@ -66,6 +69,11 @@ void Inputs_Part1_CoolantTemp() {
   } else if (CoolantTempNotInLimits) /* CoolantTempNotInLimits && !FLASH[0x805D] */ {
     AdjustedCoolantTemp = COMPOSE_WORD(FLASH[0x8A4B], 0);
   }
+#if __E591_HOST_COMPILATION
+  else {
+    assert(false && "Shouldn't get here");
+  }
+#endif
 
   // 1. 0x2F
   // 2. 0x00
@@ -444,155 +452,4 @@ word AbsWordByMSB(word V) {
     V = COMPOSE_WORD(0 - HIGH(V) - (!!(LOW(V) != 0)), 0 - LOW(V));
 
   return V;
-}
-
-// _C000:
-void init_xram_for_serial0() {
-  if (CHECK_BIT_AT(RAM[0x2F], 0)) {
-    _C006:
-    if (CHECK_BIT_AT(RAM[0x2F], 1)) {
-      _C07A:
-      XRAM[0xF983] = 0xFF;
-      XRAM[0xF984] = 0xFF;
-
-      XRAM[0xF989] = 0x02;
-      XRAM[0xF98A] = 0;
-      XRAM[0xF98B] = 0x14;
-      XRAM[0xF98C] = 0;
-
-      XRAM[0xF98D] = 0x14;
-      XRAM[0xF98E] = 0;
-      XRAM[0xF98F] = 0x88;
-      XRAM[0xF990] = 0x13;
-
-      XRAM[0xF991] = 0;
-      XRAM[0xF992] = 0;
-      XRAM[0xF993] = 0xC8;
-      XRAM[0xF994] = 0;
-
-      XRAM[0xF995] = 0;
-      XRAM[0xF996] = 0;
-      XRAM[0xF997] = 0x14;
-      XRAM[0xF998] = 0;
-
-      XRAM[0xF985] = 0x0A;
-      XRAM[0xF986] = 0;
-      XRAM[0xF987] = 0x02;
-      XRAM[0xF988] = 0;
-    } else {
-      _C009:
-      XRAM[0xF981] = 0x17;
-      XRAM[0xF982] = 0;
-      XRAM[0xF983] = 0x1B;
-      XRAM[0xF984] = 0;
-
-      XRAM[0xF989] = 0;
-      XRAM[0xF98A] = 0;
-      XRAM[0xF98B] = 0x13;
-      XRAM[0xF98C] = 0;
-
-      XRAM[0xF991] = 0x13;
-      XRAM[0xF992] = 0;
-      XRAM[0xF993] = 0x89;
-      XRAM[0xF994] = 0x13;
-
-      XRAM[0xF995] = 0x4;
-      XRAM[0xF996] = 0;
-      XRAM[0xF997] = 0x15;
-      XRAM[0xF998] = 0;
-
-      XRAM[0xF98D] = 0x1A;
-      XRAM[0xF98E] = 0;
-      XRAM[0xF98F] = 0x31;
-      XRAM[0xF990] = 0;
-
-      XRAM[0xF987] = 0;
-      XRAM[0xF988] = 0;
-    }
-  } else {
-    _C0EB:
-    if (CHECK_BIT_AT(RAM[0x2F], 1)) {
-      _C15E:
-      XRAM[0xF983] = 0xFF;
-      XRAM[0xF984] = 0xFF;
-
-      XRAM[0xF989] = 0x02;
-      XRAM[0xF98A] = 0;
-      XRAM[0xF98B] = 0x14;
-      XRAM[0xF98C] = 0;
-
-      XRAM[0xF98D] = 0xC8;
-      XRAM[0xF98E] = 0;
-      XRAM[0xF98F] = 0x88;
-      XRAM[0xF990] = 0x13;
-
-      XRAM[0xF991] = 0x02;
-      XRAM[0xF992] = 0;
-      XRAM[0xF993] = 0xC8;
-      XRAM[0xF994] = 0;
-
-      XRAM[0xF995] = 0;
-      XRAM[0xF996] = 0;
-      XRAM[0xF997] = 0x14;
-      XRAM[0xF998] = 0;
-
-      XRAM[0xF985] = 0x0A;
-      XRAM[0xF986] = 0;
-      XRAM[0xF987] = 0x02;
-      XRAM[0xF988] = 0;
-    } else {
-      _C0EE:
-      XRAM[0xF981] = 0x17;
-      XRAM[0xF982] = 0;
-      XRAM[0xF983] = 0x1B;
-      XRAM[0xF984] = 0;
-
-      XRAM[0xF989] = 0;
-      XRAM[0xF98A] = 0;
-      XRAM[0xF98B] = 0x14;
-      XRAM[0xF98C] = 0;
-
-      XRAM[0xF991] = 0;
-      XRAM[0xF992] = 0;
-      XRAM[0xF993] = 0x88;
-      XRAM[0xF994] = 0x13;
-
-      XRAM[0xF995] = 0;
-      XRAM[0xF996] = 0;
-      XRAM[0xF997] = 0x14;
-      XRAM[0xF998] = 0;
-
-      XRAM[0xF98D] = 0;
-      XRAM[0xF98E] = 0;
-      XRAM[0xF98F] = 0xF4;
-      XRAM[0xF990] = 0x01;
-
-      XRAM[0xF987] = 0;
-      XRAM[0xF988] = 0;
-    }
-  }
-
-_C1CC:
-  CLEAR_BIT_IN(RAM[0x2F], 2);
-  CLEAR_BIT_IN(RAM[0x2F], 4);
-  CLEAR_BIT_IN(RAM[0x2F], 5);
-  CLEAR_BIT_IN(RAM[0x2F], 6);
-
-  XRAM[0xFBB3] = 0;
-  XRAM[0xF9A3] = 0;
-  XRAM[0xF9A1] = 0;
-
-  if (CHECK_BIT_AT(RAM[0x2F], 1)) {
-    _C1F5:
-    CLEAR_BIT_IN(IEN0, 4); // disable serial0 interrupt
-    XRAM[0xF97F] = 0;
-    XRAM[0xF980] = 0;
-    RAM[0x77] = 0x04;
-  } else {
-    _C1E4:
-    XRAM[0xF97F] = 0;
-    XRAM[0xF980] = 0;
-    SET_BIT_IN(IEN0, 4); // enable serial0 interrupt
-    RAM[0x77] = 0xFF;
-  }
 }
