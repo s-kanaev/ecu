@@ -223,7 +223,7 @@ IEX4:
 
                 ; public IEX5
 IEX5:
-                reti                    ; External Interrupt 5
+                reti                    ; Camshaft position sensor. See Capture and compare?
 ; End of function IEX5
 
 ; ---------------------------------------------------------------------------
@@ -242,7 +242,7 @@ IEX5:
 
                 ; public IEX6
 IEX6:
-                ljmp    IEX6_0          ; External Interrupt 6
+                ljmp    IEX6_0          ; Crankshaft position sensor?
 ; End of function IEX6
 
 ; ---------------------------------------------------------------------------
@@ -2345,7 +2345,7 @@ code_88D:                               ; CODE XREF: IEX6_0-38↓j
                 sjmp    code_8C6
 ; ---------------------------------------------------------------------------
 
-code_897:                               ; CODE XREF: IEX6_0↓j
+ram_26_2_is_set:                        ; CODE XREF: IEX6_0↓j
                 push    PSW             ; Program Status Word
                 push    ACC             ; Accumulator
                 push    B               ; B-Register
@@ -2400,12 +2400,12 @@ IEX6_0:                                 ; CODE XREF: IEX6↑j
 
 ; FUNCTION CHUNK AT 0791 SIZE 00000147 BYTES
 
-                jb      RAM_26.2, code_897
-                jb      P1.3, code_8E1  ; Port 1 (PDIR=0)
-                ljmp    code_C0B
+                jb      RAM_26.2, ram_26_2_is_set
+                jb      P1.3, non_even_zero_cross? ; Port 1 (PDIR=0)
+                ljmp    even_zero_cross
 ; ---------------------------------------------------------------------------
 
-code_8E1:                               ; CODE XREF: IEX6_0+3↑j
+non_even_zero_cross?:                   ; CODE XREF: IEX6_0+3↑j
                 push    PSW             ; Program Status Word
                 push    ACC             ; Accumulator
                 push    B               ; B-Register
@@ -3032,7 +3032,7 @@ code_C05:                               ; CODE XREF: IEX6_0-85↑j
                 pop     ACC             ; Accumulator
                 pop     PSW             ; Program Status Word
 
-code_C0B:                               ; CODE XREF: IEX6_0+6↑j
+even_zero_cross:                        ; CODE XREF: IEX6_0+6↑j
                 reti
 ; End of function IEX6_0
 
@@ -3338,56 +3338,67 @@ TF0_0:                                  ; CODE XREF: TF0↑j
                 push    B               ; B-Register
                 push    DPL             ; Data Pointer, Low Byte
                 push    DPH             ; Data Pointer, High Byte
-                clr     TCON.4          ; Timer Control Register
+                clr     TCON.4          ; Stop Timer0
                 mov     A, TL0          ; Timer 0, Low Byte
                 add     A, #0D0h
                 mov     TL0, A          ; Timer 0, Low Byte
                 mov     A, TH0          ; Timer 0, High Byte
                 addc    A, #0FAh
-                mov     TH0, A          ; Timer 0, High Byte
-                jnc     code_DD6
+                mov     TH0, A          ; TimerOldVal = TH0:TL0
+                                        ; TH0:TL0 += FA:D0
+                jnc     dont_reload_timer0 ; if (FF:FF - TimerOldVal >= FA:D0)
+                                        ;   jump ...
                 mov     TL0, #0CBh      ; Timer 0, Low Byte
-                mov     TH0, #0FAh      ; Timer 0, High Byte
+                mov     TH0, #0FAh      ; Reset Timer0 to FA:CB on overflow
+                                        ;
+                                        ; FA:CB connection between FA:D0?
 
-code_DD6:                               ; CODE XREF: TF0_0+18↑j
-                setb    TCON.4          ; Timer Control Register
-                djnz    RAM_35, code_DE0
-                mov     RAM_35, #14h
-                setb    RAM_28.0
+dont_reload_timer0:                     ; CODE XREF: TF0_0+18↑j
+                setb    TCON.4          ; start Timer0
+                djnz    RAM_35, code_DE0 ; if (--RAM[0x35])
+                                        ;   jump ...
+                mov     RAM_35, #14h    ; RAM[0x35] = 0x14
+                                        ;
+                                        ; // reset value
+                setb    RAM_28.0        ; Stop main loop
 
 code_DE0:                               ; CODE XREF: TF0_0+22↑j
                 mov     DPTR, #0F97Fh
                 movx    A, @DPTR
                 inc     A
                 movx    @DPTR, A
-                jnz     code_DF8
+                jnz     overflow_on_inc_xram_f97f_or_f980 ; if (++XRAM[0xF97F]) // no overflow FF=>0
+                                        ;   jump ...
                 inc     DPTR
                 movx    A, @DPTR
                 inc     A
                 movx    @DPTR, A
-                jnz     code_DF8
+                jnz     overflow_on_inc_xram_f97f_or_f980 ; if (++XRAM[0xF980]) // no overflow FF=>0
+                                        ;   jump ...
+Both XRAM[0xF97F] and XRAM[0xF980] overflowed on increment. Resetting both to 0xFF.
                 mov     A, #0FFh
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0FFh
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF97F] = 0xFF
+                                        ; XRAM[0xF980] = 0xFF
 
-code_DF8:                               ; CODE XREF: TF0_0+30↑j
+overflow_on_inc_xram_f97f_or_f980:      ; CODE XREF: TF0_0+30↑j
                                         ; TF0_0+36↑j
                 mov     A, RAM_77
-                cjne    A, #0FFh, code_E34
-                jb      RAM_2F.1, code_E0D
+                cjne    A, #0FFh, ram_77_not_equal_ff
+                jb      RAM_2F.1, ram_2f_bit_1_set
                 mov     A, #0
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980] = 0
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_E0D:                               ; CODE XREF: TF0_0+47↑j
+ram_2f_bit_1_set:                       ; CODE XREF: TF0_0+47↑j
                 mov     DPTR, #0F994h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3396,11 +3407,12 @@ code_E0D:                               ; CODE XREF: TF0_0+47↑j
                 cjne    A, B, code_E1A  ; B-Register
 
 code_E1A:                               ; CODE XREF: TF0_0+61↑j
-                jnc     code_E1F
+                jnc     xram_f980_geq_xram_f994 ; if (XRAM[0xF980] >= XRAM[0xF994])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_E1F:                               ; CODE XREF: TF0_0:code_E1A↑j
+xram_f980_geq_xram_f994:                ; CODE XREF: TF0_0:code_E1A↑j
                 mov     DPTR, #0F993h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3409,27 +3421,29 @@ code_E1F:                               ; CODE XREF: TF0_0:code_E1A↑j
                 cjne    A, B, code_E2C  ; B-Register
 
 code_E2C:                               ; CODE XREF: TF0_0+73↑j
-                jnc     code_E31
+                jnc     xram_f97f_geq_xram_f993 ; if (XRAM[0xF97F] >= FRAM[0xF993])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_E31:                               ; CODE XREF: TF0_0:code_E2C↑j
+xram_f97f_geq_xram_f993:                ; CODE XREF: TF0_0:code_E2C↑j
                 ljmp    code_F1C
 ; ---------------------------------------------------------------------------
 
-code_E34:                               ; CODE XREF: TF0_0+44↑j
-                cjne    A, #0FEh, code_E39
-                sjmp    code_E3C
+ram_77_not_equal_ff:                    ; CODE XREF: TF0_0+44↑j
+                cjne    A, #0FEh, ram_77_neq_fe ; if (RAM[0x77] != 0xFE)
+                                        ;   jump ...
+                sjmp    ram_77_eq_fe
 ; ---------------------------------------------------------------------------
 
-code_E39:                               ; CODE XREF: TF0_0:code_E34↑j
+ram_77_neq_fe:                          ; CODE XREF: TF0_0:ram_77_not_equal_ff↑j
                 ljmp    code_EC2
 ; ---------------------------------------------------------------------------
 
-code_E3C:                               ; CODE XREF: TF0_0+81↑j
+ram_77_eq_fe:                           ; CODE XREF: TF0_0+81↑j
                 mov     A, S0CON        ; Serial Channel 0 Control Register
-                jb      ACC.0, code_EAC ; Accumulator
-                jb      P3.0, code_E6A  ; Port 3 (PDIR=0)
+                jb      ACC.0, receive_request_on_serial0 ; Accumulator
+                jb      P3.0, RxD_eq_1  ; Port 3 (PDIR=0)
                 mov     DPTR, #0F984h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3438,11 +3452,12 @@ code_E3C:                               ; CODE XREF: TF0_0+81↑j
                 cjne    A, B, code_E51  ; B-Register
 
 code_E51:                               ; CODE XREF: TF0_0+98↑j
-                jnc     code_E56
+                jnc     xram_f980_geq_xram_f984 ; if (XRAM[0xF980] >= XRAM[0xF984])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_E56:                               ; CODE XREF: TF0_0:code_E51↑j
+xram_f980_geq_xram_f984:                ; CODE XREF: TF0_0:code_E51↑j
                 mov     DPTR, #0F983h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3451,15 +3466,16 @@ code_E56:                               ; CODE XREF: TF0_0:code_E51↑j
                 cjne    A, B, code_E63  ; B-Register
 
 code_E63:                               ; CODE XREF: TF0_0+AA↑j
-                jnc     code_E68
+                jnc     xram_f97f_geq_xram_f983 ; if (XRAM[0xF97F] >= XRAM[0xF983])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_E68:                               ; CODE XREF: TF0_0:code_E63↑j
+xram_f97f_geq_xram_f983:                ; CODE XREF: TF0_0:code_E63↑j
                 sjmp    code_EAF
 ; ---------------------------------------------------------------------------
 
-code_E6A:                               ; CODE XREF: TF0_0+8B↑j
+RxD_eq_1:                               ; CODE XREF: TF0_0+8B↑j
                 mov     DPTR, #0F982h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3468,11 +3484,12 @@ code_E6A:                               ; CODE XREF: TF0_0+8B↑j
                 cjne    A, B, code_E77  ; B-Register
 
 code_E77:                               ; CODE XREF: TF0_0+BE↑j
-                jnc     code_E7C
+                jnc     xram_f980_geq_xram_f982 ; if (XRAM[0xF980] >= XRAM[0xF982])
+                                        ;   jump ...
                 ljmp    code_EAF
 ; ---------------------------------------------------------------------------
 
-code_E7C:                               ; CODE XREF: TF0_0:code_E77↑j
+xram_f980_geq_xram_f982:                ; CODE XREF: TF0_0:code_E77↑j
                 mov     DPTR, #0F981h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3481,47 +3498,49 @@ code_E7C:                               ; CODE XREF: TF0_0:code_E77↑j
                 cjne    A, B, code_E89  ; B-Register
 
 code_E89:                               ; CODE XREF: TF0_0+D0↑j
-                jnc     code_E8E
+                jnc     xram_f97f_geq_xram_f981 ; if (XRAM[0xF97F] >= XRAM[0xF981])
+                                        ;   jump ...
                 ljmp    code_EAF
 ; ---------------------------------------------------------------------------
 
-code_E8E:                               ; CODE XREF: TF0_0:code_E89↑j
+xram_f97f_geq_xram_f981:                ; CODE XREF: TF0_0:code_E89↑j
                 mov     A, #0
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
-                jnb     RAM_2F.1, code_E9E
-                ljmp    code_11E7
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980] = 0
+                jnb     RAM_2F.1, ram_2f_1_is_set
+                ljmp    ram_2f_bit_1_not_set_4
 ; ---------------------------------------------------------------------------
 
-code_E9E:                               ; CODE XREF: TF0_0+E2↑j
+ram_2f_1_is_set:                        ; CODE XREF: TF0_0+E2↑j
                 setb    RAM_2F.0
                 lcall   init_xram_for_serial0
                 mov     S0RELH, #0FFh   ; Serial Channel 0 Reload Reg., High Byte
-                mov     S0RELL, #0D0h   ; Serial Channel 0 Reload Reg., Low Byte
-                ljmp    code_11E7
+                mov     S0RELL, #0D0h   ; set serial0 frequency
+                ljmp    ram_2f_bit_1_not_set_4
 ; ---------------------------------------------------------------------------
 
-code_EAC:                               ; CODE XREF: TF0_0+88↑j
-                anl     S0CON, #0FEh    ; Serial Channel 0 Control Register
+receive_request_on_serial0:             ; CODE XREF: TF0_0+88↑j
+                anl     S0CON, #0FEh    ; Clear RI0 flag (serial recieve request)
 
-code_EAF:                               ; CODE XREF: TF0_0:code_E68↑j
+code_EAF:                               ; CODE XREF: TF0_0:xram_f97f_geq_xram_f983↑j
                                         ; TF0_0+C3↑j ...
                 mov     A, #0
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
-                orl     IEN0, #10h      ; Interrupt Enable Register 0
-                mov     RAM_77, #0FFh
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980] = 0
+                orl     IEN0, #10h      ; Enable Serial0 interrupt
+                mov     RAM_77, #0FFh   ; RAM[0x77] = 0xFF
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_EC2:                               ; CODE XREF: TF0_0:code_E39↑j
-                cjne    A, #5, code_EF2
+code_EC2:                               ; CODE XREF: TF0_0:ram_77_neq_fe↑j
+                cjne    A, #5, ram_77_neq_5 ; if (RAM[0x77] != 5)
+                                        ;   jump ...
                 mov     DPTR, #0F992h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3530,11 +3549,12 @@ code_EC2:                               ; CODE XREF: TF0_0:code_E39↑j
                 cjne    A, B, code_ED2  ; B-Register
 
 code_ED2:                               ; CODE XREF: TF0_0+119↑j
-                jnc     code_ED7
+                jnc     xram_f980_geq_xram_f992 ; if (XRAM[0xF980] >= XRAM[0xF992])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_ED7:                               ; CODE XREF: TF0_0:code_ED2↑j
+xram_f980_geq_xram_f992:                ; CODE XREF: TF0_0:code_ED2↑j
                 mov     DPTR, #0F991h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3543,18 +3563,20 @@ code_ED7:                               ; CODE XREF: TF0_0:code_ED2↑j
                 cjne    A, B, code_EE4  ; B-Register
 
 code_EE4:                               ; CODE XREF: TF0_0+12B↑j
-                jnc     code_EE9
+                jnc     xram_f97f_geq_xram_f991 ; if (XRAM[0xF97F] >= XRAM[0xF991])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_EE9:                               ; CODE XREF: TF0_0:code_EE4↑j
-                anl     S0CON, #0FEh    ; Serial Channel 0 Control Register
-                orl     S0CON, #10h     ; Serial Channel 0 Control Register
-                ljmp    code_11E7
+xram_f97f_geq_xram_f991:                ; CODE XREF: TF0_0:code_EE4↑j
+                anl     S0CON, #0FEh    ; Clear Serial0 Receieve request
+                orl     S0CON, #10h     ; Enable serial0 reception
+                ljmp    ram_2f_bit_1_not_set_4
 ; ---------------------------------------------------------------------------
 
-code_EF2:                               ; CODE XREF: TF0_0:code_EC2↑j
-                cjne    A, #6, code_F5D
+ram_77_neq_5:                           ; CODE XREF: TF0_0:code_EC2↑j
+                cjne    A, #6, ram_77_neq_6 ; if (RAM[0x77] != 6)
+                                        ;   jump ...
                 mov     DPTR, #0F994h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3563,11 +3585,12 @@ code_EF2:                               ; CODE XREF: TF0_0:code_EC2↑j
                 cjne    A, B, code_F02  ; B-Register
 
 code_F02:                               ; CODE XREF: TF0_0+149↑j
-                jnc     code_F07
+                jnc     xram_f980_geq_xram_f994_2 ; if (XRAM[0xF980] >= XRAM[0xF994])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_F07:                               ; CODE XREF: TF0_0:code_F02↑j
+xram_f980_geq_xram_f994_2:              ; CODE XREF: TF0_0:code_F02↑j
                 mov     DPTR, #0F993h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3576,15 +3599,16 @@ code_F07:                               ; CODE XREF: TF0_0:code_F02↑j
                 cjne    A, B, code_F14  ; B-Register
 
 code_F14:                               ; CODE XREF: TF0_0+15B↑j
-                jnc     code_F19
+                jnc     xram_f97f_geq_xram_f993_2 ; if (XRAM[0xF97F] >= XRAM[0xF993])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_F19:                               ; CODE XREF: TF0_0:code_F14↑j
-                jnb     RAM_2F.1, code_F39
+xram_f97f_geq_xram_f993_2:              ; CODE XREF: TF0_0:code_F14↑j
+                jnb     RAM_2F.1, ram_2f_bit_1_not_set
 
-code_F1C:                               ; CODE XREF: TF0_0:code_E31↑j
-                anl     IEN0, #0EFh     ; Interrupt Enable Register 0
+code_F1C:                               ; CODE XREF: TF0_0:xram_f97f_geq_xram_f993↑j
+                anl     IEN0, #0EFh     ; Disable Serial0 Interrupt
 
 code_F1F:                               ; CODE XREF: TF0_0+2D1↓j
                                         ; TF0_0+440↓j
@@ -3593,43 +3617,43 @@ code_F1F:                               ; CODE XREF: TF0_0+2D1↓j
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF9A0] = XRAM[0xF9A1] = 0
 
-code_F29:                               ; CODE XREF: TF0_0+19C↓j
+ram_2f_bit_4_or_bit_5_set:              ; CODE XREF: TF0_0+19C↓j
                                         ; TF0_0+19F↓j
                 mov     A, #0
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
-                mov     RAM_77, #4
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980] = 0
+                mov     RAM_77, #4      ; RAM[0x77] = 4
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_F39:                               ; CODE XREF: TF0_0:code_F19↑j
-                jb      RAM_2F.0, code_F4F
+ram_2f_bit_1_not_set:                   ; CODE XREF: TF0_0:xram_f97f_geq_xram_f993_2↑j
+                jb      RAM_2F.0, ram_2f_bit_0_set
                 mov     A, #0
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
-                orl     IEN0, #10h      ; Interrupt Enable Register 0
-                mov     RAM_77, #0FFh
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980] = 0
+                orl     IEN0, #10h      ; Enable Serial0 Interrupt
+                mov     RAM_77, #0FFh   ; RAM[0x77] = 0xFF
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_F4F:                               ; CODE XREF: TF0_0:code_F39↑j
-                anl     IEN0, #0EFh     ; Interrupt Enable Register 0
-                jb      RAM_2F.4, code_F29
-                jb      RAM_2F.5, code_F29
+ram_2f_bit_0_set:                       ; CODE XREF: TF0_0:ram_2f_bit_1_not_set↑j
+                anl     IEN0, #0EFh     ; Disable Serial0 Interrupt
+                jb      RAM_2F.4, ram_2f_bit_4_or_bit_5_set
+                jb      RAM_2F.5, ram_2f_bit_4_or_bit_5_set
                 clr     RAM_2F.2
                 ljmp    code_1192
 ; ---------------------------------------------------------------------------
 
-code_F5D:                               ; CODE XREF: TF0_0:code_EF2↑j
-                cjne    A, #7, code_F93
+ram_77_neq_6:                           ; CODE XREF: TF0_0:ram_77_neq_5↑j
+                cjne    A, #7, ram_77_neq_7
                 mov     DPTR, #0F996h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3638,11 +3662,12 @@ code_F5D:                               ; CODE XREF: TF0_0:code_EF2↑j
                 cjne    A, B, code_F6D  ; B-Register
 
 code_F6D:                               ; CODE XREF: TF0_0+1B4↑j
-                jnc     code_F72
+                jnc     xram_f980_geq_xram_f996 ; if (XRAM[0xF980] >= XRAM[0xF996])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_F72:                               ; CODE XREF: TF0_0:code_F6D↑j
+xram_f980_geq_xram_f996:                ; CODE XREF: TF0_0:code_F6D↑j
                 mov     DPTR, #0F995h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3651,20 +3676,21 @@ code_F72:                               ; CODE XREF: TF0_0:code_F6D↑j
                 cjne    A, B, code_F7F  ; B-Register
 
 code_F7F:                               ; CODE XREF: TF0_0+1C6↑j
-                jnc     code_F84
+                jnc     xram_f97f_geq_xram_f995 ; if (XRAM[0xF97F] >= XRAM[0xF995])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_F84:                               ; CODE XREF: TF0_0:code_F7F↑j
-                anl     S0CON, #0FEh    ; Serial Channel 0 Control Register
-                orl     S0CON, #10h     ; Serial Channel 0 Control Register
-                orl     IEN0, #10h      ; Interrupt Enable Register 0
-                mov     RAM_77, #8
+xram_f97f_geq_xram_f995:                ; CODE XREF: TF0_0:code_F7F↑j
+                anl     S0CON, #0FEh    ; Reset Serial0 Recieve Request Flag
+                orl     S0CON, #10h     ; Enable Serial0 reception
+                orl     IEN0, #10h      ; Enable Serial0 Interrupt
+                mov     RAM_77, #8      ; RAM[0x77] = 8
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_F93:                               ; CODE XREF: TF0_0:code_F5D↑j
-                cjne    A, #8, code_FC6
+ram_77_neq_7:                           ; CODE XREF: TF0_0:ram_77_neq_6↑j
+                cjne    A, #8, ram_77_neq_8
                 mov     DPTR, #0F998h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3673,11 +3699,12 @@ code_F93:                               ; CODE XREF: TF0_0:code_F5D↑j
                 cjne    A, B, code_FA3  ; B-Register
 
 code_FA3:                               ; CODE XREF: TF0_0+1EA↑j
-                jnc     code_FA8
+                jnc     xram_f980_geq_xram_f998 ; if (XRAM[0xF980] >= XRAM[0xF998])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_FA8:                               ; CODE XREF: TF0_0:code_FA3↑j
+xram_f980_geq_xram_f998:                ; CODE XREF: TF0_0:code_FA3↑j
                 mov     DPTR, #0F997h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3686,43 +3713,45 @@ code_FA8:                               ; CODE XREF: TF0_0:code_FA3↑j
                 cjne    A, B, code_FB5  ; B-Register
 
 code_FB5:                               ; CODE XREF: TF0_0+1FC↑j
-                jnc     code_FBA
+                jnc     xram_f97f_geq_xram_f997 ; if (XRAM[0xF97F] >= XRAM[0xF997])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_FBA:                               ; CODE XREF: TF0_0:code_FB5↑j
-                anl     IEN0, #0EFh     ; Interrupt Enable Register 0
-                jnb     RAM_2F.2, code_FC3
-                ljmp    code_11B3
+xram_f97f_geq_xram_f997:                ; CODE XREF: TF0_0:code_FB5↑j
+                anl     IEN0, #0EFh     ; Disable Serial0 Interrupt
+                jnb     RAM_2F.2, ram_2f_bit_2_not_set
+                ljmp    ram_2f_bit_2_set
 ; ---------------------------------------------------------------------------
 
-code_FC3:                               ; CODE XREF: TF0_0+207↑j
+ram_2f_bit_2_not_set:                   ; CODE XREF: TF0_0+207↑j
                 ljmp    code_1192
 ; ---------------------------------------------------------------------------
 
-code_FC6:                               ; CODE XREF: TF0_0:code_F93↑j
-                cjne    A, #4, code_FCB
-                sjmp    code_FCE
+ram_77_neq_8:                           ; CODE XREF: TF0_0:ram_77_neq_7↑j
+                cjne    A, #4, ram_77_neq_4
+                sjmp    ram_77_eq_4
 ; ---------------------------------------------------------------------------
 
-code_FCB:                               ; CODE XREF: TF0_0:code_FC6↑j
-                ljmp    code_1028
+ram_77_neq_4:                           ; CODE XREF: TF0_0:ram_77_neq_8↑j
+                ljmp    ram_77_neq_4_sub
 ; ---------------------------------------------------------------------------
 
-code_FCE:                               ; CODE XREF: TF0_0+213↑j
+ram_77_eq_4:                            ; CODE XREF: TF0_0+213↑j
                 mov     A, S0CON        ; Serial Channel 0 Control Register
-                jnb     ACC.0, code_FE3 ; Accumulator
-                anl     S0CON, #0FEh    ; Serial Channel 0 Control Register
+                jnb     ACC.0, no_serial0_receive_request ; if (!(S0CON & (1 << 0))) // Serial0 Reciever interrupt flag is not set
+                                        ;   jump ...
+                anl     S0CON, #0FEh    ; reset Serial0 Reciever Request flag
                 mov     A, #0
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980] = 0
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_FE3:                               ; CODE XREF: TF0_0+21A↑j
+no_serial0_receive_request:             ; CODE XREF: TF0_0+21A↑j
                 mov     DPTR, #0F990h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3731,11 +3760,12 @@ code_FE3:                               ; CODE XREF: TF0_0+21A↑j
                 cjne    A, B, code_FF0  ; B-Register
 
 code_FF0:                               ; CODE XREF: TF0_0+237↑j
-                jnc     code_FF5
+                jnc     xram_f980_geq_xram_f990 ; if (XRAM[0xF980] >= XRAM[0xF990])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_FF5:                               ; CODE XREF: TF0_0:code_FF0↑j
+xram_f980_geq_xram_f990:                ; CODE XREF: TF0_0:code_FF0↑j
                 mov     DPTR, #0F98Fh
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3744,52 +3774,56 @@ code_FF5:                               ; CODE XREF: TF0_0:code_FF0↑j
                 cjne    A, B, code_1002 ; B-Register
 
 code_1002:                              ; CODE XREF: TF0_0+249↑j
-                jnc     code_1007
+                jnc     xram_f97f_geq_xram_f98f ; if (XRAM[0xF97F] >= XRAM[0xF98F])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_1007:                              ; CODE XREF: TF0_0:code_1002↑j
+xram_f97f_geq_xram_f98f:                ; CODE XREF: TF0_0:code_1002↑j
                 mov     A, #0
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
-                jnb     RAM_2F.1, code_101F
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980] = 0
+                jnb     RAM_2F.1, ram_2f_bit_1_not_set_2 ; if (!(RAM[0x2F] & (1 << 1)))
+                                        ;   jump ...
                 clr     RAM_2F.2
-                jb      RAM_2F.0, code_101C
+                jb      RAM_2F.0, ram_2f_bit_0_set_2 ; if (RAM[0x2F] & (1 << 0))
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_101C:                              ; CODE XREF: TF0_0+260↑j
+ram_2f_bit_0_set_2:                     ; CODE XREF: TF0_0+260↑j
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_101F:                              ; CODE XREF: TF0_0+25B↑j
-                jb      RAM_2F.0, code_1025
-                ljmp    code_11B3
+ram_2f_bit_1_not_set_2:                 ; CODE XREF: TF0_0+25B↑j
+                jb      RAM_2F.0, ram_2f_bit_0_set_3 ; if (RAM[0x2F] & (1 << 0))
+                                        ;   jump ...
+                ljmp    ram_2f_bit_2_set
 ; ---------------------------------------------------------------------------
 
-code_1025:                              ; CODE XREF: TF0_0:code_101F↑j
+ram_2f_bit_0_set_3:                     ; CODE XREF: TF0_0:ram_2f_bit_1_not_set_2↑j
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_1028:                              ; CODE XREF: TF0_0:code_FCB↑j
-                cjne    A, #0FDh, code_1097
-                jnb     P3.1, code_1040 ; Port 3 (PDIR=0)
-                anl     S0CON, #0EFh    ; Serial Channel 0 Control Register
+ram_77_neq_4_sub:                       ; CODE XREF: TF0_0:ram_77_neq_4↑j
+                cjne    A, #0FDh, ram_77_neq_fd ; if (RAM[0x77] != 0xFD)
+                jnb     P3.1, serial0_txd_not_set ; Port 3 (PDIR=0)
+                anl     S0CON, #0EFh    ; Disable Serial0 Receiver
                 clr     P3.1            ; Port 3 (PDIR=0)
                 mov     A, #0
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980] = 0
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_1040:                              ; CODE XREF: TF0_0+275↑j
-                jb      P3.0, code_107C ; Port 3 (PDIR=0)
+serial0_txd_not_set:                    ; CODE XREF: TF0_0+275↑j
+                jb      P3.0, serial0_rxd_set ; Port 3 (PDIR=0)
                 mov     DPTR, #0F986h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3798,11 +3832,12 @@ code_1040:                              ; CODE XREF: TF0_0+275↑j
                 cjne    A, B, code_1050 ; B-Register
 
 code_1050:                              ; CODE XREF: TF0_0+297↑j
-                jnc     code_1055
+                jnc     xram_f980_geq_xram_f986 ; if (XRAM[0xF980] >= XRAM[0xF986])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_1055:                              ; CODE XREF: TF0_0:code_1050↑j
+xram_f980_geq_xram_f986:                ; CODE XREF: TF0_0:code_1050↑j
                 mov     DPTR, #0F985h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3811,48 +3846,51 @@ code_1055:                              ; CODE XREF: TF0_0:code_1050↑j
                 cjne    A, B, code_1062 ; B-Register
 
 code_1062:                              ; CODE XREF: TF0_0+2A9↑j
-                jnc     code_1067
+                jnc     xram_f97f_geq_xram_f985 ; if (XRAM[0xF97F] >= XRAM[0xF985])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_1067:                              ; CODE XREF: TF0_0:code_1062↑j
-                setb    P3.1            ; Port 3 (PDIR=0)
-                orl     S0CON, #10h     ; Serial Channel 0 Control Register
+xram_f97f_geq_xram_f985:                ; CODE XREF: TF0_0:code_1062↑j
+                setb    P3.1            ; Set TxD @ Serial0 (TxD @ MC33199)
+                orl     S0CON, #10h     ; Enable Receiver at Serial0
                 mov     A, #0
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0x7F] = XRAM[0xF980] = 0
 
 code_1076:                              ; CODE XREF: TF0_0+371↓j
-                mov     RAM_77, #0FCh
+                mov     RAM_77, #0FCh   ; RAM[0x77] = 0xFC
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_107C:                              ; CODE XREF: TF0_0:code_1040↑j
-                jb      RAM_2F.1, code_1082
-                ljmp    code_108A
+serial0_rxd_set:                        ; CODE XREF: TF0_0:serial0_txd_not_set↑j
+                jb      RAM_2F.1, ram_2f_bit_2_set_2 ; if (RAM[0x2F] & (1 << 1))
+                                        ;   jump ...
+                ljmp    ram_2f_bit_1_not_set_3
 ; ---------------------------------------------------------------------------
 
-code_1082:                              ; CODE XREF: TF0_0:code_107C↑j
-                setb    P3.1            ; Port 3 (PDIR=0)
-                orl     S0CON, #10h     ; Serial Channel 0 Control Register
+ram_2f_bit_2_set_2:                     ; CODE XREF: TF0_0:serial0_rxd_set↑j
+                setb    P3.1            ; Set TxD at Serial0 (TxD @ MC33199)
+                orl     S0CON, #10h     ; Enable Receiver at Serial0
                 ljmp    code_F1F
 ; ---------------------------------------------------------------------------
 
-code_108A:                              ; CODE XREF: TF0_0+2C9↑j
+ram_2f_bit_1_not_set_3:                 ; CODE XREF: TF0_0+2C9↑j
                 mov     A, #0
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980] = 0
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_1097:                              ; CODE XREF: TF0_0:code_1028↑j
-                cjne    A, #0FCh, code_10DC
+ram_77_neq_fd:                          ; CODE XREF: TF0_0:ram_77_neq_4_sub↑j
+                cjne    A, #0FCh, ram_77_neq_fc ; if (RAM[0x77] != 0xFC)
+                                        ;   jump ...
                 mov     DPTR, #0F988h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3861,11 +3899,12 @@ code_1097:                              ; CODE XREF: TF0_0:code_1028↑j
                 cjne    A, B, code_10A7 ; B-Register
 
 code_10A7:                              ; CODE XREF: TF0_0+2EE↑j
-                jnc     code_10AC
+                jnc     xram_f980_geq_xram_f988 ; if (XRAM[0xF980] >= XRAM[0xF988])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_10AC:                              ; CODE XREF: TF0_0:code_10A7↑j
+xram_f980_geq_xram_f988:                ; CODE XREF: TF0_0:code_10A7↑j
                 mov     DPTR, #0F987h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3874,36 +3913,40 @@ code_10AC:                              ; CODE XREF: TF0_0:code_10A7↑j
                 cjne    A, B, code_10B9 ; B-Register
 
 code_10B9:                              ; CODE XREF: TF0_0+300↑j
-                jnc     code_10BE
+                jnc     xram_f97f_geq_xram_f987 ; if (XRAM[0xF97F] >= XRAM[0xF987])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_10BE:                              ; CODE XREF: TF0_0:code_10B9↑j
+xram_f97f_geq_xram_f987:                ; CODE XREF: TF0_0:code_10B9↑j
                 mov     DPTR, #0F9A2h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
                 inc     DPTR
                 movx    A, @DPTR
-                xch     A, B            ; B-Register
+                xch     A, B            ; B:A = XRAM[0xF9A3]:XRAM[0xF9A2]
                 mov     DPTR, #0F99Eh
                 movx    @DPTR, A
                 inc     DPTR
                 xch     A, B            ; B-Register
-                movx    @DPTR, A
-                mov     DPSEL, #7       ; Data Pointer Select Register
-                mov     DPTR, #0FAA8h
-                mov     DPSEL, #0       ; Data Pointer Select Register
-                ljmp    code_124A
+                movx    @DPTR, A        ; B:A = XRAM[0xF9A3]:XRAM[0xF9A2]
+                                        ; XRAM[0xF99F]:XRAM[0xF99E] = XRAM[0xF9A3]:XRAM[0xF9A2]
+                mov     DPSEL, #7       ; Select DPTR #7
+                mov     DPTR, #0FAA8h   ; DPTR[7] = 0xFAA8
+                mov     DPSEL, #0       ; Select DPTR #0
+                ljmp    xram_f987_and_xram_f988_eq_0 ; DPTR #7 may contain smth
 ; ---------------------------------------------------------------------------
 
-code_10DC:                              ; CODE XREF: TF0_0:code_1097↑j
-                cjne    A, #3, code_1130
+ram_77_neq_fc:                          ; CODE XREF: TF0_0:ram_77_neq_fd↑j
+                cjne    A, #3, ram_77_neq_3 ; if (RAM[0x77] != 3)
+                                        ;   jump ...
                 mov     A, S0CON        ; Serial Channel 0 Control Register
-                jnb     ACC.0, code_10E7 ; Accumulator
-                ljmp    code_11F0
+                jnb     ACC.0, no_serial0_receive_request_2 ; if (!(S0CON & (1 << 0))) // Serial0 Receiver Interrupt
+                                        ;   jump ...
+                ljmp    serial0_receive_request_2
 ; ---------------------------------------------------------------------------
 
-code_10E7:                              ; CODE XREF: TF0_0+32B↑j
+no_serial0_receive_request_2:           ; CODE XREF: TF0_0+32B↑j
                 mov     DPTR, #0F98Eh
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3912,11 +3955,12 @@ code_10E7:                              ; CODE XREF: TF0_0+32B↑j
                 cjne    A, B, code_10F4 ; B-Register
 
 code_10F4:                              ; CODE XREF: TF0_0+33B↑j
-                jnc     code_10F9
+                jnc     xram_f980_geq_xram_f98e ; if (XRAM[0xF980] >= XRAM[0xF98E])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_10F9:                              ; CODE XREF: TF0_0:code_10F4↑j
+xram_f980_geq_xram_f98e:                ; CODE XREF: TF0_0:code_10F4↑j
                 mov     DPTR, #0F98Dh
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3925,39 +3969,41 @@ code_10F9:                              ; CODE XREF: TF0_0:code_10F4↑j
                 cjne    A, B, code_1106 ; B-Register
 
 code_1106:                              ; CODE XREF: TF0_0+34D↑j
-                jnc     code_110B
+                jnc     xram_f97f_geq_xram_f98d ; if (XRAM[0xF97F] >= XRAM[0xF98D])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_110B:                              ; CODE XREF: TF0_0:code_1106↑j
+xram_f97f_geq_xram_f98d:                ; CODE XREF: TF0_0:code_1106↑j
                 mov     A, #0
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980] = 0
                 mov     DPTR, #0F987h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
                 inc     DPTR
                 movx    A, @DPTR
                 orl     A, B            ; B-Register
-                jnz     code_1124
-                ljmp    code_124A
+                jnz     xram_f987_or_xram_f988_not_null ; if (XRAM[0xF987] || XRAM[0xF988])
+                                        ;   jump ...
+                ljmp    xram_f987_and_xram_f988_eq_0 ; DPTR #7 may contain smth
 ; ---------------------------------------------------------------------------
 
-code_1124:                              ; CODE XREF: TF0_0+369↑j
-                jb      RAM_2F.1, code_112A
+xram_f987_or_xram_f988_not_null:        ; CODE XREF: TF0_0+369↑j
+                jb      RAM_2F.1, ram_2f_bit_1_set_2
                 ljmp    code_1076
 ; ---------------------------------------------------------------------------
 
-code_112A:                              ; CODE XREF: TF0_0:code_1124↑j
-                mov     RAM_77, #0FDh
+ram_2f_bit_1_set_2:                     ; CODE XREF: TF0_0:xram_f987_or_xram_f988_not_null↑j
+                mov     RAM_77, #0FDh   ; RAM[0x77] = 0xFD
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_1130:                              ; CODE XREF: TF0_0:code_10DC↑j
-                cjne    A, #2, code_115D
+ram_77_neq_3:                           ; CODE XREF: TF0_0:ram_77_neq_fc↑j
+                cjne    A, #2, ram_77_neq_2 ; RAM[0x77] != 2
                 mov     DPTR, #0F98Ch
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3966,11 +4012,12 @@ code_1130:                              ; CODE XREF: TF0_0:code_10DC↑j
                 cjne    A, B, code_1140 ; B-Register
 
 code_1140:                              ; CODE XREF: TF0_0+387↑j
-                jnc     code_1145
+                jnc     xram_f980_geq_xram_f98c ; if (XRAM[0xF980] >= XRAM[0xF98C])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_1145:                              ; CODE XREF: TF0_0:code_1140↑j
+xram_f980_geq_xram_f98c:                ; CODE XREF: TF0_0:code_1140↑j
                 mov     DPTR, #0F98Bh
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -3979,23 +4026,25 @@ code_1145:                              ; CODE XREF: TF0_0:code_1140↑j
                 cjne    A, B, code_1152 ; B-Register
 
 code_1152:                              ; CODE XREF: TF0_0+399↑j
-                jnc     code_1157
+                jnc     xram_f97f_geq_xram_f98b ; if (XRAM[0xF97F] >= XRAM[0xF98B])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_1157:                              ; CODE XREF: TF0_0:code_1152↑j
-                anl     IEN0, #0EFh     ; Interrupt Enable Register 0
+xram_f97f_geq_xram_f98b:                ; CODE XREF: TF0_0:code_1152↑j
+                anl     IEN0, #0EFh     ; Disable Serial0 Interrupt
                 ljmp    code_11F3
 ; ---------------------------------------------------------------------------
 
-code_115D:                              ; CODE XREF: TF0_0:code_1130↑j
-                cjne    A, #1, code_118F
+ram_77_neq_2:                           ; CODE XREF: TF0_0:ram_77_neq_3↑j
+                cjne    A, #1, ram_77_neq_1 ; if (RAM[0x77] != 1)
+                                        ;   jump ...
                 mov     A, S0CON        ; Serial Channel 0 Control Register
-                jnb     ACC.0, code_1168 ; Accumulator
-                ljmp    code_11F0
+                jnb     ACC.0, no_serial0_receive_request_3 ; Accumulator
+                ljmp    serial0_receive_request_2
 ; ---------------------------------------------------------------------------
 
-code_1168:                              ; CODE XREF: TF0_0+3AC↑j
+no_serial0_receive_request_3:           ; CODE XREF: TF0_0+3AC↑j
                 mov     DPTR, #0F98Ah
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -4004,11 +4053,12 @@ code_1168:                              ; CODE XREF: TF0_0+3AC↑j
                 cjne    A, B, code_1175 ; B-Register
 
 code_1175:                              ; CODE XREF: TF0_0+3BC↑j
-                jnc     code_117A
+                jnc     xram_f980_geq_xram_f98a ; if (XRAM[0xF980] >= XRAM[0xF98A])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_117A:                              ; CODE XREF: TF0_0:code_1175↑j
+xram_f980_geq_xram_f98a:                ; CODE XREF: TF0_0:code_1175↑j
                 mov     DPTR, #0F989h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -4017,100 +4067,106 @@ code_117A:                              ; CODE XREF: TF0_0:code_1175↑j
                 cjne    A, B, code_1187 ; B-Register
 
 code_1187:                              ; CODE XREF: TF0_0+3CE↑j
-                jnc     code_118C
+                jnc     xram_f97f_geq_xram_f989 ; if (XRAM[0xF97F] >= XRAM[0xF989])
+                                        ;   jump ...
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_118C:                              ; CODE XREF: TF0_0:code_1187↑j
-                ljmp    code_124A
+xram_f97f_geq_xram_f989:                ; CODE XREF: TF0_0:code_1187↑j
+                ljmp    xram_f987_and_xram_f988_eq_0 ; DPTR #7 may contain smth
 ; ---------------------------------------------------------------------------
 
-code_118F:                              ; CODE XREF: TF0_0:code_115D↑j
+ram_77_neq_1:                           ; CODE XREF: TF0_0:ram_77_neq_2↑j
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
 code_1192:                              ; CODE XREF: TF0_0+1A4↑j
-                                        ; TF0_0:code_FC3↑j
+                                        ; TF0_0:ram_2f_bit_2_not_set↑j
                 mov     A, #0
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
-                anl     S0CON, #0FEh    ; Serial Channel 0 Control Register
-                orl     IEN0, #10h      ; Interrupt Enable Register 0
-                mov     RAM_77, #0FFh
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980] = 0
+                anl     S0CON, #0FEh    ; Clear Serial0 Receiver Interrupt flag
+                orl     IEN0, #10h      ; Enable Serial0 Interrupt
+                mov     RAM_77, #0FFh   ; RAM[0x77] = 0xFF
                 clr     RAM_2F.0
                 lcall   init_xram_for_serial0
                 mov     S0RELH, #0FFh   ; Serial Channel 0 Reload Reg., High Byte
-                mov     S0RELL, #0CCh   ; Serial Channel 0 Reload Reg., Low Byte
+                mov     S0RELL, #0CCh   ; Set Serial0 Baudrate
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_11B3:                              ; CODE XREF: TF0_0+20A↑j
+ram_2f_bit_2_set:                       ; CODE XREF: TF0_0+20A↑j
                                         ; TF0_0+26C↑j
                 mov     A, #0
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980] = 0
                 mov     DPTR, #0F991h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
                 inc     DPTR
                 movx    A, @DPTR
                 orl     A, B            ; B-Register
-                jz      code_11D2
-                anl     S0CON, #0EFh    ; Serial Channel 0 Control Register
-                mov     RAM_77, #5
+                jz      xram_f991_and_xram_f992_eq_0 ; if (!XRAM[0xF991] && !XRAM[0xF992])
+                                        ;   jump ...
+                anl     S0CON, #0EFh    ; Disable Serial0 Receiver
+                mov     RAM_77, #5      ; RAM[0x77] = 5
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_11D2:                              ; CODE XREF: TF0_0+411↑j
-                jnb     RAM_2F.1, code_11E7
+xram_f991_and_xram_f992_eq_0:           ; CODE XREF: TF0_0+411↑j
+                jnb     RAM_2F.1, ram_2f_bit_1_not_set_4 ; if (!(RAM[0x2F] & (1 << 1)))
+                                        ;   jump ...
                 mov     DPTR, #0F983h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
                 inc     DPTR
                 movx    A, @DPTR
                 orl     A, B            ; B-Register
-                jz      code_11E7
-                orl     IEN0, #10h      ; Interrupt Enable Register 0
-                mov     RAM_77, #0FFh
+                jz      ram_2f_bit_1_not_set_4 ; if (!XRAM[0xF983] && !XRAM[0xF984])
+                                        ;   jump ...
+                orl     IEN0, #10h      ; Enable Serial0 Interrupt
+                mov     RAM_77, #0FFh   ; RAM[0x77] = 0xFF
 
-code_11E7:                              ; CODE XREF: TF0_0+E5↑j
+ram_2f_bit_1_not_set_4:                 ; CODE XREF: TF0_0+E5↑j
                                         ; TF0_0+F3↑j ...
-                orl     IEN0, #10h      ; Interrupt Enable Register 0
-                mov     RAM_77, #6
+                orl     IEN0, #10h      ; Enable Serial0 Interrupt
+                mov     RAM_77, #6      ; RAM[0x77] = 6
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_11F0:                              ; CODE XREF: TF0_0+32E↑j
+serial0_receive_request_2:              ; CODE XREF: TF0_0+32E↑j
                                         ; TF0_0+3AF↑j
-                anl     S0CON, #0FEh    ; Serial Channel 0 Control Register
+                anl     S0CON, #0FEh    ; Disable Serial0 Receiver
 
 code_11F3:                              ; CODE XREF: TF0_0+3A4↑j
-                jnb     RAM_2F.1, code_11F9
+                jnb     RAM_2F.1, ram_2f_bit_1_not_set_5 ; if (!(RAM[0x2F] & (1 << 1)))
+                                        ;   jump ...
                 ljmp    code_F1F
 ; ---------------------------------------------------------------------------
 
-code_11F9:                              ; CODE XREF: TF0_0:code_11F3↑j
-                jb      RAM_2F.2, code_1213
+ram_2f_bit_1_not_set_5:                 ; CODE XREF: TF0_0:code_11F3↑j
+                jb      RAM_2F.2, ram_2f_bit_1_set_5 ; if (RAM[0x2F] & (1 << 2))
+                                        ;   jump ...
                 clr     RAM_2F.4
-                clr     RAM_2F.5
+                clr     RAM_2F.5        ; RAM[0x2F] &= ~((1 << 4) || (1 << 5))
                 mov     A, #0
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
-                orl     IEN0, #10h      ; Interrupt Enable Register 0
-                mov     RAM_77, #0FFh
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980] = 0
+                orl     IEN0, #10h      ; Enable Serial0 Interrupt
+                mov     RAM_77, #0FFh   ; RAM[0x77] = 9xFF
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_1213:                              ; CODE XREF: TF0_0:code_11F9↑j
+ram_2f_bit_1_set_5:                     ; CODE XREF: TF0_0:ram_2f_bit_1_not_set_5↑j
                 mov     DPTR, #0F9A2h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -4121,182 +4177,203 @@ code_1213:                              ; CODE XREF: TF0_0:code_11F9↑j
                 movx    @DPTR, A
                 inc     DPTR
                 xch     A, B            ; B-Register
-                movx    @DPTR, A
+                movx    @DPTR, A        ; XRAM[0xF99F]:XRAM[0xF99E] = XRAM[0xF9A3]:XRAM[0xF9A2]
                 mov     DPSEL, #7       ; Data Pointer Select Register
-                mov     DPTR, #0FAA8h
+                mov     DPTR, #0FAA8h   ; DPTR[7] = 0xFAA8
                 mov     DPSEL, #0       ; Data Pointer Select Register
-                mov     DPTR, #0F98Dh
+                mov     DPTR, #0F98Dh   ; DPTR[0] = 0xF98D
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
                 inc     DPTR
                 movx    A, @DPTR
                 orl     A, B            ; B-Register
-                jz      code_124A
+                jz      xram_f987_and_xram_f988_eq_0 ; DPTR #7 may contain smth
                 mov     A, #0
-                mov     DPTR, #0F97Fh
+                mov     DPTR, #0F97Fh   ; DPTR[0] = 0xF97F
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
-                mov     RAM_77, #3
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980] = 0
+                mov     RAM_77, #3      ; RAM[0x77] = 3
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
-code_124A:                              ; CODE XREF: TF0_0+323↑j
+xram_f987_and_xram_f988_eq_0:           ; CODE XREF: TF0_0+323↑j
                                         ; TF0_0+36B↑j ...
-                mov     A, #0
+                mov     A, #0           ; DPTR #7 may contain smth
                 mov     DPTR, #0F97Fh
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A
-                anl     S0CON, #0F7h    ; Serial Channel 0 Control Register
-                orl     S0CON, #2       ; Serial Channel 0 Control Register
-                orl     IEN0, #10h      ; Interrupt Enable Register 0
-                mov     RAM_77, #2
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980]
+                anl     S0CON, #0F7h    ; Clear Serial0 Transmitter bit 9
+                orl     S0CON, #2       ; Set Serial0 Transmitter interrupt flag?
+                orl     IEN0, #10h      ; Enable Serial0 Interrupt
+                mov     RAM_77, #2      ; RAM[0x77] = 2
                 ljmp    code_1263
 ; ---------------------------------------------------------------------------
 
 code_1263:                              ; CODE XREF: TF0_0+54↑j
                                         ; TF0_0+66↑j ...
-                jb      RAM_29.1, code_1269
+                jb      RAM_29.1, ram_29_bit_1_set ; if (RAM[0x29] & (1 << 1))
+                                        ;   jump ...
                 ljmp    code_1299
 ; ---------------------------------------------------------------------------
 
-code_1269:                              ; CODE XREF: TF0_0:code_1263↑j
-                jb      RAM_2B.7, code_126F
-                ljmp    code_12FD
+ram_29_bit_1_set:                       ; CODE XREF: TF0_0:code_1263↑j
+                jb      RAM_2B.7, ram_2b_bit_7_set ; if (RAM[0x2B] & (1 << 7))
+                                        ;   jump ...
+                ljmp    flash_8752_is_nil
 ; ---------------------------------------------------------------------------
 
-code_126F:                              ; CODE XREF: TF0_0:code_1269↑j
+ram_2b_bit_7_set:                       ; CODE XREF: TF0_0:ram_29_bit_1_set↑j
                 mov     A, RAM_4D
-                cjne    A, #0, code_127F
-                jnb     P5.1, code_1290 ; Port 5 (PDIR=0)
+                cjne    A, #0, ram_4d_not_nil ; if (RAM[0x4D])
+                                        ;   jump ...
+                jnb     P5.1, either_ignition_coil_is_charging ; if (!P5.1)  // ignition coil for cyl 1/4 is charging // is it CM/CCM output?
+                                        ;   jump ...
                 anl     CLRMSK, #0FDh   ; Compare Clear Mask Register
-                anl     SETMSK, #0FDh   ; Compare Set Mask Register
-                sjmp    code_1293
+                anl     SETMSK, #0FDh   ; Clear Mask = 0xFD
+                                        ; Set Mask = 0xFD
+                sjmp    clrmsk_setmsk_updated
 ; ---------------------------------------------------------------------------
 
-code_127F:                              ; CODE XREF: TF0_0+4BB↑j
-                cjne    A, #1, code_128D
-                jnb     P5.0, code_1290 ; Port 5 (PDIR=0)
+ram_4d_not_nil:                         ; CODE XREF: TF0_0+4BB↑j
+                cjne    A, #1, ram_4d_not_eq_1 ; if (RAM[0x4D] != 1)
+                                        ;   jump ...
+                jnb     P5.0, either_ignition_coil_is_charging ; if (!P5.0)  // ignition coil for cyl 2/3 is charging // is it CM/CCM output?
+                                        ;   jump ...
                 anl     CLRMSK, #0FEh   ; Compare Clear Mask Register
-                anl     SETMSK, #0FEh   ; Compare Set Mask Register
-                sjmp    code_1293
+                anl     SETMSK, #0FEh   ; Clear Mask = 0xFE
+                                        ; Set Mask = 0xFE
+                sjmp    clrmsk_setmsk_updated
 ; ---------------------------------------------------------------------------
 
-code_128D:                              ; CODE XREF: TF0_0:code_127F↑j
-                ljmp    code_12FD
+ram_4d_not_eq_1:                        ; CODE XREF: TF0_0:ram_4d_not_nil↑j
+                ljmp    flash_8752_is_nil
 ; ---------------------------------------------------------------------------
 
-code_1290:                              ; CODE XREF: TF0_0+4BE↑j
+either_ignition_coil_is_charging:       ; CODE XREF: TF0_0+4BE↑j
                                         ; TF0_0+4CC↑j
                 ljmp    code_12FF
 ; ---------------------------------------------------------------------------
 
-code_1293:                              ; CODE XREF: TF0_0+4C7↑j
+clrmsk_setmsk_updated:                  ; CODE XREF: TF0_0+4C7↑j
                                         ; TF0_0+4D5↑j
-                ljmp    code_12EA
+                ljmp    clrmsk_setmsk_updated_sub
 ; ---------------------------------------------------------------------------
 
-code_1296:                              ; CODE XREF: TF0_0:code_12A0↓j
+ram_4e_neq_0:                           ; CODE XREF: TF0_0:ram_4f_eq_nil↓j
                 ljmp    code_12FF
 ; ---------------------------------------------------------------------------
 
 code_1299:                              ; CODE XREF: TF0_0+4B0↑j
                 mov     A, RAM_4F
-                jnz     code_12A0
+                jnz     ram_4f_eq_nil   ; if (RAM[0x4F])
+                                        ;   jump ...
                 ljmp    code_12FF
 ; ---------------------------------------------------------------------------
 
-code_12A0:                              ; CODE XREF: TF0_0+4E5↑j
-                djnz    RAM_4E, code_1296
+ram_4f_eq_nil:                          ; CODE XREF: TF0_0+4E5↑j
+                djnz    RAM_4E, ram_4e_neq_0 ; if (--RAM[0x4E])
+                                        ;   jump ...
                 mov     A, RAM_4D
-                cjne    A, #0, code_12B4
-                jnb     P5.1, code_12AF ; Port 5 (PDIR=0)
-                clr     P5.1            ; Port 5 (PDIR=0)
-                sjmp    code_12C6
+                cjne    A, #0, ram_4d_not_nil_2 ; if (RAM[0x4D])
+                                        ;   jump ...
+                jnb     P5.1, ignition_coil_14_is_charging ; if (!P5.1)  // ignition coil for cyl 1/4 is charging // is it CM/CCM output?
+                                        ;   jump ...
+                clr     P5.1            ; Start charging ignition coil for cylinders 1/4
+                sjmp    either_ignition_coil_started_charging
 ; ---------------------------------------------------------------------------
 
-code_12AF:                              ; CODE XREF: TF0_0+4F2↑j
-                setb    P5.1            ; Port 5 (PDIR=0)
-                ljmp    code_12C9
+ignition_coil_14_is_charging:           ; CODE XREF: TF0_0+4F2↑j
+                setb    P5.1            ; Ignite cylinders 1/4?
+                ljmp    either_ignition_coil_just_discharged
 ; ---------------------------------------------------------------------------
 
-code_12B4:                              ; CODE XREF: TF0_0+4EF↑j
-                cjne    A, #1, code_12C3
-                jnb     P5.0, code_12BE ; Port 5 (PDIR=0)
-                clr     P5.0            ; Port 5 (PDIR=0)
-                sjmp    code_12C6
+ram_4d_not_nil_2:                       ; CODE XREF: TF0_0+4EF↑j
+                cjne    A, #1, ram_4d_not_eq_1_2 ; if (RAM[0x4D] != 1)
+                                        ;   jump ...
+                jnb     P5.0, code_12BE ; if (!P5.0)  // ignition coil for cyl 2/3 is charging // is it CM/CCM output?
+                                        ;   jump ...
+                clr     P5.0            ; Start charging ignition coil for cylinders 2/3
+                sjmp    either_ignition_coil_started_charging
 ; ---------------------------------------------------------------------------
 
 code_12BE:                              ; CODE XREF: TF0_0+501↑j
-                setb    P5.0            ; Port 5 (PDIR=0)
-                ljmp    code_12C9
+                setb    P5.0            ; Ignite cylinders 2/3?
+                ljmp    either_ignition_coil_just_discharged
 ; ---------------------------------------------------------------------------
 
-code_12C3:                              ; CODE XREF: TF0_0:code_12B4↑j
-                ljmp    code_12FD
+ram_4d_not_eq_1_2:                      ; CODE XREF: TF0_0:ram_4d_not_nil_2↑j
+                ljmp    flash_8752_is_nil
 ; ---------------------------------------------------------------------------
 
-code_12C6:                              ; CODE XREF: TF0_0+4F7↑j
+either_ignition_coil_started_charging:  ; CODE XREF: TF0_0+4F7↑j
                                         ; TF0_0+506↑j
-                ljmp    code_12DA
+                ljmp    either_ignition_coil_started_charging_sub
 ; ---------------------------------------------------------------------------
 
-code_12C9:                              ; CODE XREF: TF0_0+4FB↑j
+either_ignition_coil_just_discharged:   ; CODE XREF: TF0_0+4FB↑j
                                         ; TF0_0+50A↑j
-                djnz    RAM_4F, code_12F3
+                djnz    RAM_4F, code_12F3 ; if (--RAM[0x4F])
+                                        ;   jump ...
                 mov     A, RAM_4D
-                cjne    A, #0, code_12D3
-                sjmp    code_12D8
+                cjne    A, #0, ram_4d_not_nil_3 ; if (RAM[0x4D])
+                                        ;   jump ...
+                sjmp    ram_4d_not_eq_1_3
 ; ---------------------------------------------------------------------------
 
-code_12D3:                              ; CODE XREF: TF0_0+518↑j
-                cjne    A, #1, code_12D8
-                sjmp    code_12D8
+ram_4d_not_nil_3:                       ; CODE XREF: TF0_0+518↑j
+                cjne    A, #1, ram_4d_not_eq_1_3 ; if (RAM[0x4D] != 1)
+                                        ;   jump ...
+                sjmp    ram_4d_not_eq_1_3
 ; ---------------------------------------------------------------------------
 
-code_12D8:                              ; CODE XREF: TF0_0+51B↑j
-                                        ; TF0_0:code_12D3↑j ...
+ram_4d_not_eq_1_3:                      ; CODE XREF: TF0_0+51B↑j
+                                        ; TF0_0:ram_4d_not_nil_3↑j ...
                 sjmp    code_12FF
 ; ---------------------------------------------------------------------------
 
-code_12DA:                              ; CODE XREF: TF0_0:code_12C6↑j
+either_ignition_coil_started_charging_sub:
+                                        ; CODE XREF: TF0_0:either_ignition_coil_started_charging↑j
                 mov     DPTR, #8A5Bh
                 mov     A, RAM_3F
                 movc    A, @A+DPTR
                 swap    A
-                anl     A, #0Fh
-                jnz     code_12E6
-                inc     A
+                anl     A, #0Fh         ; A = (FLASH[0x8A5B + RAM[0x3F]] & 0xF0) >> 4
+                jnz     high_nibble_of_flash_8a5b_not_nil ; if ((FLASH[0x8A5B + RAM[0x3F]] & 0xF0) >> 4)
+                                        ;   jump ...
+                inc     A               ; A = 1
 
-code_12E6:                              ; CODE XREF: TF0_0+52D↑j
-                mov     RAM_4E, A
+high_nibble_of_flash_8a5b_not_nil:      ; CODE XREF: TF0_0+52D↑j
+                mov     RAM_4E, A       ; X = (FLASH[0x8A5B + RAM[0x3F]] & 0xF0) >> 4
+                                        ; RAM[0x4E] = X ? X : 1
                 sjmp    code_12FF
 ; ---------------------------------------------------------------------------
 
-code_12EA:                              ; CODE XREF: TF0_0:code_1293↑j
+clrmsk_setmsk_updated_sub:              ; CODE XREF: TF0_0:clrmsk_setmsk_updated↑j
                 mov     DPTR, #8752h
                 clr     A
                 movc    A, @A+DPTR
-                mov     RAM_4F, A
-                jz      code_12FD
+                mov     RAM_4F, A       ; RAM[0x4F] = FLASH[0x8752]
+                jz      flash_8752_is_nil ; if (!FLASH[0x8752])
+                                        ;   jump ...
 
-code_12F3:                              ; CODE XREF: TF0_0:code_12C9↑j
+code_12F3:                              ; CODE XREF: TF0_0:either_ignition_coil_just_discharged↑j
                 mov     DPTR, #8751h
                 clr     A
                 movc    A, @A+DPTR
                 swap    A
                 anl     A, #0Fh
-                mov     RAM_4E, A
+                mov     RAM_4E, A       ; RAM[0x4E] = (FLASH[0x8751] & 0xF0) >> 4
 
-code_12FD:                              ; CODE XREF: TF0_0+4B6↑j
-                                        ; TF0_0:code_128D↑j ...
-                clr     RAM_29.1
+flash_8752_is_nil:                      ; CODE XREF: TF0_0+4B6↑j
+                                        ; TF0_0:ram_4d_not_eq_1↑j ...
+                clr     RAM_29.1        ; CLEAR_BIT_IN(RAM[0x29], 1)
 
-code_12FF:                              ; CODE XREF: TF0_0:code_1290↑j
-                                        ; TF0_0:code_1296↑j ...
+code_12FF:                              ; CODE XREF: TF0_0:either_ignition_coil_is_charging↑j
+                                        ; TF0_0:ram_4e_neq_0↑j ...
                 inc     RAM_6A
                 mov     A, RAM_6A
                 cjne    A, #3Eh, code_1309 ; '>'
@@ -4397,6 +4474,7 @@ IEX4_0:                                 ; CODE XREF: IEX4↑j
 
 ; =============== S U B R O U T I N E =======================================
 
+; UNUSED ???
 
 IE0_0:                                  ; CODE XREF: IE0↑j
 
@@ -4407,7 +4485,7 @@ IE0_0:                                  ; CODE XREF: IE0↑j
                 push    B               ; B-Register
                 push    DPL             ; Data Pointer, Low Byte
                 push    DPH             ; Data Pointer, High Byte
-                mov     PSW, #8         ; Program Status Word
+                mov     PSW, #8         ; Select register bank 1
                 jb      RAM_27.1, code_13A1
                 ljmp    code_1553
 ; ---------------------------------------------------------------------------
@@ -4526,6 +4604,13 @@ code_1431:                              ; CODE XREF: IE0_0:code_1420↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   code_60EB
                 mov     A, R1
                 jz      code_1443
@@ -5001,6 +5086,13 @@ code_1661:                              ; CODE XREF: IE0_0+28B↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     A, R2
                 jnb     ACC.7, code_16A5 ; Accumulator
                 mov     DPTR, #0F6C8h
@@ -5105,6 +5197,13 @@ code_16F1:                              ; CODE XREF: IE0_0+35D↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   mul_word_16_saturate_to_ffff ; INPUT: R1:R0 - word
                                         ;
                                         ; OUTPUT: R1:R0
@@ -5423,6 +5522,13 @@ code_1825:                              ; CODE XREF: IE0_0+42A↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   code_6076
                 jnb     RAM_2B.1, code_1856
                 mov     DPTR, #0F6CCh
@@ -5457,6 +5563,13 @@ code_1856:                              ; CODE XREF: IE0_0+4AB↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     R2, RAM_8
                 mov     R3, RAM_9
                 mov     DPTR, #0F6CEh
@@ -5478,6 +5591,13 @@ code_1856:                              ; CODE XREF: IE0_0+4AB↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   add_word        ; Add words
                                         ;
                                         ; INPUT:
@@ -5574,6 +5694,13 @@ code_1890:                              ; CODE XREF: IE0_0+4C6↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     B, #40h ; '@'   ; B-Register
                 lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
@@ -5584,6 +5711,13 @@ code_1890:                              ; CODE XREF: IE0_0+4C6↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   shr_word_twice  ; INPUT:
                                         ;   R1:R0
                                         ;
@@ -5599,6 +5733,13 @@ code_1890:                              ; CODE XREF: IE0_0+4C6↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     A, R1
                 jnz     code_18F3
                 mov     A, R0
@@ -5684,6 +5825,13 @@ code_1934:                              ; CODE XREF: IE0_0:code_1927↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 jnb     RAM_2B.7, code_19AA
                 mov     DPTR, #0F6C2h
                 movx    A, @DPTR
@@ -5768,6 +5916,13 @@ code_19AA:                              ; CODE XREF: IE0_0+5C2↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     DPTR, #0F6C5h
                 movx    A, @DPTR
                 rr      A
@@ -5792,6 +5947,13 @@ code_19C4:                              ; CODE XREF: IE0_0:code_19C0↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     DPTR, #0F600h
                 movx    A, @DPTR
                 mov     B, A            ; B-Register
@@ -5804,6 +5966,13 @@ code_19C4:                              ; CODE XREF: IE0_0:code_19C0↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   code_6076
                 mov     R2, RAM_8
                 mov     R3, RAM_9
@@ -6158,6 +6327,13 @@ code_1B33:                              ; CODE XREF: IE0_0+7A0↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   shr_word_twice  ; INPUT:
                                         ;   R1:R0
                                         ;
@@ -6256,6 +6432,13 @@ code_1B78:                              ; CODE XREF: IE0_0+7E5↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   shr_word_twice  ; INPUT:
                                         ;   R1:R0
                                         ;
@@ -6662,6 +6845,13 @@ code_1D63:                              ; CODE XREF: IE0_0+9CB↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     R4, B           ; B-Register
                 mov     A, R0
                 mov     R2, A
@@ -6685,6 +6875,13 @@ code_1D63:                              ; CODE XREF: IE0_0+9CB↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     A, R4
                 add     A, B            ; B-Register
                 mov     R4, A
@@ -6712,6 +6909,13 @@ code_1D63:                              ; CODE XREF: IE0_0+9CB↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     A, R4
                 add     A, B            ; B-Register
                 mov     A, R2
@@ -6773,6 +6977,13 @@ code_1DBE:                              ; CODE XREF: IE0_0+A50↓j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     DPTR, #0F748h
                 mov     A, R0
                 movx    @DPTR, A
@@ -6797,6 +7008,13 @@ code_1DBE:                              ; CODE XREF: IE0_0+A50↓j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     DPTR, #0F757h
                 mov     A, R0
                 movx    @DPTR, A
@@ -6821,6 +7039,13 @@ code_1DBE:                              ; CODE XREF: IE0_0+A50↓j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     DPTR, #0F766h
                 mov     A, R0
                 movx    @DPTR, A
@@ -6999,6 +7224,13 @@ code_1DBE:                              ; CODE XREF: IE0_0+A50↓j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     A, R1
                 jnz     code_1F35
                 mov     A, R2
@@ -7051,6 +7283,13 @@ code_1F39:                              ; CODE XREF: IE0_0+BA5↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     A, R1
                 jnz     code_1F71
                 mov     A, R2
@@ -7103,6 +7342,13 @@ code_1F75:                              ; CODE XREF: IE0_0+BE1↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     A, R1
                 jnz     code_1FAD
                 mov     A, R2
@@ -9546,6 +9792,13 @@ query_inputs:                           ; CODE XREF: power_on__ignition_key_turn
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     DPTR, #0F69Eh
                 lcall   add_word_in_xram_word ; INPUT:
                                         ;  - DPTR - address of low byte of word, DPTR+1 - address of high byte
@@ -9586,6 +9839,13 @@ INTAKE AIR TEMPERATURE SENSOR
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     DPTR, #0F6A0h
                 lcall   add_word_in_xram_word ; INPUT:
                                         ;  - DPTR - address of low byte of word, DPTR+1 - address of high byte
@@ -9716,6 +9976,13 @@ THROTTLE POSITION SENSOR
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     DPTR, #0F6A6h
                 lcall   add_word_in_xram_word ; INPUT:
                                         ;  - DPTR - address of low byte of word, DPTR+1 - address of high byte
@@ -10907,6 +11174,13 @@ R1:R0 = ADC_10bit(Throttle Position)
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     DPTR, #807Eh
                 clr     A
                 movc    A, @A+DPTR      ; A = FLASH[0x807E]
@@ -11123,6 +11397,13 @@ scale_ADC_10bit_value(XRAM[0xF6CD]:XRAM[0xF6CC], RAM[0x49])
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   mul_word_16_saturate_to_ffff ; INPUT: R1:R0 - word
                                         ;
                                         ; OUTPUT: R1:R0
@@ -11276,6 +11557,13 @@ RAM[0x49] != 0
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 clr     RAM_27.2
 
 code_3237:                              ; CODE XREF: power_on__ignition_key_turned_+EC7↓j
@@ -11563,8 +11851,8 @@ xram_f6ee_ne_xram_f6ed:                 ; CODE XREF: power_on__ignition_key_turn
 
 
                 lcall   filter?         ; INPUT:
-                                        ;  - R1:R0
-                                        ;
+R1:R0, B = filter?(R1:R0)               ;  - R1:R0
+Acc = R1                                ;
                                         ; OUTPUT:
                                         ;  - R1:R0 = ?
                                         ;  - B = ?
@@ -11577,8 +11865,8 @@ xram_f6ee_ne_xram_f6ed:                 ; CODE XREF: power_on__ignition_key_turn
                 movx    A, @DPTR
                 mov     R1, A           ; R1:R0 = XRAM[0xF6E3]:XRAM[0xF6E2]
                 lcall   filter?         ; INPUT:
-                                        ;  - R1:R0
-                                        ;
+R1:R0, B = filter?(XRAM[0xF6E3]:XRAM[0xF6E2]) ;  - R1:R0
+Acc = R1                                ;
                                         ; OUTPUT:
                                         ;  - R1:R0 = ?
                                         ;  - B = ?
@@ -11589,7 +11877,7 @@ xram_f6ee_ne_xram_f6ed:                 ; CODE XREF: power_on__ignition_key_turn
                 pop     RAM_0           ; restore R1:R0
                 mov     B, A            ; B-Register
                 lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
-                                        ;  - B - factor
+R1:R0:B = R1:R0 * B                     ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
                                         ;
                                         ; OUTPUT:
@@ -11597,6 +11885,13 @@ xram_f6ee_ne_xram_f6ed:                 ; CODE XREF: power_on__ignition_key_turn
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 clr     RAM_27.2
 
 code_3388:                              ; CODE XREF: power_on__ignition_key_turned_+1019↓j
@@ -11668,6 +11963,13 @@ code_33D7:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   mul_word_16_saturate_to_ffff ; INPUT: R1:R0 - word
                                         ;
                                         ; OUTPUT: R1:R0
@@ -14700,6 +15002,13 @@ code_4334:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 clr     IEN0.7          ; Interrupt Enable Register 0
                 mov     DPTR, #0F76Ah
                 mov     A, R0
@@ -15799,6 +16108,13 @@ code_491E:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     R2, RAM_0
                 mov     R3, RAM_1
                 mov     R0, #41h ; 'A'
@@ -15895,6 +16211,13 @@ code_499D:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     A, RAM_58
                 add     A, #80h
                 mov     R2, A
@@ -15933,6 +16256,13 @@ code_499D:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     A, RAM_67
                 jnb     ACC.7, code_49EC ; Accumulator
                 lcall   add_word        ; Add words
@@ -15959,6 +16289,13 @@ code_49EC:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
 
 code_49F2:                              ; CODE XREF: power_on__ignition_key_turned_+2607↑j
                 mov     DPTR, #0F79Eh
@@ -15977,6 +16314,13 @@ code_49F2:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 clr     RAM_27.2
 
 code_4A02:                              ; CODE XREF: power_on__ignition_key_turned_+2692↓j
@@ -18035,6 +18379,13 @@ code_5305:                              ; CODE XREF: power_on__ignition_key_turn
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     A, R0
                 mov     DPTR, #0F971h
                 movx    @DPTR, A
@@ -18648,6 +18999,13 @@ R1:R0 = scale_ADC_10bit_value(table_lookup_0(0x900B, RAM[0x3D]), R1:R0)
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     DPTR, #0B80Dh
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -18669,6 +19027,13 @@ R1:R0 = scale_ADC_10bit_value(table_lookup_0(0xB80D, RAM[0x3E]), R1:R0)
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
 R1:R0 >>= 1
                 lcall   shift_right_word ; INPUT:
                                         ;   R1:R0
@@ -18740,6 +19105,13 @@ R1:R0 = scale_ADC_10bit_value(R1:R0, table_lookup_0(0x900B, RAM[0x3D]))
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     DPTR, #0B80Dh
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -18761,6 +19133,13 @@ R1:R0 = scale_ADC_10bit_value(R1:R0, table_lookup_0(0xB80D, RAM[0x3E]))
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
 R1:R0 >>= 1
                 lcall   shift_right_word ; INPUT:
                                         ;   R1:R0
@@ -18874,6 +19253,13 @@ sum_xram_f602_and_f779_less_or_equal_ff:
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   add_word        ; Add words
                                         ;
                                         ; INPUT:
@@ -18909,6 +19295,13 @@ xram_f602_larger_7f_sum_xram_f602_and_f779_less_or_equal_ff:
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   subtract_word   ; INPUT - R1:R0
                                         ;         R3:R2
                                         ;
@@ -18991,6 +19384,13 @@ code_5620:                              ; CODE XREF: IE0_0+2E6↑p
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     A, R1
                 jnz     code_5646
                 mov     A, R0
@@ -19047,6 +19447,7 @@ filter?:                                ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ;  Returns result of get_value_from_table_no_negate
                 mov     B, A            ; B-Register
+R1:R0 = get_value_from_table_offset_and_factor_in_acc_no_negate(&FLASH[0x8CFB], RAM[0x4A]) * table_lookup_0(&FLASH[0x900B], RAM[0x3D]) / 256
                 lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
@@ -19056,6 +19457,13 @@ filter?:                                ; CODE XREF: power_on__ignition_key_turn
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     DPTR, #0B80Dh
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -19067,6 +19475,7 @@ filter?:                                ; CODE XREF: power_on__ignition_key_turn
                                         ;
                                         ;  Returns result of get_value_from_table_no_negate
                 mov     B, A            ; B-Register
+R1:R0 = R1:R0 * table_lookup_0(&FLASH[0xB80D], RAM[0x3E]) / 256
                 lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
@@ -19076,16 +19485,26 @@ filter?:                                ; CODE XREF: power_on__ignition_key_turn
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
+R1:R0 >>= 1
                 lcall   shift_right_word ; INPUT:
                                         ;   R1:R0
                                         ;
                                         ; OUTPUT:
                                         ;   R1:R0 >>= 1
+R3:R2 = COMPOSE_WORD(FLASH[0x8E0B + 0xF0 + RAM[0x4C] + 1], FLASH[0x8E0B + 0xF0 + RAM[0x4C]])
                 lcall   get_flash_8e0b_plus_swapped_0f_plus_ram4c ; OUTPUT
                                         ;   Ptr = 0x8E0B + SWAP(0x0F) + RAM[0x4C]
                                         ;       = 0x8E0B + 0xF0 + RAM[0x4C]
                                         ;   R2 = FLASH[Ptr]
                                         ;   R3 = FLASH[Ptr + 1]
+R3:R2 += R1:R0
                 lcall   add_word_R3_R2  ; INPUT
                                         ;  - R1:R0
                                         ;  - R3:R2
@@ -19097,6 +19516,7 @@ filter?:                                ; CODE XREF: power_on__ignition_key_turn
                 pop     ACC             ; Accumulator
                 mov     R0, A           ; restore R1:R0
                 mov     B, #0F0h        ; B-Register
+R1:R0 = R1:R0 * 0xF0 / 256
                 lcall   get_B_256_fraction_of_R1_R0 ; INPUT:
                                         ;  - B - factor
                                         ;  - R1:R0 - ADC value (i.e. R1 - full, R0 only two most significant bits)
@@ -19106,6 +19526,13 @@ filter?:                                ; CODE XREF: power_on__ignition_key_turn
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 clr     RAM_27.2
 
 code_5688:                              ; CODE XREF: filter?+61↓j
@@ -19124,6 +19551,7 @@ code_5688:                              ; CODE XREF: filter?+61↓j
                 mov     DPL, MD0        ; Quot (32-bit), Rem (16-bit) = 00:R1:R0:B / R3:R2
                                         ;
                                         ; DPTR = LOW_WORD(Quot)
+                                        ; DPTR = R1:R0 * 0xF0 / R3:R2
                 mov     DPH, MD1        ; Data Pointer, High Byte
                 mov     A, MD2          ; Multiplication/Division Register 2
                 mov     A, MD3          ; Multiplication/Division Register 3
@@ -19201,6 +19629,13 @@ code_56C7:                              ; CODE XREF: IE0_0:code_1651↑p
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   code_60EB
                 ret
 ; End of function code_56C7
@@ -19579,6 +20014,13 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     DPTR, #0B80Dh
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -19599,6 +20041,13 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   shift_right_word ; INPUT:
                                         ;   R1:R0
                                         ;
@@ -19668,6 +20117,13 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     DPTR, #0B80Dh
                 mov     A, RAM_3E
                 lcall   table_lookup_0  ; INPUT:
@@ -19688,6 +20144,13 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   shift_right_word ; INPUT:
                                         ;   R1:R0
                                         ;
@@ -19717,6 +20180,13 @@ code_581B:                              ; CODE XREF: code_57FA+11↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   add_word        ; Add words
                                         ;
                                         ; INPUT:
@@ -19820,6 +20290,13 @@ code_58E4:                              ; CODE XREF: code_58D1+8↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 pop     ACC             ; Accumulator
                 jnb     ACC.7, code_5913 ; Accumulator
                 lcall   code_615A
@@ -19858,6 +20335,13 @@ code_5926:                              ; CODE XREF: code_58D1+4E↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     A, RAM_67
                 jnb     ACC.7, code_593A ; Accumulator
                 lcall   code_615A
@@ -19876,6 +20360,13 @@ code_593A:                              ; CODE XREF: code_58D1+63↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 jb      RAM_29.4, code_594A
                 lcall   shift_right_word ; INPUT:
                                         ;   R1:R0
@@ -19937,6 +20428,13 @@ code_597A:                              ; CODE XREF: code_58D1+DA↓j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     MD0, B          ; Multiplication/Division Register 0
                 mov     MD1, R0         ; Multiplication/Division Register 1
                 mov     MD2, R1         ; Multiplication/Division Register 2
@@ -20923,6 +21421,13 @@ code_5EA8:                              ; CODE XREF: code_5D9F+103↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 clr     C
                 mov     DPTR, #0F78Ch
                 movx    A, @DPTR
@@ -21272,6 +21777,13 @@ code_5FF4:                              ; CODE XREF: multiply_signed+A↑j
 ;    R1:R0 = X3:X2
 ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
 ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+;  - B = reminder of this division
+;
+;    X (24-bit) = R1:R0 * B
+;    Quot (16-bit), Rem (8-bit) = X / 256
+;  - R1:R0 = Quot
+;  - B = Rem
+;
 
 get_B_256_fraction_of_R1_R0:            ; CODE XREF: IE0_0+AA↑p
                                         ; IE0_0+2FF↑p ...
@@ -22783,6 +23295,13 @@ code_63A5:                              ; CODE XREF: code_638E+D↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 mov     A, R2
                 cpl     A
                 inc     A
@@ -22807,6 +23326,13 @@ code_63A5:                              ; CODE XREF: code_638E+D↑j
                                         ;    R1:R0 = X3:X2
                                         ;    R1:R0 = LOW_WORD((QUAD(R1:R0) * B) >> 8)
                                         ;  - R1:R0 = R1:R0 * (B / 256), get (B/256) fraction of R1:R0
+                                        ;  - B = reminder of this division
+                                        ;
+                                        ;    X (24-bit) = R1:R0 * B
+                                        ;    Quot (16-bit), Rem (8-bit) = X / 256
+                                        ;  - R1:R0 = Quot
+                                        ;  - B = Rem
+                                        ;
                 lcall   add_word        ; Add words
                                         ;
                                         ; INPUT:
@@ -62730,7 +63256,7 @@ RAM_29 equ 29h                          ; DATA XREF: IEX6_0:code_980↑r
                                         ; ICR_0+20↑w ...
 RAM_2A equ 2Ah                          ; DATA XREF: ICR_0+4A↑r
                                         ; ICR_0+7E↑r ...
-RAM_2B equ 2Bh                          ; DATA XREF: TF0_0:code_1269↑r
+RAM_2B equ 2Bh                          ; DATA XREF: TF0_0:ram_29_bit_1_set↑r
                                         ; IE0_0+40F↑w ...
 RAM_2C equ 2Ch                          ; DATA XREF: power_on__ignition_key_turned_:code_3720↑w
                                         ; power_on__ignition_key_turned_+1536↑w ...
@@ -62799,11 +63325,11 @@ RAM_4B equ 4Bh                          ; DATA XREF: IE0_0+26↑r
 RAM_4C equ 4Ch                          ; DATA XREF: IEX2_0+29↑r
                                         ; IE0_0+32E↑r ...
 RAM_4D equ 4Dh                          ; DATA XREF: ICR_0+22↑w
-                                        ; TF0_0:code_126F↑r ...
-RAM_4E equ 4Eh                          ; DATA XREF: TF0_0:code_12A0↑w
-                                        ; TF0_0:code_12E6↑w ...
+                                        ; TF0_0:ram_2b_bit_7_set↑r ...
+RAM_4E equ 4Eh                          ; DATA XREF: TF0_0:ram_4f_eq_nil↑w
+                                        ; TF0_0:high_nibble_of_flash_8a5b_not_nil↑w ...
 RAM_4F equ 4Fh                          ; DATA XREF: TF0_0:code_1299↑r
-                                        ; TF0_0:code_12C9↑w ...
+                                        ; TF0_0:either_ignition_coil_just_discharged↑w ...
 RAM_50 equ 50h                          ; DATA XREF: IE0_0+3C0↑r
                                         ; IE0_0+522↑w ...
 RAM_51 equ 51h                          ; DATA XREF: IE0_0+52A↑w
@@ -62881,7 +63407,7 @@ RAM_75 equ 75h                          ; DATA XREF: power_on__ignition_key_turn
                                         ; power_on__ignition_key_turned_+1F3C↑r ...
 RAM_76 equ 76h                          ; DATA XREF: power_on__ignition_key_turned_:code_4301↑r
                                         ; code_6783+61↑r ...
-RAM_77 equ 77h                          ; DATA XREF: TF0_0:code_DF8↑r
+RAM_77 equ 77h                          ; DATA XREF: TF0_0:overflow_on_inc_xram_f97f_or_f980↑r
                                         ; TF0_0+106↑w ...
 
 
@@ -62952,8 +63478,8 @@ RESERVED0094 equ 94h                    ; RESERVED
 RESERVED0095 equ 95h                    ; RESERVED
 RESERVED0096 equ 96h                    ; RESERVED
 RESERVED0097 equ 97h                    ; RESERVED
-S0CON equ 98h                           ; DATA XREF: TF0_0:code_E3C↑r
-                                        ; TF0_0:code_EAC↑w ...
+S0CON equ 98h                           ; DATA XREF: TF0_0:ram_77_eq_fe↑r
+                                        ; TF0_0:receive_request_on_serial0↑w ...
                                         ; Serial Channel 0 Control Register
 S0BUF equ 99h                           ; DATA XREF: RI0_TI0_0:code_C23F↑r
                                         ; RI0_TI0_0:code_C2A0↑r ...

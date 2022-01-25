@@ -50,13 +50,13 @@
  00000000:00000870       code_870
  00000000:0000087D       code_87D
  00000000:0000088D       code_88D
- 00000000:00000897       code_897
+ 00000000:00000897       ram_26_2_is_set
  00000000:000008B9       code_8B9
  00000000:000008C6       code_8C6
  00000000:000008CB       code_8CB
  00000000:000008D3       code_8D3
  00000000:000008D8       IEX6_0
- 00000000:000008E1       code_8E1
+ 00000000:000008E1       non_even_zero_cross?
  00000000:00000902       code_902
  00000000:0000090C       code_90C
  00000000:00000912       code_912
@@ -133,7 +133,7 @@
  00000000:00000BFE       code_BFE
  00000000:00000C03       code_C03
  00000000:00000C05       code_C05
- 00000000:00000C0B       code_C0B
+ 00000000:00000C0B       even_zero_cross
  00000000:00000C0C       ICR_0
  00000000:00000C34       code_C34
  00000000:00000C4C       code_C4C
@@ -170,133 +170,133 @@
  00000000:00000D88       code_D88
  00000000:00000DAF       code_DAF
  00000000:00000DB6       TF0_0
- 00000000:00000DD6       code_DD6
+ 00000000:00000DD6       dont_reload_timer0
  00000000:00000DE0       code_DE0
- 00000000:00000DF8       code_DF8
- 00000000:00000E0D       code_E0D
+ 00000000:00000DF8       overflow_on_inc_xram_f97f_or_f980
+ 00000000:00000E0D       ram_2f_bit_1_set
  00000000:00000E1A       code_E1A
- 00000000:00000E1F       code_E1F
+ 00000000:00000E1F       xram_f980_geq_xram_f994
  00000000:00000E2C       code_E2C
- 00000000:00000E31       code_E31
- 00000000:00000E34       code_E34
- 00000000:00000E39       code_E39
- 00000000:00000E3C       code_E3C
+ 00000000:00000E31       xram_f97f_geq_xram_f993
+ 00000000:00000E34       ram_77_not_equal_ff
+ 00000000:00000E39       ram_77_neq_fe
+ 00000000:00000E3C       ram_77_eq_fe
  00000000:00000E51       code_E51
- 00000000:00000E56       code_E56
+ 00000000:00000E56       xram_f980_geq_xram_f984
  00000000:00000E63       code_E63
- 00000000:00000E68       code_E68
- 00000000:00000E6A       code_E6A
+ 00000000:00000E68       xram_f97f_geq_xram_f983
+ 00000000:00000E6A       RxD_eq_1
  00000000:00000E77       code_E77
- 00000000:00000E7C       code_E7C
+ 00000000:00000E7C       xram_f980_geq_xram_f982
  00000000:00000E89       code_E89
- 00000000:00000E8E       code_E8E
- 00000000:00000E9E       code_E9E
- 00000000:00000EAC       code_EAC
+ 00000000:00000E8E       xram_f97f_geq_xram_f981
+ 00000000:00000E9E       ram_2f_1_is_set
+ 00000000:00000EAC       receive_request_on_serial0
  00000000:00000EAF       code_EAF
  00000000:00000EC2       code_EC2
  00000000:00000ED2       code_ED2
- 00000000:00000ED7       code_ED7
+ 00000000:00000ED7       xram_f980_geq_xram_f992
  00000000:00000EE4       code_EE4
- 00000000:00000EE9       code_EE9
- 00000000:00000EF2       code_EF2
+ 00000000:00000EE9       xram_f97f_geq_xram_f991
+ 00000000:00000EF2       ram_77_neq_5
  00000000:00000F02       code_F02
- 00000000:00000F07       code_F07
+ 00000000:00000F07       xram_f980_geq_xram_f994_2
  00000000:00000F14       code_F14
- 00000000:00000F19       code_F19
+ 00000000:00000F19       xram_f97f_geq_xram_f993_2
  00000000:00000F1C       code_F1C
  00000000:00000F1F       code_F1F
- 00000000:00000F29       code_F29
- 00000000:00000F39       code_F39
- 00000000:00000F4F       code_F4F
- 00000000:00000F5D       code_F5D
+ 00000000:00000F29       ram_2f_bit_4_or_bit_5_set
+ 00000000:00000F39       ram_2f_bit_1_not_set
+ 00000000:00000F4F       ram_2f_bit_0_set
+ 00000000:00000F5D       ram_77_neq_6
  00000000:00000F6D       code_F6D
- 00000000:00000F72       code_F72
+ 00000000:00000F72       xram_f980_geq_xram_f996
  00000000:00000F7F       code_F7F
- 00000000:00000F84       code_F84
- 00000000:00000F93       code_F93
+ 00000000:00000F84       xram_f97f_geq_xram_f995
+ 00000000:00000F93       ram_77_neq_7
  00000000:00000FA3       code_FA3
- 00000000:00000FA8       code_FA8
+ 00000000:00000FA8       xram_f980_geq_xram_f998
  00000000:00000FB5       code_FB5
- 00000000:00000FBA       code_FBA
- 00000000:00000FC3       code_FC3
- 00000000:00000FC6       code_FC6
- 00000000:00000FCB       code_FCB
- 00000000:00000FCE       code_FCE
- 00000000:00000FE3       code_FE3
+ 00000000:00000FBA       xram_f97f_geq_xram_f997
+ 00000000:00000FC3       ram_2f_bit_2_not_set
+ 00000000:00000FC6       ram_77_neq_8
+ 00000000:00000FCB       ram_77_neq_4
+ 00000000:00000FCE       ram_77_eq_4
+ 00000000:00000FE3       no_serial0_receive_request
  00000000:00000FF0       code_FF0
- 00000000:00000FF5       code_FF5
+ 00000000:00000FF5       xram_f980_geq_xram_f990
  00000000:00001002       code_1002
- 00000000:00001007       code_1007
- 00000000:0000101C       code_101C
- 00000000:0000101F       code_101F
- 00000000:00001025       code_1025
- 00000000:00001028       code_1028
- 00000000:00001040       code_1040
+ 00000000:00001007       xram_f97f_geq_xram_f98f
+ 00000000:0000101C       ram_2f_bit_0_set_2
+ 00000000:0000101F       ram_2f_bit_1_not_set_2
+ 00000000:00001025       ram_2f_bit_0_set_3
+ 00000000:00001028       ram_77_neq_4_sub
+ 00000000:00001040       serial0_txd_not_set
  00000000:00001050       code_1050
- 00000000:00001055       code_1055
+ 00000000:00001055       xram_f980_geq_xram_f986
  00000000:00001062       code_1062
- 00000000:00001067       code_1067
+ 00000000:00001067       xram_f97f_geq_xram_f985
  00000000:00001076       code_1076
- 00000000:0000107C       code_107C
- 00000000:00001082       code_1082
- 00000000:0000108A       code_108A
- 00000000:00001097       code_1097
+ 00000000:0000107C       serial0_rxd_set
+ 00000000:00001082       ram_2f_bit_2_set_2
+ 00000000:0000108A       ram_2f_bit_1_not_set_3
+ 00000000:00001097       ram_77_neq_fd
  00000000:000010A7       code_10A7
- 00000000:000010AC       code_10AC
+ 00000000:000010AC       xram_f980_geq_xram_f988
  00000000:000010B9       code_10B9
- 00000000:000010BE       code_10BE
- 00000000:000010DC       code_10DC
- 00000000:000010E7       code_10E7
+ 00000000:000010BE       xram_f97f_geq_xram_f987
+ 00000000:000010DC       ram_77_neq_fc
+ 00000000:000010E7       no_serial0_receive_request_2
  00000000:000010F4       code_10F4
- 00000000:000010F9       code_10F9
+ 00000000:000010F9       xram_f980_geq_xram_f98e
  00000000:00001106       code_1106
- 00000000:0000110B       code_110B
- 00000000:00001124       code_1124
- 00000000:0000112A       code_112A
- 00000000:00001130       code_1130
+ 00000000:0000110B       xram_f97f_geq_xram_f98d
+ 00000000:00001124       xram_f987_or_xram_f988_not_null
+ 00000000:0000112A       ram_2f_bit_1_set_2
+ 00000000:00001130       ram_77_neq_3
  00000000:00001140       code_1140
- 00000000:00001145       code_1145
+ 00000000:00001145       xram_f980_geq_xram_f98c
  00000000:00001152       code_1152
- 00000000:00001157       code_1157
- 00000000:0000115D       code_115D
- 00000000:00001168       code_1168
+ 00000000:00001157       xram_f97f_geq_xram_f98b
+ 00000000:0000115D       ram_77_neq_2
+ 00000000:00001168       no_serial0_receive_request_3
  00000000:00001175       code_1175
- 00000000:0000117A       code_117A
+ 00000000:0000117A       xram_f980_geq_xram_f98a
  00000000:00001187       code_1187
- 00000000:0000118C       code_118C
- 00000000:0000118F       code_118F
+ 00000000:0000118C       xram_f97f_geq_xram_f989
+ 00000000:0000118F       ram_77_neq_1
  00000000:00001192       code_1192
- 00000000:000011B3       code_11B3
- 00000000:000011D2       code_11D2
- 00000000:000011E7       code_11E7
- 00000000:000011F0       code_11F0
+ 00000000:000011B3       ram_2f_bit_2_set
+ 00000000:000011D2       xram_f991_and_xram_f992_eq_0
+ 00000000:000011E7       ram_2f_bit_1_not_set_4
+ 00000000:000011F0       serial0_receive_request_2
  00000000:000011F3       code_11F3
- 00000000:000011F9       code_11F9
- 00000000:00001213       code_1213
- 00000000:0000124A       code_124A
+ 00000000:000011F9       ram_2f_bit_1_not_set_5
+ 00000000:00001213       ram_2f_bit_1_set_5
+ 00000000:0000124A       xram_f987_and_xram_f988_eq_0
  00000000:00001263       code_1263
- 00000000:00001269       code_1269
- 00000000:0000126F       code_126F
- 00000000:0000127F       code_127F
- 00000000:0000128D       code_128D
- 00000000:00001290       code_1290
- 00000000:00001293       code_1293
- 00000000:00001296       code_1296
+ 00000000:00001269       ram_29_bit_1_set
+ 00000000:0000126F       ram_2b_bit_7_set
+ 00000000:0000127F       ram_4d_not_nil
+ 00000000:0000128D       ram_4d_not_eq_1
+ 00000000:00001290       either_ignition_coil_is_charging
+ 00000000:00001293       clrmsk_setmsk_updated
+ 00000000:00001296       ram_4e_neq_0
  00000000:00001299       code_1299
- 00000000:000012A0       code_12A0
- 00000000:000012AF       code_12AF
- 00000000:000012B4       code_12B4
+ 00000000:000012A0       ram_4f_eq_nil
+ 00000000:000012AF       ignition_coil_14_is_charging
+ 00000000:000012B4       ram_4d_not_nil_2
  00000000:000012BE       code_12BE
- 00000000:000012C3       code_12C3
- 00000000:000012C6       code_12C6
- 00000000:000012C9       code_12C9
- 00000000:000012D3       code_12D3
- 00000000:000012D8       code_12D8
- 00000000:000012DA       code_12DA
- 00000000:000012E6       code_12E6
- 00000000:000012EA       code_12EA
+ 00000000:000012C3       ram_4d_not_eq_1_2
+ 00000000:000012C6       either_ignition_coil_started_charging
+ 00000000:000012C9       either_ignition_coil_just_discharged
+ 00000000:000012D3       ram_4d_not_nil_3
+ 00000000:000012D8       ram_4d_not_eq_1_3
+ 00000000:000012DA       either_ignition_coil_started_charging_sub
+ 00000000:000012E6       high_nibble_of_flash_8a5b_not_nil
+ 00000000:000012EA       clrmsk_setmsk_updated_sub
  00000000:000012F3       code_12F3
- 00000000:000012FD       code_12FD
+ 00000000:000012FD       flash_8752_is_nil
  00000000:000012FF       code_12FF
  00000000:00001309       code_1309
  00000000:0000130C       code_130C
