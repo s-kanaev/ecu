@@ -370,11 +370,7 @@ byte AdjustTemperature(word TemperatureTableValue) {
 
     word Quot;
 
-    do {
-      CLEAR_BIT_IN(RAM[0x27], 2);
-
-      Quot = TemperatureTableValue / DIVIDER;
-    } while (CHECK_BIT_AT(RAM[0x27], 2));
+    Quot = TemperatureTableValue / DIVIDER;
 
     // 1. Quot = 0x2FD4 / 0xA0 = 0x4C
     // 2. Quot = 0x0050 / 0xA0 = 0
