@@ -456,19 +456,7 @@ TableEntryT Lookup17ByteTableWithSaturation(byte Input, word FlashPtr) {
 
   byte Quot;
 
-  CLEAR_BIT_IN(RAM[0x27], 2); // we don't need to divide twice
-
-  _62AF: // looks like point of changes for modification FW setup
-  do {
-    Quot = LOW((0x10 * (Input - LesserVal)) / IntervalWidth);
-
-    if (CHECK_BIT_AT(RAM[0x27], 2))
-      CLEAR_BIT_IN(RAM[0x27], 2);
-    else
-      break;
-  } while (1);
-
-  SET_BIT_IN(RAM[0x27], 2);
+  Quot = LOW((0x10 * (Input - LesserVal)) / IntervalWidth);
 
   Result.TE.InterpolationFraction = Quot;
   assert(SWAP_NIBBLES(Idx) + Quot == Result.TE.InterpolationFraction);
@@ -741,7 +729,7 @@ void FinishInitPeripherals() {
   XRAM[0xF96D] = 0xF7;
   XRAM[0xF96E] = 0x0A;
   XRAM[0xF96F] = 0;
-  XRAM[0xG970] = 0;
+  XRAM[0xF970] = 0;
 
   // watchdog:
   // Reload value = 0x78
@@ -1130,13 +1118,9 @@ _2A32:
 
   if (Ram44 || Ram45) {
     // _2A7C:
-    CLEAR_BIT_IN(RAM[0x27], 2);
-    do {
-      Dividend = 0x01E84800;
-      Divisor = COMPOSE_WORD(Ram45, Ram44);
-      Quot = Dividend / Divisor;
-    } while (CHECK_AND_CLEAR_BIT(RAM[0x27], 2));
-    SET_BIT_IN(RAM[0x27], 2);
+    Dividend = 0x01E84800;
+    Divisor = COMPOSE_WORD(Ram45, Ram44);
+    Quot = Dividend / Divisor;
   } else {
     CLEAR_BIT_IN(IEN0, 7); // disable all interrupts
     byte Ram30 = RAM[0x30];
@@ -1149,13 +1133,9 @@ _2A32:
       DivisionSkipped = true;
     } else {
       // _2A4B:
-      CLEAR_BIT_IN(RAM[0x27], 2);
-      do {
-        Dividend = 0x00082300;
-        Divisor = COMPOSE_WORD(Ram1D, Ram1C);
-        Quot = Dividend / Divisor;
-      } while (CHECK_AND_CLEAR_BIT(RAM[0x27], 2));
-      SET_BIT_IN(RAM[0x27], 2);
+      Dividend = 0x00082300;
+      Divisor = COMPOSE_WORD(Ram1D, Ram1C);
+      Quot = Dividend / Divisor;
     }
   }
 
