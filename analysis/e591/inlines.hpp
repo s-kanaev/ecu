@@ -7,6 +7,11 @@
 #include <include/xram.hpp>
 #include <include/flash.hpp>
 
+#define UNREACHABLE                                                            \
+do {                                                                           \
+  assert(false && "UNREACHABLE");                                              \
+} while (0)
+
 inline bool CheckCoolantTemperature(byte XramF6BF, byte Flash805D,
                                     byte CoolantTemperature, byte Min,
                                     byte Max) {
