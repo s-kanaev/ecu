@@ -7,6 +7,7 @@
 #include "include/undefined.hpp"
 #include "include/pins.hpp"
 #include "include/registers.hpp"
+#include <mask_set.hpp>
 
 #include "e591/memory-locations.hpp"
 #include "e591/impl.hpp"
@@ -1935,4 +1936,456 @@ _C1CC:
     SET_BIT_IN(IEN0, 4); // enable serial0 interrupt
     RAM[0x77] = 0xFF;
   }
+}
+
+inline void StopTimer0() {
+  CLEAR_BIT_IN(TCON, 4);
+}
+
+inline void StartTimer0() {
+  SET_BIT_IN(TCON, 4);
+}
+
+inline void DisableSerial0Int() {
+  Reg::Mask<Reg::IEN0> M;
+  M.add<Reg::IEN0::ES0>();
+}
+
+inline void EnableSerial0Int() {
+  Reg::Set<Reg::IEN0> M;
+  M.add<Reg::IEN0::ES0>();
+}
+
+inline void EnableSerial0Receiver() {
+  Reg::Set<Reg::S0CON> M;
+  M.add<Reg::S0CON::REN0>();
+}
+
+inline void DisableSerial0Receiver() {
+  Reg::Mask<Reg::S0CON> M;
+  M.add<Reg::S0CON::REN0>();
+}
+
+inline bool checkSerial0TxD() {
+  return CHECK_BIT_AT(P3, 1);
+}
+
+inline bool checkSerial0RxD() {
+  return CHECK_BIT_AT(P3, 0);
+}
+
+#define BYTE_PAIR_GEQ(rh, lh) \
+  ((XRAM[(rh)] >= XRAM[(lh)]) && (XRAM[(rh) - 1] >= XRAM[(lh) - 1]))
+
+// _0DB6:
+void Timer0OverflowInterrupt() {
+  StopTimer0();
+
+  S0RELH_S0RELL is S0RELH:S0RELL
+
+  // TH_TL0 is TH0:TL0
+  {
+    static const word ToAdd = 0xFAD0;
+    if (0xFFFF - TH_TL0 < ToAdd)
+      // 0DD0:
+      TH_TL0 = 0xFACB;
+    else
+      TH_TL0 += ToAdd;
+  }
+
+  // 0DD6:
+  // dont_reload_timer0:
+  StartTimer0();
+
+  if (--RAM[0x35] == 0) {
+    RAM[0x35] = 0x14;
+    SET_BIT_IN(RAM[0x28], 0);
+  }
+
+  // 0DE0:
+  if (!(++XRAM[0xF97F]) && !(++XRAM[0xF980])) {
+    // __0DEE:
+    XRAM[0xF97F] = 0xFF;
+    XRAM[0xF980] = 0xFF;
+  }
+
+  Ram77 = RAM[0x77];
+  // _0DF8:
+  // no_overflow_on_inc_xram_f97f_or_f980:
+  switch (Ram77) {
+    case 0xFF: {
+        // _0DFD:
+        if (CHECK_BIT_AT(RAM[0x2F], 1)) {
+          // _0E0D:
+          // ram_2f_bit_1_set:
+          if (BYTE_PAIR_GEQ(0xF980, 0xF994)) {
+            // _0E31:
+            // xram_f97f_geq_xram_f993:
+            // TODO
+            goto _0F1C;
+          }
+          goto _1263;
+        } else {
+          XRAM[0xF97F] = XRAM[0xF980] = 0;
+          goto _1263;
+        }
+        UNREACHABLE;
+        break;
+      }
+    case 0xFE: {
+        // _0E3C:
+        // ram_77_eq_fe:
+        if (CHECK_BIT_AT(S0CON, 0)) {
+          // _0EAC:
+          // receive_request_on_serial0:
+          CLEAR_BIT_IN(S0CON, 0); // Clear RI0 flag (serial recieve request)
+
+          // _0EAF:
+          XRAM[0xF97F] = XRAM[0xF980] = 0;
+          EnableSerial0Int(); // Enable Serial0 interrupt
+          RAM[0x77] = 0xFF;
+
+          goto _1263;
+        } else /* _0E41 */ if (CHECK_BIT_AT(P3, 0)) {
+          // _0E6A:
+          // RxD_eq_1:
+          // TODO
+          if (BYTE_PAIR_GEQ(0xF980, 0xF982)) {
+            // _0E8E:
+            // xram_f97f_geq_xram_f981:
+            XRAM[0xF97F] = XRAM[0xF980] = 0;
+
+            if (CHECK_BIT_AT(RAM[0x2F], 1)) {
+              // _0E9E:
+              // ram_2f_1_is_set:
+              SET_BIT_IN(RAM[0x2F], 0);
+              init_xram_for_serial0();
+              S0RELH_S0RELL = 0xFFD0;
+            }
+
+            goto ram_2f_bit_1_not_set_4;
+          } else {
+            goto _0EAF; // TODO jump
+          }
+        } else {
+          // _0E44:
+          if (BYTE_PAIR_GEQ(0xF980, 0xF984)) {
+            // _0E68:
+            // xram_f97f_geq_xram_f983:
+            // TODO
+            goto _0EAF; // TODO jump
+          }
+
+          goto _1263;
+        }
+        break;
+      }
+    case 0xFD: {
+        // _102B:
+        if (!checkSerial0TxD()) {
+          // _1040:
+          // serial0_txd_not_set:
+          if (checkSerial0RxD()) {
+            // _107C:
+            // serial0_rxd_set:
+            if (CHECK_BIT_AT(RAM[0x2F], 1)) {
+              // _1082:
+              // ram_2f_bit_2_set_2:
+              SET_BIT_IN(P3, 1);
+              EnableSerial0Receiver();
+              goto _F1F;
+            } else {
+              // _108A:
+              // ram_2f_bit_1_not_set_3:
+              XRAM[0xF97F] = XRAM[0xF980] = 0;
+              goto _1263;
+            }
+            UNREACHABLE;
+          } else /* _1043: */ if (BYTE_PAIR_GEQ(0xF980, 0xF986)) {
+            // _1067:
+            // xram_f97f_geq_xram_f985:
+            SET_BIT_IN(P3, 1); // Set TxD @ MC33199
+            EnableSerial0Receiver();
+            XRAM[0x7F] = XRAM[0xF980] = 0;
+
+            // _1076:
+            RAM[0x77] = 0xFC;
+            goto _1263;
+          } else {
+            goto _1263;
+          }
+        } else {
+          // _102E:
+          DisableSerial0Receiver();
+          CLEAR_BIT_IN(P3, 1);
+          XRAM[0xF97F] = XRAM[0xF980] = 0;
+
+          goto _1263;
+        }
+        break;
+      }
+    case 0xFC: {
+        // _109A:
+        if (BYTE_PAIR_GEQ(0xF980, 0xF988)) {
+          // _10BE:
+          // xram_f97f_geq_xram_f987:
+          XRAM[0xF99F]:XRAM[0xF99E] = XRAM[0xF9A3]:XRAM[0xF9A2];
+          DPTR[7] = 0xFAA8;
+          goto xram_f987_and_xram_f988_eq_0; // => _124A
+        } else {
+          goto _1263;
+        }
+        UNREACHABLE;
+        break;
+      }
+    case 0x08: {
+        // _0F96:
+        if (BYTE_PAIR_GEQ(0xF980, 0xF998)) {
+          // _0FBA:
+          // xram_f97f_geq_xram_f997:
+          DisableSerial0Int();
+          if (!CHECK_BIT_AT(RAM[0x2F], 2)) {
+            // _0FC3:
+            // ram_2f_bit_2_not_set:
+            goto _1192;
+          } else {
+            // _0FC0: goto ram_2f_bit_2_set; // => _11B3
+            // _11B3:
+            // ram_2f_bit_2_set:
+            XRAM[0xF97F] = XRAM[0xF980] = 0;
+            if (!XRAM[0xF991] && !XRAM[0xF992]) {
+              // _11D2:
+              // xram_f991_and_xram_f992_eq_0:
+              if (CHECK_BIT_AT(RAM[0x2F], 1) &&
+                  (XRAM[0xF983] || XRAM[0xF984])) {
+                // _11E1:
+                EnableSerial0Int();
+                RAM[0x77] = 0xFF;
+              }
+              // _11E7:
+              // ram_2f_bit_1_not_set_4:
+              EnableSerial0Int();
+              RAM[0x77] = 0x06;
+              goto _1263;
+            } else {
+              // _11C9:
+              DisableSerial0Int();
+              RAM[0x77] = 0x05;
+              goto _1263;
+            }
+            // TODO
+          }
+          // TODO
+        } else {
+          goto _1263;
+        }
+        break;
+      }
+    case 0x07: {
+        // _0F60:
+        if (BYTE_PAIR_GEQ(0xF980, 0xF996)) {
+          // _0F84:
+          // xram_f97f_geq_xram_f995:
+          {
+            Mask<Reg::S0CON> M;
+            M.add<Reg::S0CON::RI0>();
+          }
+          {
+            Set<Reg::S0CON> S;
+            S.add<Reg::S0CON::REN0>();
+          }
+          EnableSerial0Int();
+          RAM[0x77] = 8;
+          goto _1263;
+        } else {
+          goto _1263;
+        }
+        break;
+      }
+    case 0x06: {
+        // _0EF2:
+        if (BYTE_PAIR_GEQ(0xF980, 0xF994)) {
+          // _0F19:
+          // xram_f97f_geq_xram_f993_2:
+          if (!CHECK_BIT_AT(RAM[0x2F], 1)) {
+            // _0F19:
+            // ram_2f_bit_1_not_set:
+            if (CHECK_BIT_AT(RAM[0x2F], 0)) {
+              // _0F4F:
+              // ram_2f_bit_0_set:
+              DisableSerial0Int(); // Disable Serial0 Interrupt
+              if (CHECK_BIT_AT(RAM[0x2F], 4) || CHECK_BIT_AT(RAM[0x2F], 5)) {
+                goto ram_2f_bit_4_or_bit_5_set;
+              } else {
+                // _0F58:
+                CLEAR_BIT_IN(RAM[0x2F], 2);
+                goto _1192;
+              }
+              // TODO
+            } else {
+              // _0F3C:
+              XRAM[0xF97F] = XRAM[0xF980] = 0;
+              EnableSerial0Int(); // Enable Serial0 Interrupt
+              RAM[0x77] = 0xFF;
+              goto _1263;
+            }
+            // TODO
+          } else {
+            // _0F1C:
+            DisableSerial0Int(); // Disable Serial0 Interrupt
+            // _0F1F:
+            XRAM[0xF9A0] = XRAM[0xF9A1] = 0;
+            // _0F29:
+            // ram_2f_bit_4_or_bit_5_set:
+            XRAM[0xF97F] = XRAM[0xF980] = 0;
+            RAM[0x77] = 4;
+            goto _1263;
+          }
+          // TODO
+        } else {
+          goto _1263;
+        }
+        break;
+      }
+    case 0x05: {
+        // _0EC5:
+        if (BYTE_PAIR_GEQ(0xF980, 0xF991)) {
+          // _0EE9:
+          // xram_f97f_geq_xram_f991:
+          CLEAR_BIT_IN(S0CON, 0); // Clear Serial0 Receieve request
+          SET_BIT_IN(S0CON, 4); // Enable serial0 reception
+          goto ram_2f_bit_1_not_set_4; // => _11E7
+        } else {
+          goto _1263
+        }
+        break;
+      }
+    case 0x04: {
+        // _0FCE:
+        // ram_77_eq_4:
+        if (!CHECK_BIT_AT(Reg::S0CON, Reg::S0CON::RI0)) {
+          // _0FE3:
+          // no_serial0_receive_request:
+          if (BYTE_PAIR_GEQ(0xF980, 0xF990)) {
+            // _1007:
+            // xram_f97f_geq_xram_f98f:
+            XRAM[0xF97F] = XRAM[0xF980] = 0;
+            if (!CHECK_BIT_AT(RAM[0x2F], 1)) {
+              // _101F:
+              // ram_2f_bit_1_not_set_2:
+              if (CHECK_BIT_AT(RAM[0x2F], 0)) {
+                // _1025:
+                // ram_2f_bit_0_set_3:
+                goto _1263;
+              } else {
+                // _1022:
+                goto ram_2f_bit_2_set;  // => _11B3
+              }
+            } else {
+              // _1014:
+              CLEAR_BIT_IN(RAM[0x2F], 0);
+              if (CHECK_BIT_AT(RAM[0x2F], 0)) {
+                // _101C:
+                // ram_2f_bit_0_set_2:
+                goto _1263;
+              } else {
+                // _1019:
+                goto _1263;
+              }
+            }
+          } else {
+            goto _1263;
+          }
+        } else {
+          // _0FD3:
+          {
+            Mask<Reg::S0CON> M;
+            M.add<Reg::S0CON::RI0>();
+          }
+          XRAM[0xF97F] = XRAM[0xF980] = 0;
+          goto _1263;
+        }
+        break;
+      }
+    case 0x03: {
+        // _10DF:
+        if (Reg::Bit<Reg::S0CON, Reg::S0CON::RI0>().get()) {
+          // _10E7:
+          // no_serial0_receive_request_2:
+          if (BYTE_PAIR_GEQ(0xF980, 0xF98E)) {
+            // _110B:
+            // xram_f97f_geq_xram_f98d:
+            XRAM[0xF97F] = XRAM[0xF980] = 0;
+            if (XRAM[0xF987] || XRAM[0xF988]) {
+              // _1124:
+              // xram_f987_or_xram_f988_not_null:
+              if (CHECK_BIT_AT(RAM[0x2F], 1)) {
+                // _112A:
+                // ram_2f_bit_1_set_2:
+                RAM[0x77] = 0xFD;
+                goto _1263;
+              } else {
+                // _1127:
+                goto _1076;
+              }
+              UNREACHABLE;
+            } else {
+              // _124A:
+              // xram_f987_and_xram_f988_eq_0:
+              // TODO
+            }
+            // TODO
+          } else {
+            goto _1263;
+          }
+          UNREACHABLE;
+        } else {
+          // _10E4:
+          goto serial0_receive_request_2; // => _11F0
+        }
+        UNREACHABLE;
+        break;
+      }
+    case 0x02: {
+        // _1133:
+        if (BYTE_PAIR_GEQ(0xF980, 0xF98C)) {
+          // _1157:
+          // _xram_f97f_geq_xram_f98b:
+          {
+            Mask<Reg::IEN0> M;
+            M.add<Reg::IEN0::ES0>();
+          }
+          goto _11F3;
+        } else {
+          goto _1263;
+        }
+        UNREACHABLE;
+        break;
+      }
+    case 0x01: {
+        // _1160:
+        if (Reg::Bit<Reg::S0CON, Reg::S0CON::RI0>().get()) {
+          // _1168:
+          // no_serial0_receive_request_3:
+          if (BYTE_PAIR_GEQ(0xF980, 0xF98A)) {
+            // _118C:
+            // xram_f97f_geq_xram_f989:
+            goto xram_f987_and_xram_f988_eq_0; // => _124A
+          } else {
+            goto _1263;
+          }
+          UNREACHABLE;
+        } else {
+          // _1165:
+          goto serial0_receive_request_2; // __11F0
+        }
+        UNREACHABLE;
+        break;
+      }
+    default:
+      goto _1263;
+    }
+
+  // _1263:
+  // TODO
 }
