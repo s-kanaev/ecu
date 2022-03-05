@@ -1957,6 +1957,127 @@ inline bool checkSerial0RxD() {
 #define BYTE_PAIR_GEQ(rh, lh) \
   ((XRAM[(rh)] >= XRAM[(lh)]) && (XRAM[(rh) - 1] >= XRAM[(lh) - 1]))
 
+inline void _0F29() {
+  // _0F29:
+  // ram_2f_bit_4_or_bit_5_set:
+  XRAM[0xF97F] = XRAM[0xF980] = 0;
+  RAM[0x77] = 4;
+}
+
+inline void _0F1F() {
+  // _0F1F:
+  XRAM[0xF9A0] = XRAM[0xF9A1] = 0;
+  _0F29();
+}
+
+inline void _0F1C() {
+  // _0F1C:
+  DisableSerial0Int(); // Disable Serial0 Interrupt
+  _0F1F();
+}
+
+inline void _1076() {
+  RAM[0x77] = 0xFC;
+}
+
+inline void _1192() {
+  // _1192:
+  XRAM[0xF97F] = XRAM[0xF980] = 0;
+  // Clear Serail0 Receiver Interrupt request flag
+  {
+    Reg::Mask<Reg::S0CON> M;
+    M.add<Reg::S0CON::RI0>();
+  }
+
+  EnableSerial0Receiver();
+  RAM[0x77] = 0xFF;
+
+  CLEAR_BIT_IN(RAM[0x2F], 1);
+  init_xram_for_serial0();
+  S0RELH_S0RELL = 0:0;
+}
+
+inline void _11E7() {
+  // _11E7:
+  // ram_2f_bit_1_not_set_4:
+  EnableSerial0Int();
+  RAM[0x77] = 0x06;
+}
+
+inline void _11B3() {
+  // _11B3:
+  // ram_2f_bit_2_set:
+  XRAM[0xF97F] = XRAM[0xF980] = 0;
+  if (!XRAM[0xF991] && !XRAM[0xF992]) {
+    // _11D2:
+    // xram_f991_and_xram_f992_eq_0:
+    if (CHECK_BIT_AT(RAM[0x2F], 1) &&
+        (XRAM[0xF983] || XRAM[0xF984])) {
+      // _11E1:
+      EnableSerial0Int();
+      RAM[0x77] = 0xFF;
+    }
+    _11E7();
+  } else {
+    // _11C9:
+    DisableSerial0Int();
+    RAM[0x77] = 0x05;
+  }
+}
+
+inline void _0EAF() {
+  // _0EAF:
+  XRAM[0xF97F] = XRAM[0xF980] = 0;
+  EnableSerial0Int(); // Enable Serial0 interrupt
+  RAM[0x77] = 0xFF;
+}
+
+inline void _124A() {
+  // _124A:
+  // xram_f987_and_xram_f988_eq_0:
+  XRAM[0xF97F] = XRAM[0xF980] = 0;
+  {
+    Reg::Mask<Reg::S0CON> M;
+    M.add<Reg::S0CON::TB80>();
+  }
+  // Set Serial0 Transmitter interrupt flag?
+  {
+    Reg::Set<Reg::S0CON> S;
+    S.add<Reg::S0CON::TI0>();
+  }
+  EnableSerial0Int();
+  RAM[0x77] = 2;
+}
+
+inline void _11F3() {
+  // _11F3:
+  if (CHECK_BIT_AT(RAM[0x2F], 1)) {
+    // _11F9:
+    // ram_2f_bit_1_not_set_5:
+    XRAM[0xF99F] = XRAM[0xF9A3];
+    XRAM[0xF99E] = XRAM[0xF9A2];
+
+    DPTR[7] = 0xFAA8;
+    if (!XRAM[0xF98D] && !XRAM[0xF98E]) {
+      _124A();
+    } else {
+      // _123A:
+      XRAM[0xF97F] = XRAM[0xF980] = 0;
+      RAM[0x77] = 3;
+    }
+  } else {
+    // _11F6:
+    _0F1F();
+  }
+}
+
+inline void _11F0() {
+  // _11F0:
+  DisableSerial0Receiver();
+
+  _11F3();
+}
+
 // _0DB6:
 void Timer0OverflowInterrupt() {
   StopTimer0();
@@ -1989,7 +2110,7 @@ void Timer0OverflowInterrupt() {
     XRAM[0xF980] = 0xFF;
   }
 
-  Ram77 = RAM[0x77];
+  byte Ram77 = RAM[0x77];
   // _0DF8:
   // no_overflow_on_inc_xram_f97f_or_f980:
   switch (Ram77) {
@@ -2001,15 +2122,11 @@ void Timer0OverflowInterrupt() {
           if (BYTE_PAIR_GEQ(0xF980, 0xF994)) {
             // _0E31:
             // xram_f97f_geq_xram_f993:
-            // TODO
-            goto _0F1C;
+            _0F1C();
           }
-          goto _1263;
         } else {
           XRAM[0xF97F] = XRAM[0xF980] = 0;
-          goto _1263;
         }
-        UNREACHABLE;
         break;
       }
     case 0xFE: {
@@ -2020,16 +2137,10 @@ void Timer0OverflowInterrupt() {
           // receive_request_on_serial0:
           CLEAR_BIT_IN(S0CON, 0); // Clear RI0 flag (serial recieve request)
 
-          // _0EAF:
-          XRAM[0xF97F] = XRAM[0xF980] = 0;
-          EnableSerial0Int(); // Enable Serial0 interrupt
-          RAM[0x77] = 0xFF;
-
-          goto _1263;
+          _0EAF();
         } else /* _0E41 */ if (CHECK_BIT_AT(P3, 0)) {
           // _0E6A:
           // RxD_eq_1:
-          // TODO
           if (BYTE_PAIR_GEQ(0xF980, 0xF982)) {
             // _0E8E:
             // xram_f97f_geq_xram_f981:
@@ -2043,20 +2154,18 @@ void Timer0OverflowInterrupt() {
               S0RELH_S0RELL = 0xFFD0;
             }
 
-            goto ram_2f_bit_1_not_set_4;
+            //goto ram_2f_bit_1_not_set_4;
+            _11E7();
           } else {
-            goto _0EAF; // TODO jump
+            _0EAF();
           }
         } else {
           // _0E44:
           if (BYTE_PAIR_GEQ(0xF980, 0xF984)) {
             // _0E68:
             // xram_f97f_geq_xram_f983:
-            // TODO
-            goto _0EAF; // TODO jump
+            _0EAF();
           }
-
-          goto _1263;
         }
         break;
       }
@@ -2073,14 +2182,12 @@ void Timer0OverflowInterrupt() {
               // ram_2f_bit_2_set_2:
               SET_BIT_IN(P3, 1);
               EnableSerial0Receiver();
-              goto _F1F;
+              _0F1F();
             } else {
               // _108A:
               // ram_2f_bit_1_not_set_3:
               XRAM[0xF97F] = XRAM[0xF980] = 0;
-              goto _1263;
             }
-            UNREACHABLE;
           } else /* _1043: */ if (BYTE_PAIR_GEQ(0xF980, 0xF986)) {
             // _1067:
             // xram_f97f_geq_xram_f985:
@@ -2088,19 +2195,13 @@ void Timer0OverflowInterrupt() {
             EnableSerial0Receiver();
             XRAM[0x7F] = XRAM[0xF980] = 0;
 
-            // _1076:
-            RAM[0x77] = 0xFC;
-            goto _1263;
-          } else {
-            goto _1263;
+            _1076();
           }
         } else {
           // _102E:
           DisableSerial0Receiver();
           CLEAR_BIT_IN(P3, 1);
           XRAM[0xF97F] = XRAM[0xF980] = 0;
-
-          goto _1263;
         }
         break;
       }
@@ -2111,11 +2212,8 @@ void Timer0OverflowInterrupt() {
           // xram_f97f_geq_xram_f987:
           XRAM[0xF99F]:XRAM[0xF99E] = XRAM[0xF9A3]:XRAM[0xF9A2];
           DPTR[7] = 0xFAA8;
-          goto xram_f987_and_xram_f988_eq_0; // => _124A
-        } else {
-          goto _1263;
+          _124A();
         }
-        UNREACHABLE;
         break;
       }
     case 0x08: {
@@ -2127,37 +2225,11 @@ void Timer0OverflowInterrupt() {
           if (!CHECK_BIT_AT(RAM[0x2F], 2)) {
             // _0FC3:
             // ram_2f_bit_2_not_set:
-            goto _1192;
+            _1192();
           } else {
             // _0FC0: goto ram_2f_bit_2_set; // => _11B3
-            // _11B3:
-            // ram_2f_bit_2_set:
-            XRAM[0xF97F] = XRAM[0xF980] = 0;
-            if (!XRAM[0xF991] && !XRAM[0xF992]) {
-              // _11D2:
-              // xram_f991_and_xram_f992_eq_0:
-              if (CHECK_BIT_AT(RAM[0x2F], 1) &&
-                  (XRAM[0xF983] || XRAM[0xF984])) {
-                // _11E1:
-                EnableSerial0Int();
-                RAM[0x77] = 0xFF;
-              }
-              // _11E7:
-              // ram_2f_bit_1_not_set_4:
-              EnableSerial0Int();
-              RAM[0x77] = 0x06;
-              goto _1263;
-            } else {
-              // _11C9:
-              DisableSerial0Int();
-              RAM[0x77] = 0x05;
-              goto _1263;
-            }
-            // TODO
+            _11B3();
           }
-          // TODO
-        } else {
-          goto _1263;
         }
         break;
       }
@@ -2167,18 +2239,15 @@ void Timer0OverflowInterrupt() {
           // _0F84:
           // xram_f97f_geq_xram_f995:
           {
-            Mask<Reg::S0CON> M;
+            Reg::Mask<Reg::S0CON> M;
             M.add<Reg::S0CON::RI0>();
           }
           {
-            Set<Reg::S0CON> S;
+            Reg::Set<Reg::S0CON> S;
             S.add<Reg::S0CON::REN0>();
           }
           EnableSerial0Int();
           RAM[0x77] = 8;
-          goto _1263;
-        } else {
-          goto _1263;
         }
         break;
       }
@@ -2194,36 +2263,24 @@ void Timer0OverflowInterrupt() {
               // _0F4F:
               // ram_2f_bit_0_set:
               DisableSerial0Int(); // Disable Serial0 Interrupt
-              if (CHECK_BIT_AT(RAM[0x2F], 4) || CHECK_BIT_AT(RAM[0x2F], 5)) {
-                goto ram_2f_bit_4_or_bit_5_set;
+              if (CHECK_BIT_AT(RAM[0x2F], 4) ||
+                  CHECK_BIT_AT(RAM[0x2F], 5)) {
+                _0F29();
               } else {
                 // _0F58:
                 CLEAR_BIT_IN(RAM[0x2F], 2);
-                goto _1192;
+
+                _1192();
               }
-              // TODO
             } else {
               // _0F3C:
               XRAM[0xF97F] = XRAM[0xF980] = 0;
               EnableSerial0Int(); // Enable Serial0 Interrupt
               RAM[0x77] = 0xFF;
-              goto _1263;
             }
-            // TODO
           } else {
-            // _0F1C:
-            DisableSerial0Int(); // Disable Serial0 Interrupt
-            // _0F1F:
-            XRAM[0xF9A0] = XRAM[0xF9A1] = 0;
-            // _0F29:
-            // ram_2f_bit_4_or_bit_5_set:
-            XRAM[0xF97F] = XRAM[0xF980] = 0;
-            RAM[0x77] = 4;
-            goto _1263;
+            _0F1C();
           }
-          // TODO
-        } else {
-          goto _1263;
         }
         break;
       }
@@ -2234,9 +2291,8 @@ void Timer0OverflowInterrupt() {
           // xram_f97f_geq_xram_f991:
           CLEAR_BIT_IN(S0CON, 0); // Clear Serial0 Receieve request
           SET_BIT_IN(S0CON, 4); // Enable serial0 reception
-          goto ram_2f_bit_1_not_set_4; // => _11E7
-        } else {
-          goto _1263
+          //goto ram_2f_bit_1_not_set_4; // => _11E7
+          _11E7();
         }
         break;
       }
@@ -2253,13 +2309,9 @@ void Timer0OverflowInterrupt() {
             if (!CHECK_BIT_AT(RAM[0x2F], 1)) {
               // _101F:
               // ram_2f_bit_1_not_set_2:
-              if (CHECK_BIT_AT(RAM[0x2F], 0)) {
-                // _1025:
-                // ram_2f_bit_0_set_3:
-                goto _1263;
-              } else {
+              if (!CHECK_BIT_AT(RAM[0x2F], 0)) {
                 // _1022:
-                goto ram_2f_bit_2_set;  // => _11B3
+                _11B3();
               }
             } else {
               // _1014:
@@ -2267,14 +2319,10 @@ void Timer0OverflowInterrupt() {
               if (CHECK_BIT_AT(RAM[0x2F], 0)) {
                 // _101C:
                 // ram_2f_bit_0_set_2:
-                goto _1263;
               } else {
                 // _1019:
-                goto _1263;
               }
             }
-          } else {
-            goto _1263;
           }
         } else {
           // _0FD3:
@@ -2283,7 +2331,6 @@ void Timer0OverflowInterrupt() {
             M.add<Reg::S0CON::RI0>();
           }
           XRAM[0xF97F] = XRAM[0xF980] = 0;
-          goto _1263;
         }
         break;
       }
@@ -2303,27 +2350,20 @@ void Timer0OverflowInterrupt() {
                 // _112A:
                 // ram_2f_bit_1_set_2:
                 RAM[0x77] = 0xFD;
-                goto _1263;
               } else {
                 // _1127:
-                goto _1076;
+                _1076();
               }
-              UNREACHABLE;
             } else {
               // _124A:
               // xram_f987_and_xram_f988_eq_0:
-              // TODO
+              _124A();
             }
-            // TODO
-          } else {
-            goto _1263;
           }
-          UNREACHABLE;
         } else {
           // _10E4:
-          goto serial0_receive_request_2; // => _11F0
+          _11F0();
         }
-        UNREACHABLE;
         break;
       }
     case 0x02: {
@@ -2335,11 +2375,8 @@ void Timer0OverflowInterrupt() {
             Mask<Reg::IEN0> M;
             M.add<Reg::IEN0::ES0>();
           }
-          goto _11F3;
-        } else {
-          goto _1263;
+          _11F3();
         }
-        UNREACHABLE;
         break;
       }
     case 0x01: {
@@ -2350,21 +2387,17 @@ void Timer0OverflowInterrupt() {
           if (BYTE_PAIR_GEQ(0xF980, 0xF98A)) {
             // _118C:
             // xram_f97f_geq_xram_f989:
-            goto xram_f987_and_xram_f988_eq_0; // => _124A
-          } else {
-            goto _1263;
+            _124A();
           }
-          UNREACHABLE;
         } else {
           // _1165:
-          goto serial0_receive_request_2; // __11F0
+          _11F0();
         }
-        UNREACHABLE;
         break;
       }
     default:
-      goto _1263;
-    }
+      break;
+  }
 
   // _1263:
   // TODO
