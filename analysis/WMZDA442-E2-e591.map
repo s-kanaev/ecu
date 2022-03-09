@@ -172,7 +172,7 @@
  00000000:00000DB6       TF0_0
  00000000:00000DD6       dont_reload_timer0
  00000000:00000DE0       code_DE0
- 00000000:00000DF8       overflow_on_inc_xram_f97f_or_f980
+ 00000000:00000DF8       no_overflow_on_inc_xram_f97f_or_f980
  00000000:00000E0D       ram_2f_bit_1_set
  00000000:00000E1A       code_E1A
  00000000:00000E1F       xram_f980_geq_xram_f994
@@ -283,10 +283,10 @@
  00000000:00001293       clrmsk_setmsk_updated
  00000000:00001296       ram_4e_neq_0
  00000000:00001299       code_1299
- 00000000:000012A0       ram_4f_eq_nil
+ 00000000:000012A0       ram_4f_neq_nil
  00000000:000012AF       ignition_coil_14_is_charging
  00000000:000012B4       ram_4d_not_nil_2
- 00000000:000012BE       code_12BE
+ 00000000:000012BE       ignition_coil_23_is_charging
  00000000:000012C3       ram_4d_not_eq_1_2
  00000000:000012C6       either_ignition_coil_started_charging
  00000000:000012C9       either_ignition_coil_just_discharged
@@ -298,11 +298,11 @@
  00000000:000012F3       code_12F3
  00000000:000012FD       flash_8752_is_nil
  00000000:000012FF       code_12FF
- 00000000:00001309       code_1309
+ 00000000:00001309       ram_6a_neq_3e
  00000000:0000130C       code_130C
  00000000:00001316       code_1316
- 00000000:0000131B       code_131B
- 00000000:00001324       code_1324
+ 00000000:0000131B       ram_68_less_ram_69
+ 00000000:00001324       ram_68_neq_7d
  00000000:00001333       code_1333
  00000000:00001334       IEX3_0
  00000000:00001361       IEX4_0

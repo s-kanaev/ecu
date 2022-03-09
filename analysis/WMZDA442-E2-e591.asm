@@ -3351,7 +3351,8 @@ TF0_0:                                  ; CODE XREF: TF0↑j
                 mov     TL0, #0CBh      ; Timer 0, Low Byte
                 mov     TH0, #0FAh      ; Reset Timer0 to FA:CB on overflow
                                         ;
-                                        ; FA:CB connection between FA:D0?
+                                        ; FA:CB connection with FA:D0?
+                                        ;   Check the increment instruction timing and frequency of Timer0
 
 dont_reload_timer0:                     ; CODE XREF: TF0_0+18↑j
                 setb    TCON.4          ; start Timer0
@@ -3367,13 +3368,13 @@ code_DE0:                               ; CODE XREF: TF0_0+22↑j
                 movx    A, @DPTR
                 inc     A
                 movx    @DPTR, A
-                jnz     overflow_on_inc_xram_f97f_or_f980 ; if (++XRAM[0xF97F]) // no overflow FF=>0
+                jnz     no_overflow_on_inc_xram_f97f_or_f980 ; if (++XRAM[0xF97F]) // no overflow FF=>0
                                         ;   jump ...
                 inc     DPTR
                 movx    A, @DPTR
                 inc     A
                 movx    @DPTR, A
-                jnz     overflow_on_inc_xram_f97f_or_f980 ; if (++XRAM[0xF980]) // no overflow FF=>0
+                jnz     no_overflow_on_inc_xram_f97f_or_f980 ; if (++XRAM[0xF980]) // no overflow FF=>0
                                         ;   jump ...
 Both XRAM[0xF97F] and XRAM[0xF980] overflowed on increment. Resetting both to 0xFF.
                 mov     A, #0FFh
@@ -3384,7 +3385,7 @@ Both XRAM[0xF97F] and XRAM[0xF980] overflowed on increment. Resetting both to 0x
                 movx    @DPTR, A        ; XRAM[0xF97F] = 0xFF
                                         ; XRAM[0xF980] = 0xFF
 
-overflow_on_inc_xram_f97f_or_f980:      ; CODE XREF: TF0_0+30↑j
+no_overflow_on_inc_xram_f97f_or_f980:   ; CODE XREF: TF0_0+30↑j
                                         ; TF0_0+36↑j
                 mov     A, RAM_77
                 cjne    A, #0FFh, ram_77_not_equal_ff
@@ -4187,7 +4188,8 @@ ram_2f_bit_1_set_5:                     ; CODE XREF: TF0_0:ram_2f_bit_1_not_set_
                 inc     DPTR
                 movx    A, @DPTR
                 orl     A, B            ; B-Register
-                jz      xram_f987_and_xram_f988_eq_0 ; DPTR #7 may contain smth
+                jz      xram_f987_and_xram_f988_eq_0 ; if (!(XRAM[0xF98D] || XRAM[0xF98E]))
+                                        ;   jump ...
                 mov     A, #0
                 mov     DPTR, #0F97Fh   ; DPTR[0] = 0xF97F
                 movx    @DPTR, A
@@ -4205,7 +4207,7 @@ xram_f987_and_xram_f988_eq_0:           ; CODE XREF: TF0_0+323↑j
                 movx    @DPTR, A
                 inc     DPTR
                 mov     A, #0
-                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980]
+                movx    @DPTR, A        ; XRAM[0xF97F] = XRAM[0xF980] = 0
                 anl     S0CON, #0F7h    ; Clear Serial0 Transmitter bit 9
                 orl     S0CON, #2       ; Set Serial0 Transmitter interrupt flag?
                 orl     IEN0, #10h      ; Enable Serial0 Interrupt
@@ -4239,7 +4241,7 @@ ram_2b_bit_7_set:                       ; CODE XREF: TF0_0:ram_29_bit_1_set↑j
 ; ---------------------------------------------------------------------------
 
 ram_4d_not_nil:                         ; CODE XREF: TF0_0+4BB↑j
-                cjne    A, #1, ram_4d_not_eq_1 ; if (RAM[0x4D] != 1)
+                cjne    A, #1, ram_4d_not_eq_1 ; if (RAM[0x4D] != 1) // if (RAM[0x4D] > 1)
                                         ;   jump ...
                 jnb     P5.0, either_ignition_coil_is_charging ; if (!P5.0)  // ignition coil for cyl 2/3 is charging // is it CM/CCM output?
                                         ;   jump ...
@@ -4263,18 +4265,18 @@ clrmsk_setmsk_updated:                  ; CODE XREF: TF0_0+4C7↑j
                 ljmp    clrmsk_setmsk_updated_sub
 ; ---------------------------------------------------------------------------
 
-ram_4e_neq_0:                           ; CODE XREF: TF0_0:ram_4f_eq_nil↓j
+ram_4e_neq_0:                           ; CODE XREF: TF0_0:ram_4f_neq_nil↓j
                 ljmp    code_12FF
 ; ---------------------------------------------------------------------------
 
 code_1299:                              ; CODE XREF: TF0_0+4B0↑j
                 mov     A, RAM_4F
-                jnz     ram_4f_eq_nil   ; if (RAM[0x4F])
+                jnz     ram_4f_neq_nil  ; if (RAM[0x4F])
                                         ;   jump ...
                 ljmp    code_12FF
 ; ---------------------------------------------------------------------------
 
-ram_4f_eq_nil:                          ; CODE XREF: TF0_0+4E5↑j
+ram_4f_neq_nil:                         ; CODE XREF: TF0_0+4E5↑j
                 djnz    RAM_4E, ram_4e_neq_0 ; if (--RAM[0x4E])
                                         ;   jump ...
                 mov     A, RAM_4D
@@ -4294,13 +4296,13 @@ ignition_coil_14_is_charging:           ; CODE XREF: TF0_0+4F2↑j
 ram_4d_not_nil_2:                       ; CODE XREF: TF0_0+4EF↑j
                 cjne    A, #1, ram_4d_not_eq_1_2 ; if (RAM[0x4D] != 1)
                                         ;   jump ...
-                jnb     P5.0, code_12BE ; if (!P5.0)  // ignition coil for cyl 2/3 is charging // is it CM/CCM output?
+                jnb     P5.0, ignition_coil_23_is_charging ; if (!P5.0)  // ignition coil for cyl 2/3 is charging // is it CM/CCM output?
                                         ;   jump ...
                 clr     P5.0            ; Start charging ignition coil for cylinders 2/3
                 sjmp    either_ignition_coil_started_charging
 ; ---------------------------------------------------------------------------
 
-code_12BE:                              ; CODE XREF: TF0_0+501↑j
+ignition_coil_23_is_charging:           ; CODE XREF: TF0_0+501↑j
                 setb    P5.0            ; Ignite cylinders 2/3?
                 ljmp    either_ignition_coil_just_discharged
 ; ---------------------------------------------------------------------------
@@ -4352,6 +4354,9 @@ high_nibble_of_flash_8a5b_not_nil:      ; CODE XREF: TF0_0+52D↑j
                 sjmp    code_12FF
 ; ---------------------------------------------------------------------------
 
+!!!!!!!!!!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!!!!!!!!!
+IN A LINEAR WAY
+
 clrmsk_setmsk_updated_sub:              ; CODE XREF: TF0_0:clrmsk_setmsk_updated↑j
                 mov     DPTR, #8752h
                 clr     A
@@ -4376,36 +4381,40 @@ code_12FF:                              ; CODE XREF: TF0_0:either_ignition_coil_
                                         ; TF0_0:ram_4e_neq_0↑j ...
                 inc     RAM_6A
                 mov     A, RAM_6A
-                cjne    A, #3Eh, code_1309 ; '>'
-                mov     RAM_6A, #0
+                cjne    A, #3Eh, ram_6a_neq_3e ; '>' ; if (++RAM[0x6A] != 0x3E)
+                                        ;   jump ...
+                mov     RAM_6A, #0      ; Reset RAM[0x6A] to 0 at 0x3E = 62
 
-code_1309:                              ; CODE XREF: TF0_0+54D↑j
+ram_6a_neq_3e:                          ; CODE XREF: TF0_0+54D↑j
                 cjne    A, RAM_6B, code_130C
 
-code_130C:                              ; CODE XREF: TF0_0:code_1309↑j
+code_130C:                              ; CODE XREF: TF0_0:ram_6a_neq_3e↑j
                 cpl     C
-                mov     P4.4, C         ; Port 4 (PDIR=0)
+                mov     P4.4, C         ; P4.4 = !(RAM[0x6A] < RAM[0x6B]) // turn on adsorber ventilation
                 inc     RAM_68
                 mov     A, RAM_68
                 cjne    A, RAM_69, code_1316
 
 code_1316:                              ; CODE XREF: TF0_0+55D↑j
-                jc      code_131B
-                orl     P9, #2          ; Port 9 (PDIR=0)
+                jc      ram_68_less_ram_69 ; if (++RAM[0x68] < RAM[0x69])
+                                        ;   jump ...
+                orl     P9, #2          ; P9.1 = 1 // fuel-metering device ?
 
-code_131B:                              ; CODE XREF: TF0_0:code_1316↑j
-                cjne    A, #7Dh, code_1324 ; '}'
-                mov     RAM_68, #0
-                anl     P9, #0FDh       ; Port 9 (PDIR=0)
+ram_68_less_ram_69:                     ; CODE XREF: TF0_0:code_1316↑j
+                cjne    A, #7Dh, ram_68_neq_7d ; '}' ; if (RAM[0x68] != 0x7D)
+                                        ;   jump ...
+                mov     RAM_68, #0      ; Reset RAM[0x68] to 0 at 0x7D = 125 (dec)
+                anl     P9, #0FDh       ; P9.1 = 0 // turn off fuel-metering device ?
 
-code_1324:                              ; CODE XREF: TF0_0:code_131B↑j
+ram_68_neq_7d:                          ; CODE XREF: TF0_0:ram_68_less_ram_69↑j
                 pop     DPH             ; Data Pointer, High Byte
                 pop     DPL             ; Data Pointer, Low Byte
                 pop     B               ; B-Register
                 pop     ACC             ; Accumulator
                 pop     PSW             ; Program Status Word
                 jnb     TCON.5, code_1333 ; Timer Control Register
-                setb    RAM_20.4
+                setb    RAM_20.4        ; if (TCON.TF0)  // TImer0 overflow flag
+                                        ;   SET_BIT_IN(RAM[0x20], 4)
 
 code_1333:                              ; CODE XREF: TF0_0+578↑j
                 reti
@@ -63326,7 +63335,7 @@ RAM_4C equ 4Ch                          ; DATA XREF: IEX2_0+29↑r
                                         ; IE0_0+32E↑r ...
 RAM_4D equ 4Dh                          ; DATA XREF: ICR_0+22↑w
                                         ; TF0_0:ram_2b_bit_7_set↑r ...
-RAM_4E equ 4Eh                          ; DATA XREF: TF0_0:ram_4f_eq_nil↑w
+RAM_4E equ 4Eh                          ; DATA XREF: TF0_0:ram_4f_neq_nil↑w
                                         ; TF0_0:high_nibble_of_flash_8a5b_not_nil↑w ...
 RAM_4F equ 4Fh                          ; DATA XREF: TF0_0:code_1299↑r
                                         ; TF0_0:either_ignition_coil_just_discharged↑w ...
@@ -63383,7 +63392,7 @@ RAM_69 equ 69h                          ; DATA XREF: TF0_0+55D↑r
                                         ; power_on__ignition_key_turned_+269D↑w
 RAM_6A equ 6Ah                          ; DATA XREF: TF0_0:code_12FF↑w
                                         ; TF0_0+54B↑r ...
-RAM_6B equ 6Bh                          ; DATA XREF: TF0_0:code_1309↑r
+RAM_6B equ 6Bh                          ; DATA XREF: TF0_0:ram_6a_neq_3e↑r
                                         ; power_on__ignition_key_turned_+25D8↑w
 RAM_6C equ 6Ch                          ; DATA XREF: IEX2_0:code_D34↑w
                                         ; IEX2_0+51↑r
@@ -63407,7 +63416,7 @@ RAM_75 equ 75h                          ; DATA XREF: power_on__ignition_key_turn
                                         ; power_on__ignition_key_turned_+1F3C↑r ...
 RAM_76 equ 76h                          ; DATA XREF: power_on__ignition_key_turned_:code_4301↑r
                                         ; code_6783+61↑r ...
-RAM_77 equ 77h                          ; DATA XREF: TF0_0:overflow_on_inc_xram_f97f_or_f980↑r
+RAM_77 equ 77h                          ; DATA XREF: TF0_0:no_overflow_on_inc_xram_f97f_or_f980↑r
                                         ; TF0_0+106↑w ...
 
 
