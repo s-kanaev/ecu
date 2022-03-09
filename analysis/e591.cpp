@@ -2078,6 +2078,158 @@ inline void _11F0() {
   _11F3();
 }
 
+static byte SET_CLEAR_MASKS_PER_COIL[static_cast<byte>(CoilE::CoilCount)] = {
+  // 0 = Coil 2/3
+  0xFE,
+  // 1 = Coil 1/4
+  0xFD,
+};
+
+// _12C9:
+inline void either_ignition_coil_just_discharged() {
+  // _12C9:
+  if (--RAM[0x4F]) {
+    goto _12F3;
+    // TODO
+  } else /* RAM[0x4F] started being equal 0 */ {
+    switch (RAM[0x4D]) {
+      case 0:
+      case 1:
+      default:
+        // ram_4d_not_eq_1_3:
+        goto _12FF;
+        // TODO
+    }
+  }
+  UNREACHABLE;
+}
+
+#define GOTO_x_THEN_12FF(x) \
+do {                        \
+  x();                      \
+  goto _12FF;               \
+} while (0)
+
+// _12DA:
+inline void either_ignition_coil_started_charging_sub() {
+  // _12DA:
+  byte Ram4EUpdateVal = (FLASH[0x8A5B + RAM[0x3F]] & 0xF0) >> 4;
+  if (!Ram4EUpdateVal)
+    ++Ram4EUpdateVal;
+  RAM[0x4E] = Ram4EUpdateVal;
+}
+
+// _12FF:
+inline void _12FF() {
+  const byte Ram6AInc = ++RAM[0x6A];
+  if (Ram6AInc == 0x3E)
+    RAM[0x6A] = 0;
+
+  if (Ram6AInc >= RAM[0x6B])
+    SET_BIT_IN(P4, 4); // start scavenging absorber
+  else
+    CLEAR_BIT_IN(P4, 4); // stop scavenging absorber
+
+  if (++RAM[0x68] >= RAM[0x69])
+    SET_BIT_IN(P9, 1); // turn on fuel metering device?
+
+  // _131B:
+  // ram_68_less_ram_69:
+  if (0x7D == RAM[0x68]) {
+    RAM[0x68] = 0;
+    CLEAR_BIT_IN(P9, 1);
+  }
+
+  // _1324:
+  // ram_68_neq_7d:
+
+  if (Reg::Bit<Reg::TCON, Reg::TCON::TF0>{}.get())
+    SET_BIT_IN(RAM[0x20], 4);
+
+  // _1333:
+  // FINISH Timer0 Overflow Interrupt
+}
+
+inline void _12FD(const bool With_12F3 = false) {
+  if (With_12F3) {
+    // _12F3:
+    RAM[0x4E] = (FLASH[0x8751] & 0xF0) >> 4;
+  }
+
+  // _12FD:
+  // flash_8752_is_nil:
+  CLEAR_BIT_IN(RAM[0x29], 1);
+
+  _12FF();
+}
+
+inline void _12F3() {
+  _12FD(true);
+}
+
+// _12EA:
+inline void clrmsk_setmsk_updated_sub() {
+  byte Ram4F = FLASH[0x8752];
+  RAM[0x4F] = Ram4F;
+
+  const bool With_12F3 = !!Ram4F;
+
+  _12FD(With_12F3);
+}
+
+template <CoilE Coil, bool IgniteOrUpdateMasks>
+inline void processIgnCoilForTimer0Overflow() {
+  if constexpr (IGNITION_COIL_CHARGING(Coil)) {
+    if constexpr (IgniteOrUpdateMasks) {
+      IGNITE_COIL(Coil);
+      either_ignition_coil_just_discharged(); // => _12C9
+    } else {
+      //goto either_ignition_coil_is_charging; // => _1290
+      _12FF();
+    }
+  } else {
+    if constexp (IgniteOrUpdateMasks) {
+      START_CHARGING_IGNITION_COIL(Coil);
+      //goto either_ignition_coil_started_charging; // => _12C6
+      //goto either_ignition_coil_started_charging_sub; // => _12DA
+      //GOTO_x_THEN_12FF(either_ignition_coil_started_charging_sub);
+      either_ignition_coil_started_charging_sub();
+      _12FF();
+    } else {
+      // _1285:
+      CLRMSK &= SET_CLEAR_MASKS_PER_COIL[static_cast<byte>(Coil)];
+      SETMSK &= SET_CLEAR_MASKS_PER_COIL[static_cast<byte>(Coil)];
+      //goto clrmsk_setmsk_updated; // => _1293
+      //goto clrmsk_setmsk_updated_sub; // => _12EA
+      clrmsk_setmsk_updated_sub();
+    }
+  }
+
+  UNREACHABLE;
+}
+
+/// \tparam IgniteOrUpdateMasks false to only update set/clr masks
+///                             true to perform ignition/charging
+template <bool IgniteOrUpdateMasks>
+inline void processRam4DForTimer0Overflow() {
+  byte Ram4D = RAM[0x4D];
+
+  switch (Ram4D) {
+    case 0: {
+      processIgnCoilForTimer0Overflow<CoilE::C_1_4, IgniteOrUpdateMasks>();
+      break;
+    }
+    case 1: {
+      processIgnCoilForTimer0Overflow<CoilE::C_2_3, IgniteOrUpdateMasks>();
+      break;
+    }
+    default: {
+      //goto flash_8752_is_nil; // => _12FD
+      _12FD();
+      break;
+    }
+  }
+}
 // _0DB6:
 void Timer0OverflowInterrupt() {
   StopTimer0();
@@ -2109,6 +2261,8 @@ void Timer0OverflowInterrupt() {
     XRAM[0xF97F] = 0xFF;
     XRAM[0xF980] = 0xFF;
   }
+
+  // TODO Decompile and re-organize
 
   byte Ram77 = RAM[0x77];
   // _0DF8:
@@ -2399,6 +2553,38 @@ void Timer0OverflowInterrupt() {
       break;
   }
 
+  // TODO Decompile and re-organize
   // _1263:
-  // TODO
+  if (CHECK_BIT_AT(RAM[0x29], 1)) {
+    // _1269:
+    // ram_29_bit_1_set:
+    if (CHECK_BIT_AT(RAM[0x2B], 7)) {
+      // _126F:
+      // ram_2b_bit_7_set:
+
+      processRam4DForTimer0Overflow<false>();
+    } else {
+      // _12FD:
+      // flash_8752_is_nil:
+      _12FD();
+    }
+  } else {
+    // _1299:
+    if (RAM[0x4F]) {
+      // 12A0:
+      // ram_4f_neq_nil:
+      if (--RAM[0x4E]) {
+        // _1296:
+        // ram_4e_neq_0:
+        goto _12FF;
+      } else {
+        // _12A3:
+        processRam4DForTimer0Overflow<true>();
+      }
+    } else {
+      // _129D:
+      goto _12FF;
+      _12FF();
+    }
+  }
 }
