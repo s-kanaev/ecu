@@ -99,12 +99,55 @@ inline bool kitting_should_adapt_throttle_position_sensor() {
   return CHECK_BIT_AT(GET_RNG_START_PTR(FLASH, KITTING)[2], 6);
 }
 
+enum class CoilE : byte {
+  C_1_4 = 1,
+  C_2_3 = 0,
+
+  CoilCount = 2
+};
+
+inline void START_CHARGING_IGNITION_COIL(CoilE Coil) {
+  CLEAR_BIT_IN(P5, static_cast<byte>(Coil));
+}
+
+inline void IGNITE_COIL(CoilE Coil) {
+  SET_BIT_IN(P5, static_cast<byte>(Coil));
+}
+
+inline void START_CHARGING_IGNITION_COIL_1_4() {
+  START_CHARGING_IGNITION_COIL(CoilE::C_1_4);
+}
+
+inline void START_CHARGING_IGNITION_COIL_2_3() {
+  START_CHARGING_IGNITION_COIL(CoilE::C_2_3);
+}
+
 inline void TURN_OFF_IGNITION_COIL_1_4() {
-  CLEAR_BIT_IN(P5, 1);
+  START_CHARGING_IGNITION_COIL_1_4();
 }
 
 inline void TURN_OFF_IGNITION_COIL_2_3() {
-  CLEAR_BIT_IN(P5, 0);
+  START_CHARGING_IGNITION_COIL_2_3();
+}
+
+inline void IGNITE_COIL_1_4() {
+  IGNITE_COIL(CoilE::C_1_4);
+}
+
+inline void IGNITE_COIL_2_3() {
+  IGNITE_COIL(CoilE::C_2_3);
+}
+
+inline bool IGNITION_COIL_CHARGING(CoilE Coil) {
+  return !CHECK_BIT_AT(P5, static_cast<byte>(Coil));
+}
+
+inline bool IGNITION_COIL_1_4_CHARGING() {
+  return IGNITION_COIL_CHARGING(CoilE::C_1_4);
+}
+
+inline bool IGNITION_COIL_2_3_CHARGING() {
+  return IGNITION_COIL_CHARGING(CoilE::C_2_3);
 }
 
 inline void TURN_OFF_INJECTOR_1() {
