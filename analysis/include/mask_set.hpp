@@ -69,6 +69,7 @@ DEFINE_REGISTER8(SYSCON, 0xB1, 0, CLKP, PMOD, b5, RMAP, b3, b2, XMAP1, XMAP0);
 DEFINE_REGISTER8(IP1, 0xB9, 0, PDIR, b6, b5, b4, b3, b2, b1, b0);
 DEFINE_REGISTER8(IEN0, 0xA8, 0, EAL, WDT, ET2, ES0, ET1, EX1, ET0, EX0);
 DEFINE_REGISTER8(S0CON, 0x98, 0, SM0, SM1, SM20, REN0, TB80, RB80, TI0, RI0);
+DEFINE_REGISTER8(TCON, 0x88, 0, TF1, TR1, TF0, TR0, IE1, IT1, IE0, IT0);
 
 ///////////////////////////////////////////////////////////////////////////////
 
