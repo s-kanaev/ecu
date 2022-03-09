@@ -47,9 +47,11 @@ static inline void INIT_RAM() {
                   // bit 5 - ???
 
   [0x26] = 0,     // status byte:
+                  // bit 2 - ??
                   // bit 6 - ??
 
   [0x27] = 0x00,  // ???
+                  // bit 1 (bit address 0x39) ???
                   // bit 2 (bit address 0x3A), 1 if MDU was used by interrupt etc.
                   // bit 3 (bit address 0x3B) = copy of PSW.F0
                   // bit 4 ???
@@ -75,6 +77,8 @@ static inline void INIT_RAM() {
 
   [0x30] = 0,     // Some counter?, can be changed by some interrupt along with 0x1C/0x1D?
 
+  [0x35] = 0,     // Counter for timer0 overflow interrupt, max val = 0x14?
+
   [0x3A] = 0,     // Adjusted coolant temperature,
                   // saturated to 0 at -38..-39C, saturated to 204 at 165C
 
@@ -86,8 +90,13 @@ static inline void INIT_RAM() {
                   // factor - least significant three bits, will be SHL 5 = xxx0 0000
                   // offset - most significant five bits, will be SHR 3, max value = 0x1F
                   // saturated to 0 at -40C, saturated to 0xFF at 120C
+                  // RAM[0x3D] = round((T * 256 + 10140.22143) / 160)
+                  //  with T = (-40 .. +120) = coolant temperature
 
   [0x3E] = 0,     // Adjusted intake air temperature (after RAM[0x3B])
+                  // RAM[0x3E] = round((T * 256 + 10140.22143) / 160)
+                  //  with T = (-40 .. +120) = intake air temperature
+
   [0x3F] = 0,     // Adjusted ignition switch voltage
   [0x40] = 0,     // Initial value for XRAM[0xF6AD] and XRAM[0xF6AF]
   [0x41..0x43] = 0,
