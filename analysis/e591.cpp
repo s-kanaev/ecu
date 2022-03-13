@@ -2498,7 +2498,7 @@ inline void ram77Eq01() {
   }
 }
 
-inline void processRam77ForTimer0Overflow() {
+inline void processRam77ForTimer0OverflowAndSelectNewRam77Value() {
   byte Ram77 = RAM[0x77];
   // _0DF8:
   // no_overflow_on_inc_xram_f97f_or_f980:
@@ -2589,7 +2589,7 @@ void Timer0OverflowInterrupt() {
   }
 
   // TODO Decompile and re-organize
-  processRam77ForTimer0Overflow();
+  processRam77ForTimer0OverflowAndSelectNewRam77Value();
 
   // TODO Decompile and re-organize
   // _1263:
@@ -2611,13 +2611,15 @@ void Timer0OverflowInterrupt() {
     if (--RAM[0x4E]) {
       // _1296:
       // ram_4e_neq_0:
+      // INTENTIONALY EMPTY
     } else {
+      // RAM[0x4E] became 0
       // _12A3:
       processRam4DForTimer0Overflow<true>();
     }
   } else {
     // _129D:
-    // EMPTY
+    // INTENTIONALY EMPTY
   }
 
   finishTimer0OverflowInterrupt();

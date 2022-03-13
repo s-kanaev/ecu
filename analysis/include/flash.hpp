@@ -178,6 +178,8 @@ inline void INIT_FLASH() {
                     //         default = 0; 1 => FLASH[0xFFFE] = 0xBF, 0 => FLASH[0xFFFE] = 0xFF
                     // bit 7 - reserved?
 
+  FLASH[0x8751] = 0x20;  // ???, used for RAM[0x4E] default value calc
+  FLASH[0x8752] = 0x02;  // ???, copied to RAM[0x4F]
   FLASH[0x8753] = 0x1B;  // ???, copied to RAM[0x59]
   FLASH[0x8755] = 0x5A;  // ???, copied to RAM[0x57] and RAM[0x58]
 
@@ -197,6 +199,12 @@ inline void INIT_FLASH() {
   FLASH[0x87B7] = 0x69;  // some adjusted coolant temperature limit for filling in XRAM[0xF8CD]..XRAM[0xF8CD+0x7F] (0x80 bytes)
 
   FLASH[0x8A4B] = 0x28;  // Fallback table value of coolant temperature
+
+  DEF_ARRAY(byte, 0x8A5B, 0x8A69, ram_4f_value_tpl) = {
+    0x9C, 0x8F, 0x82, 0x79, 0x6F, 0x65, 0x5B, 0x51,
+    0x4C, 0x48, 0x44, 0x3F, 0x3B, 0x37, 0x33
+  };
+  copy(&FLASH[0x8A5B], ram_4f_value_tpl);
 
   /* ?????????????????????? */
 //   [0x8AFB..0x8C0A] =

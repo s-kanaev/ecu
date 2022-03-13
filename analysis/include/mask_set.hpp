@@ -2,76 +2,7 @@
 
 #include <types.hpp>
 #include <ram.hpp>
-
-namespace Reg {
-  namespace detail {
-    template <typename _Reg, typename _Reg::BitEnumT _Bit>
-    struct BitVal;
-  } // namespace detail
-
-  template <word _Loc, typename _Type, bool _Mapped>
-  struct Register;
-} // namespace Reg
-
-///////////////////////////////////////////////////////////////////////////////
-
-#define DEFINE_REGISTER(name, address, type, init, mapped, ...)                \
-namespace Reg {                                                                \
-  template <>                                                                  \
-  struct Register<address, type, mapped> {                                     \
-    using Type = type;                                                         \
-    static constexpr word Loc = address;                                       \
-    static constexpr bool Mapped = mapped;                                     \
-    static constexpr Type Init = init;                                         \
-    enum BitEnumT : byte {                                                     \
-      __VA_ARGS__                                                              \
-    };                                                                         \
-    static constexpr Type &Inst = RAM[address];                                \
-    template <BitEnumT _Bit>                                                   \
-    static constexpr byte bitN() {                                             \
-      return (byte)(_Bit);                                                     \
-    }                                                                          \
-  };                                                                           \
-  using name = Register<address, type, mapped>;                                \
-}
-
-#define DEFINE_REG_BIT(reg, bit)                                               \
-namespace Reg { namespace detail {                                             \
-  template <>                                                                  \
-  struct BitVal<reg, reg::bit> {                                               \
-    static constexpr typename reg::Type value = 1 << (byte)(reg::bit);         \
-  };                                                                           \
-}}
-
-#define DEFINE_REGISTER8(name, addr, init, b7, b6, b5, b4, b3, b2, b1, b0)     \
-DEFINE_REGISTER(name, addr, byte, init, false, b7, b6, b5, b4, b3, b2, b1, b0);\
-  DEFINE_REG_BIT(name, b7);                                                    \
-  DEFINE_REG_BIT(name, b6);                                                    \
-  DEFINE_REG_BIT(name, b5);                                                    \
-  DEFINE_REG_BIT(name, b4);                                                    \
-  DEFINE_REG_BIT(name, b3);                                                    \
-  DEFINE_REG_BIT(name, b2);                                                    \
-  DEFINE_REG_BIT(name, b1);                                                    \
-  DEFINE_REG_BIT(name, b0);
-
-#define DEFINE_REGISTER8_MAP(name, addr, init, b7, b6, b5, b4, b3, b2, b1, b0) \
-DEFINE_REGISTER(name, addr, byte, init, true, b7, b6, b5, b4, b3, b2, b1, b0); \
-  DEFINE_REG_BIT(name, b7);                                                    \
-  DEFINE_REG_BIT(name, b6);                                                    \
-  DEFINE_REG_BIT(name, b5);                                                    \
-  DEFINE_REG_BIT(name, b4);                                                    \
-  DEFINE_REG_BIT(name, b3);                                                    \
-  DEFINE_REG_BIT(name, b2);                                                    \
-  DEFINE_REG_BIT(name, b1);                                                    \
-  DEFINE_REG_BIT(name, b0);
-
-DEFINE_REGISTER8(SYSCON, 0xB1, 0, CLKP, PMOD, b5, RMAP, b3, b2, XMAP1, XMAP0);
-DEFINE_REGISTER8(IP1, 0xB9, 0, PDIR, b6, b5, b4, b3, b2, b1, b0);
-DEFINE_REGISTER8(IEN0, 0xA8, 0, EAL, WDT, ET2, ES0, ET1, EX1, ET0, EX0);
-DEFINE_REGISTER8(S0CON, 0x98, 0, SM0, SM1, SM20, REN0, TB80, RB80, TI0, RI0);
-DEFINE_REGISTER8(TCON, 0x88, 0, TF1, TR1, TF0, TR0, IE1, IT1, IE0, IT0);
-
-///////////////////////////////////////////////////////////////////////////////
+#include <registers.hpp>
 
 namespace Reg {
   template <typename _Reg>
@@ -155,7 +86,7 @@ namespace Reg {
         SYSCON::Inst |= detail::BitVal<SYSCON, SYSCON::BitEnumT::RMAP>::value;
       }
 
-      if (_MaskOrSet) {
+      if constexpr (_MaskOrSet) {
         RegT::Inst &= ~(MBitSet.get());
       } else {
         RegT::Inst |= MBitSet.get();

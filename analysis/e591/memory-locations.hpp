@@ -6,6 +6,7 @@
 #include "flash.hpp"
 #include "xram.hpp"
 #include "binary_ops.hpp"
+#include "segment.hpp"
 
 #include <vector>
 #include <map>
@@ -14,32 +15,6 @@
 #include <cstdio>
 
 #define RANGE_END(from, len) ((from) + (len) - 1)
-
-// Namespace for describing memory segments
-namespace seg {
-  // Method get return start of memory segment
-
-  struct XRAM {
-    static byte *get();
-#if __E591_HOST_COMPILATION
-    static const char *name();
-#endif  // __E591_HOST_COMPILATION
-  };
-
-  struct FLASH {
-    static byte *get();
-#if __E591_HOST_COMPILATION
-    static const char *name();
-#endif  // __E591_HOST_COMPILATION
-  };
-
-  struct RAM {
-    static byte *get();
-#if __E591_HOST_COMPILATION
-    static const char *name();
-#endif  // __E591_HOST_COMPILATION
-  };
-} // namespace seg
 
 // namespace for helpers on describing regions in memory segments
 namespace location {
@@ -165,7 +140,7 @@ do {                                                          \
 } while (0)
 
 
-// Define a word in memory segment which. The word is
+// Define a word in memory segment. The word is
 // referred to with a tag. The word is stored with
 // LSB endiannes i.e. least significant byte is stored
 // at the lowest address and most significant byte is

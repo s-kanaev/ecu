@@ -111,7 +111,13 @@ static inline void INIT_RAM() {
   [0x4A] = 0,     // interpolated value of XRAM[0xF6BC/0xF6BB], table at FLASH[0x83B0], size unknown, TODO
   [0x4B] = 0,     // ((RAM[0x4A] + 4) >> 3) & 0x1F, range = 0x00 .. 0x1F
   [0x4C] = 0,     // ((RAM[0x4A] + 8) >> 4) = offset div 0x11 for table at FLASH[0x8AFB]
-  [0x4D..0x5C] = 0,
+  [0x4D] = 0,     // Which ignition coil to process: 0 = cyl 1/4, 1 = cyl 2/3
+  [0x4E] = 0,     // Counter, reset to value based solely on FLASH[0x8751] or
+                  // FLASH[0x8A5B] (as base) together with RAM[0x3F] as offset
+                  // max value = 0x0F
+  [0x4F] = 0,     // Some counter, updated to FLASH[0x8752] upon
+                  // CLRMSK/SETMSK update
+  [0x50..0x5C] = 0,
   [0x5D] = 0,     // ???
   [0x5E] = 0x00,
 
@@ -136,7 +142,10 @@ static inline void INIT_RAM() {
                   // bit 3 - XRAM[0xF681] initialized
                   // bit 4 - XRAM[0xF682] initialized
                   // bit 5 - ???
-  [0x74..0x7B] = 0x00,
+  [0x74..0x76] = 0x00,
+  [0x77] = 0,     // Current mode of operation?
+                  // Mode of work for Timer0 Overflow interrupt
+  [0x78..0x7B] = 0x00,
 
   [0x7C..0x7D] = 0x00,
 
