@@ -4257,7 +4257,7 @@ ram_4d_not_eq_1:                        ; CODE XREF: TF0_0:ram_4d_not_nil↑j
 
 either_ignition_coil_is_charging:       ; CODE XREF: TF0_0+4BE↑j
                                         ; TF0_0+4CC↑j
-                ljmp    code_12FF
+                ljmp    finish_timer0_interrupt
 ; ---------------------------------------------------------------------------
 
 clrmsk_setmsk_updated:                  ; CODE XREF: TF0_0+4C7↑j
@@ -4266,14 +4266,14 @@ clrmsk_setmsk_updated:                  ; CODE XREF: TF0_0+4C7↑j
 ; ---------------------------------------------------------------------------
 
 ram_4e_neq_0:                           ; CODE XREF: TF0_0:ram_4f_neq_nil↓j
-                ljmp    code_12FF
+                ljmp    finish_timer0_interrupt
 ; ---------------------------------------------------------------------------
 
 code_1299:                              ; CODE XREF: TF0_0+4B0↑j
                 mov     A, RAM_4F
                 jnz     ram_4f_neq_nil  ; if (RAM[0x4F])
                                         ;   jump ...
-                ljmp    code_12FF
+                ljmp    finish_timer0_interrupt
 ; ---------------------------------------------------------------------------
 
 ram_4f_neq_nil:                         ; CODE XREF: TF0_0+4E5↑j
@@ -4334,7 +4334,7 @@ ram_4d_not_nil_3:                       ; CODE XREF: TF0_0+518↑j
 
 ram_4d_not_eq_1_3:                      ; CODE XREF: TF0_0+51B↑j
                                         ; TF0_0:ram_4d_not_nil_3↑j ...
-                sjmp    code_12FF
+                sjmp    finish_timer0_interrupt
 ; ---------------------------------------------------------------------------
 
 either_ignition_coil_started_charging_sub:
@@ -4351,11 +4351,8 @@ either_ignition_coil_started_charging_sub:
 high_nibble_of_flash_8a5b_not_nil:      ; CODE XREF: TF0_0+52D↑j
                 mov     RAM_4E, A       ; X = (FLASH[0x8A5B + RAM[0x3F]] & 0xF0) >> 4
                                         ; RAM[0x4E] = X ? X : 1
-                sjmp    code_12FF
+                sjmp    finish_timer0_interrupt
 ; ---------------------------------------------------------------------------
-
-!!!!!!!!!!!!!!!!! CONTINUE REVERSING HERE !!!!!!!!!!!!!!!!!
-IN A LINEAR WAY
 
 clrmsk_setmsk_updated_sub:              ; CODE XREF: TF0_0:clrmsk_setmsk_updated↑j
                 mov     DPTR, #8752h
@@ -4377,7 +4374,7 @@ flash_8752_is_nil:                      ; CODE XREF: TF0_0+4B6↑j
                                         ; TF0_0:ram_4d_not_eq_1↑j ...
                 clr     RAM_29.1        ; CLEAR_BIT_IN(RAM[0x29], 1)
 
-code_12FF:                              ; CODE XREF: TF0_0:either_ignition_coil_is_charging↑j
+finish_timer0_interrupt:                ; CODE XREF: TF0_0:either_ignition_coil_is_charging↑j
                                         ; TF0_0:ram_4e_neq_0↑j ...
                 inc     RAM_6A
                 mov     A, RAM_6A
@@ -63390,7 +63387,7 @@ RAM_68 equ 68h                          ; DATA XREF: TF0_0+559↑w
                                         ; TF0_0+55B↑r ...
 RAM_69 equ 69h                          ; DATA XREF: TF0_0+55D↑r
                                         ; power_on__ignition_key_turned_+269D↑w
-RAM_6A equ 6Ah                          ; DATA XREF: TF0_0:code_12FF↑w
+RAM_6A equ 6Ah                          ; DATA XREF: TF0_0:finish_timer0_interrupt↑w
                                         ; TF0_0+54B↑r ...
 RAM_6B equ 6Bh                          ; DATA XREF: TF0_0:ram_6a_neq_3e↑r
                                         ; power_on__ignition_key_turned_+25D8↑w

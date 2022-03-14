@@ -297,7 +297,7 @@
  00000000:000012EA       clrmsk_setmsk_updated_sub
  00000000:000012F3       code_12F3
  00000000:000012FD       flash_8752_is_nil
- 00000000:000012FF       code_12FF
+ 00000000:000012FF       finish_timer0_interrupt
  00000000:00001309       ram_6a_neq_3e
  00000000:0000130C       code_130C
  00000000:00001316       code_1316
