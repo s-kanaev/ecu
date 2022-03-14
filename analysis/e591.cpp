@@ -2197,9 +2197,7 @@ inline void processIgnCoilForTimer0Overflow() {
 ///                             true to perform ignition/charging
 template <bool IgniteOrUpdateMasks>
 inline void processRam4DForTimer0Overflow() {
-  byte Ram4D = RAM[0x4D];
-
-  switch (Ram4D) {
+  switch (RAM[0x4D]) {
     case 0: {
       processIgnCoilForTimer0Overflow<CoilE::C_1_4, IgniteOrUpdateMasks>();
       break;

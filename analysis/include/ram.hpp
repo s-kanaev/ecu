@@ -61,12 +61,13 @@ static inline void INIT_RAM() {
                   // bit 3 - ???
                   // bit 4 - ignition switch voltage above threshold @ FLASH[0x8096]
                   // bit 6 - ???, set when XRAM[0xF679] >= FLASH[0x809B] && RAM[0x49] >= FLASH[0x809A]
-  [0x29] = 0x00,
+  [0x29] = 0x00,  // bit 1 - ???, cleared when ignition performed in Timer0 Overflow interrupt
   [0x2A] = 0x00,  // some status word
                   // bit 0 ???
                   // bit 3 ???
   [0x2B] = 0x00,  // ???
                   // bit 4 ???
+                  // bit 7 ???
   [0x2C] = 0x00,
   [0x2D] = 0x00,  // bit 7 = FLASH[0x873F] bit 4, is there camshaft position sensor
   [0x2E] = 0x00,  // bit 0 = FLASH[0x873F] bit 5, camshaft position sensor cross-section is aligned with TDC
@@ -97,7 +98,7 @@ static inline void INIT_RAM() {
                   // RAM[0x3E] = round((T * 256 + 10140.22143) / 160)
                   //  with T = (-40 .. +120) = intake air temperature
 
-  [0x3F] = 0,     // Adjusted ignition switch voltage
+  [0x3F] = 0,     // Adjusted ignition switch voltage, max value = 0x1F
   [0x40] = 0,     // Initial value for XRAM[0xF6AD] and XRAM[0xF6AF]
   [0x41..0x43] = 0,
 
@@ -115,6 +116,8 @@ static inline void INIT_RAM() {
   [0x4E] = 0,     // Counter, reset to value based solely on FLASH[0x8751] or
                   // FLASH[0x8A5B] (as base) together with RAM[0x3F] as offset
                   // max value = 0x0F
+                  // denotes number of Timer0 overflows to wait priori to
+                  // ignite/start charging an ignition coil
   [0x4F] = 0,     // Some counter, updated to FLASH[0x8752] upon
                   // CLRMSK/SETMSK update
   [0x50..0x5C] = 0,
