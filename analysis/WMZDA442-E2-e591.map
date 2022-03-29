@@ -32,95 +32,95 @@
  00000000:000000D3       ICC10_ICC17
  00000000:000000DB       CT1F
  00000000:00000791       code_791
- 00000000:0000079D       code_79D
- 00000000:000007BE       code_7BE
- 00000000:000007DE       code_7DE
- 00000000:000007EA       code_7EA
+ 00000000:0000079D       r5_r4_shl_1_bit_15_not_set
+ 00000000:000007BE       r1_r0_was_larger_than_r5_r4_shl_1
+ 00000000:000007DE       r5_eq_0
+ 00000000:000007EA       ram_32_ram_31_was_leq_than_r5_r4
  00000000:000007FB       code_7FB
  00000000:00000806       code_806
- 00000000:0000080E       code_80E
- 00000000:00000820       code_820
+ 00000000:0000080E       psw_f0_set
+ 00000000:00000820       no_overflow_on_ram32_ram31_plus_half_r5_r4
  00000000:00000823       code_823
- 00000000:0000082E       code_82E
+ 00000000:0000082E       either_r1_or_r5_neq_0
  00000000:0000084B       code_84B
- 00000000:00000856       code_856
- 00000000:00000866       code_866
- 00000000:0000086A       code_86A
- 00000000:0000086E       code_86E
+ 00000000:00000856       r1_r0_was_leq_than_r5_r4
+ 00000000:00000866       ram_26_0_set
+ 00000000:0000086A       ram_26_1_set
+ 00000000:0000086E       ram_32_ram_31_was_less_than_r5_r4_2
  00000000:00000870       code_870
  00000000:0000087D       code_87D
- 00000000:0000088D       code_88D
+ 00000000:0000088D       ram_25_bit_1_not_set
  00000000:00000897       ram_26_2_is_set
- 00000000:000008B9       code_8B9
+ 00000000:000008B9       r6_neq_39
  00000000:000008C6       code_8C6
- 00000000:000008CB       code_8CB
+ 00000000:000008CB       ram_30_neq_4
  00000000:000008D3       code_8D3
  00000000:000008D8       IEX6_0
  00000000:000008E1       non_even_zero_cross?
- 00000000:00000902       code_902
- 00000000:0000090C       code_90C
+ 00000000:00000902       both_r1_and_r5_eq_0
+ 00000000:0000090C       r4_shr_1_less_than_r0
  00000000:00000912       code_912
- 00000000:0000093C       code_93C
- 00000000:0000094D       code_94D
- 00000000:00000952       code_952
+ 00000000:0000093C       r6_neq_38
+ 00000000:0000094D       r6_neq_3b
+ 00000000:00000952       r6_greater_than_38
  00000000:00000955       code_955
- 00000000:00000967       code_967
- 00000000:00000974       code_974
- 00000000:0000097B       code_97B
+ 00000000:00000967       ram_25_bit_2_not_set
+ 00000000:00000974       ram_2d_bit_7_set
+ 00000000:0000097B       ram_2e_bit_0_not_set
  00000000:00000980       code_980
- 00000000:0000098A       code_98A
- 00000000:0000098D       code_98D
+ 00000000:0000098A       camshaft_reference_mark_active
+ 00000000:0000098D       ram_25_bit_0_not_set
  00000000:0000098F       code_98F
- 00000000:00000996       code_996
- 00000000:0000099D       code_99D
- 00000000:000009A1       code_9A1
- 00000000:000009A7       code_9A7
+ 00000000:00000996       ram_33_neq_4
+ 00000000:0000099D       ram_33_neq_2
+ 00000000:000009A1       ram_29_bit_6_set
+ 00000000:000009A7       ram_25_bit_0_not_set_2
  00000000:000009AB       code_9AB
- 00000000:000009AD       code_9AD
- 00000000:000009B2       code_9B2
- 00000000:000009B7       code_9B7
+ 00000000:000009AD       ram_33_less_than_2
+ 00000000:000009B2       inc_ram_33_should_reset_to_0
+ 00000000:000009B7       r7_neq_1e
  00000000:000009BB       code_9BB
- 00000000:000009C5       code_9C5
+ 00000000:000009C5       r5_less_than_4
  00000000:000009D5       code_9D5
- 00000000:000009E3       code_9E3
- 00000000:000009E9       code_9E9
+ 00000000:000009E3       ram_25_bit_4_set_or_r7_neq_ram_36
+ 00000000:000009E9       r6_bank_3_neq_r0_bank_2
  00000000:000009EC       code_9EC
- 00000000:00000A0B       code_A0B
+ 00000000:00000A0B       high_r5_r4_shl_1_eq_zero
  00000000:00000A11       code_A11
  00000000:00000A20       code_A20
- 00000000:00000A30       code_A30
+ 00000000:00000A30       wait_AD_conversion
  00000000:00000A38       code_A38
- 00000000:00000A49       code_A49
+ 00000000:00000A49       ign_coil_14_adc_voltage_less_83
  00000000:00000A4C       code_A4C
- 00000000:00000A5B       code_A5B
- 00000000:00000A73       code_A73
- 00000000:00000A81       code_A81
+ 00000000:00000A5B       ign_coil_14_adc_voltage_greater_or_equal_14
+ 00000000:00000A73       ram_5c_neq_0
+ 00000000:00000A81       wait_AD_conversion_2
  00000000:00000A89       code_A89
- 00000000:00000A9A       code_A9A
+ 00000000:00000A9A       ign_coil_23_adc_voltage_less_83
  00000000:00000A9D       code_A9D
- 00000000:00000AAC       code_AAC
- 00000000:00000AC4       code_AC4
- 00000000:00000AC5       code_AC5
- 00000000:00000ACA       code_ACA
+ 00000000:00000AAC       ign_coil_23_adc_voltage_greater_or_equal_14
+ 00000000:00000AC4       ram_5c_neq_1
+ 00000000:00000AC5       r6_bank_3_neq_r0_bank_2_impl
+ 00000000:00000ACA       r6_bank_3_neq_r2_bank_2
  00000000:00000ACD       code_ACD
  00000000:00000AEC       code_AEC
  00000000:00000AF2       code_AF2
- 00000000:00000B01       code_B01
- 00000000:00000B0B       code_B0B
- 00000000:00000B15       code_B15
+ 00000000:00000B01       r5bank2_greater_or_equal_2
+ 00000000:00000B0B       r5bank2_equals_neither_2_nor_0
+ 00000000:00000B15       r5bank2_equals_neither_1_nor_3
  00000000:00000B22       code_B22
  00000000:00000B30       code_B30
  00000000:00000B33       code_B33
  00000000:00000B3C       code_B3C
  00000000:00000B3E       code_B3E
- 00000000:00000B58       code_B58
- 00000000:00000B5D       code_B5D
- 00000000:00000B60       code_B60
+ 00000000:00000B58       r6_bank_3_neq_r6_bank_2_impl
+ 00000000:00000B5D       r6_neq_r7_bank1
+ 00000000:00000B60       r6_eq_r7_bank1
  00000000:00000B80       code_B80
  00000000:00000B86       code_B86
- 00000000:00000B9A       code_B9A
+ 00000000:00000B9A       ram_2e_bit_1_not_set
  00000000:00000BAF       code_BAF
- 00000000:00000BB8       code_BB8
+ 00000000:00000BB8       r6_bank2_plus_1_neq_4
  00000000:00000BBF       code_BBF
  00000000:00000BCB       code_BCB
  00000000:00000BCE       code_BCE
@@ -128,12 +128,12 @@
  00000000:00000BDB       code_BDB
  00000000:00000BDF       code_BDF
  00000000:00000BE1       code_BE1
- 00000000:00000BE4       code_BE4
+ 00000000:00000BE4       r6_neq_r7_bank1_impl
  00000000:00000BEE       code_BEE
  00000000:00000BFE       code_BFE
- 00000000:00000C03       code_C03
- 00000000:00000C05       code_C05
- 00000000:00000C0B       even_zero_cross
+ 00000000:00000C03       set_ram_25_5_and_graceful_finish_ext_int_6
+ 00000000:00000C05       graceful_finish_ext_int_6
+ 00000000:00000C0B       ret_from_ext_int_6
  00000000:00000C0C       ICR_0
  00000000:00000C34       code_C34
  00000000:00000C4C       code_C4C
