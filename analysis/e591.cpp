@@ -1053,7 +1053,7 @@ inline bool CHECK_AND_CLEAR_BIT(byte *Ptr, bit Bit) {
     for (;;) {
       byte Expected = *Ptr;
       byte Desired = Expected;
-      CLEAR_BIT_IN(Expected, Bit);
+      CLEAR_BIT_IN(Desired, Bit);
 
       if (CAS(Ptr, Expected, Desired)) {
         Ret = true;
@@ -2621,4 +2621,249 @@ void Timer0OverflowInterrupt() {
   }
 
   finishTimer0OverflowInterrupt();
+}
+
+//////////////////////////////////////////////////
+inline byte registerBankMask(byte RS) {
+  assert(RS >= 0 && BS < 4);
+  return RS << 3;
+}
+
+inline void _087D() {
+  RAM[0x30] = 0;
+  CLEAR_BIT_IN(RAM[0x25], 2);
+  CLEAR_BIT_IN(RAM[0x25], 3);
+  RAM[0x44] = RAM[0x45] = 0;
+  goto graceful_finish_ext_int_6; // TODO
+}
+
+// _08C6:
+inline void _08C6() {
+  SET_BIT_IN(RAM[0x25], 5);
+  _087D();
+}
+
+// _0897:
+inline void ExtInt6_RAM26_Bit2_Set() {
+  // ram_26_2_is_set:
+  Reg::PSW::Inst = registerBankMask(3);
+  if (!CHECK_BIT_AT(RAM[0x25], 1)) {
+    // _088D:
+    // ram_25_bit_1_not_set:
+    CLEAR_BIT_IN(RAM[0x26], 2);
+    // Capture on rising edge at P1.3/INT6/CC3
+    {
+      Reg::Mask<Reg::CCEN>{}.add<Reg::CCEN::COCAH3, Reg::CCEN::COCAL3>();
+    }
+    {
+      Reg::Set<Reg::CCEN>{}.add<Reg::CCEN, COCAL3>();
+    }
+    _08C6(); // TODO
+    UNREACHABLE;
+  } else {
+    // _08A3:
+    R3_R2::set(Reg::CC3::Inst);
+    if (R6 != 0x39) {
+      // _08B9:
+      // r6_neq_39:
+      CLEAR_BIT_IN(RAM[0x26], 2);
+
+      // Capture on rising edge at P1.3/INT6/CC3
+      {
+        Reg::Mask<Reg::CCEN>{}.add<Reg::CCEN::COCAH3, Reg::CCEN::COCAL3>();
+      }
+      {
+        Reg::Set<Reg::CCEN>{}.add<Reg::CCEN, COCAL3>();
+      }
+
+      ++R6;
+      ++R7;
+    } else {
+      // _08AA:
+      Reg::CC3::Inst += R5_R4::get();
+      {
+        Reg::Mask<Reg::IRCON0> M;
+        M.add<Reg::IRCON0::IEX6>();
+      }
+
+      ++R6;
+      ++R7;
+    }
+    goto r7_neq_1e; // TODO
+    UNREACHABLE;
+  }
+  UNREACHABLE;
+}
+
+// _08E1:
+inline void ExtInt6_NonEvenZeroCross() {
+  // non_even_zero_cross?:
+  Reg::PSW::Inst = registerBankMask(3);
+  if (!CHECK_BIT_AT(RAM[0x25], 1)) {
+    _08C6(); // TODO
+    UNREACHABLE
+  } else {
+    // _08ED:
+    R1_R0::set(Reg::CC3::Inst - R3_R2::get());
+
+    if (RAM[0x30] != 4) {
+      // _08CB:
+      // ram_30_neq_4:
+      if (RAM[0x30] < 2) {
+        // _08D3:
+        {
+          Reg::Set<Reg::PSW> S;
+          S.add<Reg::PSW::CY>(); // is it needed?
+        }
+        ++RAM[0x30];
+
+        _0823(); // TODO
+      } else {
+        // _08D0:
+        // goto _0791;
+        // _0791:
+        word R5_R4x2 = R5_R4::get() << 1;
+        RAM[0x31] = LOW(R5_R4x2);
+
+        using Ram31WordT = location::AsWord<seg::RAM, 0x31>;
+
+        if (!CHECK_BIT_AT(R5_R4::get(), 15)) {
+          // _079D:
+          // r5_r4_shl_1_bit_15_not_set:
+          RAM[0x32] = HIGH(X);
+
+          Ram31WordT::set(R1_R0 - R5_R4x2);
+          {
+            Reg::Set<Reg::PSW> S;
+            S.add<Reg::PSW::F0>();  // TODO Find where it's used and pass it
+                                    // as a bool parameter
+          }
+
+          if (R1_R0 < R5_R4x2) {
+            // _07AE:
+            {
+              Reg::Mask<Reg::PSW> M;
+              M.add<Reg::PSW::F0>();  // TODO Find where it's used and pass it
+                                      // as a bool parameter
+            }
+
+            Ram31WordT::set(NEGATE(Ram31WordT::get()));
+          }
+          // _07BE:
+          // r1_r0_was_larger_than_r5_r4_shl_1:
+          word Ram31W = Ram31WordT::get();
+          Ram31WordT::set(Ram31W - R5_R4);
+
+          if (Ram31W >= R5_R4) {
+            // _07EA:
+            // ram_32_ram_31_was_greater_or_equal_than_r5_r4:
+            if (!R5) {
+              // _07FB:
+              Ram31WordT::set(Ram31W - (R5_R4 >> 1));
+
+              if (Ram31W < (R5_R4 >> 1)) {
+                goto no_overflow_on_ram32_ram31_plus_half_r5_r4; // _0820 TODO
+              } else {
+                // _0806
+                if (Reg::Bit<Reg::PSW, Reg::PSW::F0>{}.get()) {
+                  // _080E:
+                  // psw_f0_set:
+                  if (RAM[0x30] !+ 3) {
+                    goto no_overflow_on_ram32_ram31_plus_half_r5_r4; // => _0820 TODO
+                  } else {
+                    // _0813:
+                    R3_R2 = Reg::CC3::Inst;
+                    ++RAM[0x30];
+                    CLEAR_BIT_IN(RAM[0x26], 1);
+                    CLEAR_BIT_IN(RAM[0x26], 0);
+                    goto _0955;
+                  }
+                  UNREACHABLE;
+                } else {
+                  // _0809:
+                  RAM[0x30] = 3;
+                  goto _0823; // TODO
+                }
+                UNREACHABLE
+              }
+              UNREACHABLE
+            } else {
+              // _07ED:
+              quad Sum = QUAD(Ram31W) + (R5_R4 >> 1);
+              Ram31WordT::set(LOW_W(Sum));
+
+              if (Sum <= 0xFFFF) {
+                goto no_overflow_on_ram32_ram31_plus_half_r5_r4; // => _0820 TODO
+              } else {
+                goto _0806; // TODO
+              }
+              UNREACHABLE
+            }
+            UNREACHABLE;
+          } else /* _07CB: */ if (!R5) {
+            // _07DE:
+            // r5_eq_0:
+            quad Sum = QUAD(Ram31W) + (R5_R4 >> 1);
+            Ram31WordT::set(LOW_W(Sum));
+
+            if (Sum <= 0xFFFF) {
+              goto no_overflow_on_ram32_ram31_plus_half_r5_r4; // => _0820 TODO
+            } else {
+              goto _0806; // TODO
+            }
+            UNREACHABLE;
+          } else /* R5 != 0 */ {
+            // _07CE:
+            quad Sum = QUAD(Ram31W) + (R5_R4 >> 1);
+            Ram31WordT::set(LOW_W(Sum));
+
+            if (Sum <= 0xFFFF) {
+              // _0820:
+              // no_overflow_on_ram32_ram31_plus_half_r5_r4:
+              RAM[0x30] = 2;
+
+              // _0823:
+              R5_R4 = R1_R0;
+              R3_R2 = Reg::CC3::Inst;
+              goto set_ram_25_5_and_graceful_finish_ext_int_6; // => _0C03 TODO
+            } else {
+              goto _0806; // TODO
+            }
+            UNREACHABLE;
+          }
+          UNREACHABLE;
+        } else {
+          // _079A:
+          goto no_overflow_on_ram32_ram31_plus_half_r5_r4; // => _0820 TODO
+        }
+        UNREACHABLE
+      }
+      // TODO
+    } else /* _08F8: */ if (!R1 && !R5) {
+      // _0902:
+      // both_r1_and_r5_eq_0:
+      // TODO
+    } else {
+      // _082E
+      // either_r1_or_r5_neq_0:
+      // TODO
+    }
+    // TODO
+  }
+}
+
+// _08D8:
+void ExternalInterrupt6() {
+  if (CHECK_BIT_AT(RAM[0x26], 2)) {
+    ExtInt6_RAM26_Bit2_Set();
+  } else if (CHECK_BIT_AT(P1, 3)) {
+    // _08E1:
+    // non_even_zero_cross?:
+    ExtInt6_NonEvenZeroCross();
+    // TODO
+  } else {
+    // _0C0B:
+    // ret_from_ext_int_6:
+    return;
+  }
 }
