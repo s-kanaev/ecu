@@ -35,7 +35,7 @@
  00000000:0000079D       r5_r4_shl_1_bit_15_not_set
  00000000:000007BE       r1_r0_was_larger_than_r5_r4_shl_1
  00000000:000007DE       r5_eq_0
- 00000000:000007EA       ram_32_ram_31_was_leq_than_r5_r4
+ 00000000:000007EA       ram_32_ram_31_was_greater_or_equal_than_r5_r4
  00000000:000007FB       code_7FB
  00000000:00000806       code_806
  00000000:0000080E       psw_f0_set
@@ -122,11 +122,11 @@
  00000000:00000BAF       code_BAF
  00000000:00000BB8       r6_bank2_plus_1_neq_4
  00000000:00000BBF       code_BBF
- 00000000:00000BCB       code_BCB
+ 00000000:00000BCB       ram_a9_plus_offset_shl_1_larger_or_eqal_r0_bank2
  00000000:00000BCE       code_BCE
- 00000000:00000BD4       code_BD4
+ 00000000:00000BD4       diff_less_than_3
  00000000:00000BDB       code_BDB
- 00000000:00000BDF       code_BDF
+ 00000000:00000BDF       r0bank2_plus_3_less_3c
  00000000:00000BE1       code_BE1
  00000000:00000BE4       r6_neq_r7_bank1_impl
  00000000:00000BEE       code_BEE

@@ -2188,7 +2188,7 @@ r1_r0_was_larger_than_r5_r4_shl_1:      ; CODE XREF: IEX6_0-12C↑j
                 mov     A, RAM_32
                 subb    A, R5
                 mov     RAM_32, A       ; RAM[0x32]:RAM[0x31] -= R5:R4
-                jnc     ram_32_ram_31_was_leq_than_r5_r4 ; OLD_W = RAM[0x32]:RAM[0x31]
+                jnc     ram_32_ram_31_was_greater_or_equal_than_r5_r4 ; OLD_W = RAM[0x32]:RAM[0x31]
                                         ; RAM[0x32]:RAM[0x31] -= R5:R4
                                         ;
                                         ; if (OLD_W >= R5:R4)
@@ -2214,20 +2214,21 @@ r5_eq_0:                                ; CODE XREF: IEX6_0-10C↑j
                 rrc     A
                 add     A, RAM_31
                 clr     A
-                addc    A, RAM_32       ; RAM[0x32]:RAM[0x31] += (00:R4) >> 1
+                addc    A, RAM_32       ; RAM[0x32]:RAM[0x31] += (R5:R4) >> 1 // in a quicker way when R5 = 0
                 jnc     no_overflow_on_ram32_ram31_plus_half_r5_r4
                 sjmp    code_806
 ; ---------------------------------------------------------------------------
 
-ram_32_ram_31_was_leq_than_r5_r4:       ; CODE XREF: IEX6_0-10F↑j
+ram_32_ram_31_was_greater_or_equal_than_r5_r4:
+                                        ; CODE XREF: IEX6_0-10F↑j
                 mov     A, R5
                 jz      code_7FB
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = R5
                 mov     A, R4
                 clr     C
                 subb    A, RAM_31
                 mov     A, B            ; B-Register
-                subb    A, RAM_32
+                subb    A, RAM_32       ; RAM[0x32]:RAM[0x31] -= R5:R4
                 jc      no_overflow_on_ram32_ram31_plus_half_r5_r4
                 sjmp    code_806
 ; ---------------------------------------------------------------------------
@@ -2239,7 +2240,7 @@ code_7FB:                               ; CODE XREF: IEX6_0-ED↑j
                 clr     C
                 subb    A, RAM_31
                 clr     A
-                subb    A, RAM_32
+                subb    A, RAM_32       ; RAM[0x32]:RAM[0x31] -= R5:R4 >> 1 // in a quicker way when R5 = 0
                 jc      no_overflow_on_ram32_ram31_plus_half_r5_r4
 
 code_806:                               ; CODE XREF: IEX6_0-FC↑j
@@ -2270,11 +2271,16 @@ no_overflow_on_ram32_ram31_plus_half_r5_r4:
 code_823:                               ; CODE XREF: IEX6_0-CC↑j
                                         ; IEX6_0-3↓j
                 mov     R4, RAM_18
-                mov     R5, RAM_19      ; R5:R4 = RAM[0x19]:RAM[0x18]
+                mov     R5, RAM_19      ; R5:R4 = R1:R0
                 mov     R2, CCL3        ; Compare/Capture Register 3, Low Byte
                 mov     R3, CCH3        ; R3:R2 = CC3
                 ljmp    set_ram_25_5_and_graceful_finish_ext_int_6
 ; ---------------------------------------------------------------------------
+!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+CONTINUE DECOMPILING HERE
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 either_r1_or_r5_neq_0:                  ; CODE XREF: IEX6_0+27↓j
                 mov     A, R0
@@ -2377,7 +2383,7 @@ ram_26_2_is_set:                        ; CODE XREF: IEX6_0↓j
                                         ; F1 - 0
                                         ; P (parity, set by H/W) - 0
 ; ALL OPERATIONS ON REGISTERS ARE ON REGISTER BANK 3, RAM[0x18]..RAM[0x1F]
-                jnb     RAM_25.1, ram_25_bit_1_not_set ; if (CHECK_BIT_AT(RAM[0x25], 1))
+                jnb     RAM_25.1, ram_25_bit_1_not_set ; if (!CHECK_BIT_AT(RAM[0x25], 1))
                                         ;   jump ...
                 mov     R2, CCL3        ; Compare/Capture Register 3, Low Byte
                 mov     R3, CCH3        ; R3:R2 = CC3
@@ -2469,7 +2475,7 @@ non_even_zero_cross?:                   ; CODE XREF: IEX6_0+3↑j
                 mov     A, CCH3         ; Compare/Capture Register 3, High Byte
                 subb    A, R3
                 mov     R1, A           ; R1:R0 = CC3 - R3:R2
-                mov     A, RAM_30       ; A = RAM[0x30] = R1
+                mov     A, RAM_30       ; A = RAM[0x30]
                 cjne    A, #4, ram_30_neq_4 ; if (RAM[0x30] != 4)
                                         ;   jump ...
                 mov     A, R1
@@ -3052,14 +3058,6 @@ code_B86:                               ; CODE XREF: IEX6_0+2A6↑j
                 sjmp    code_BAF
 ; ---------------------------------------------------------------------------
 
-
-!!!!!!!!!!!!!!!!!
-CONTINUE COMMENTING HERE
-!!!!!!!!!!!!!!!!!
-
-
-
-
 ram_2e_bit_1_not_set:                   ; CODE XREF: IEX6_0:r6_eq_r7_bank1↑j
                 push    DPL             ; Data Pointer, Low Byte
                 push    DPH             ; Store DPTR
@@ -3077,7 +3075,7 @@ code_BAF:                               ; CODE XREF: IEX6_0+2C0↑j
                 mov     A, RAM_16
                 inc     A               ; Acc = R6(bank2) + 1
                 cjne    A, #4, r6_bank2_plus_1_neq_4
-                clr     A               ; Acc = 0
+                clr     A               ; Acc = 0 // reset to 0 on reaching 4, i.e. valid values = [0..3]
                 sjmp    code_BBF
 ; ---------------------------------------------------------------------------
 
@@ -3093,61 +3091,81 @@ code_BBF:                               ; CODE XREF: IEX6_0+2DE↑j
                 rl      A
                 add     A, #0A9h
                 mov     R0, A           ; R0 = 0xA9 + (A << 1)
-                mov     A, @R0
+                mov     A, @R0          ; Offset = R6(bank2) + 1;
+                                        ;
+                                        ; if (Offset == 4)
+                                        ;   Offset = 0
+                                        ; else /* offset < 4 */ if (Offset >= 2)
+                                        ;   Offset -= 2
+                                        ;
+                                        ; Offset <<= 1
+                                        ;
+                                        ; R0 = Offset
+                                        ;
+                                        ; Acc = RAM[0xA9 + Offset]
                 clr     C
-                subb    A, RAM_10
-                jnc     code_BCB
-                add     A, #3Ch ; '<'
+                subb    A, RAM_10       ; Acc = RAM[0xA9 + Offset] - R0(bank2)
+                jnc     ram_a9_plus_offset_shl_1_larger_or_eqal_r0_bank2
+                add     A, #3Ch ; '<'   ; Acc = RAM[0xA9 + Offset] - R0(bank2) + 0x3C
 
-code_BCB:                               ; CODE XREF: IEX6_0+2EF↑j
+ram_a9_plus_offset_shl_1_larger_or_eqal_r0_bank2:
+                                        ; CODE XREF: IEX6_0+2EF↑j
                 cjne    A, #3, code_BCE
 
-code_BCE:                               ; CODE XREF: IEX6_0:code_BCB↑j
-                jc      code_BD4
-                mov     RAM_F, @R0
+code_BCE:                               ; CODE XREF: IEX6_0:ram_a9_plus_offset_shl_1_larger_or_eqal_r0_bank2↑j
+                jc      diff_less_than_3 ; if (RAM[0xA9 + Offset << 1] - R0(bank2) < 3)
+                                        ;   jump ...
+                mov     RAM_F, @R0      ; R7(bank1) = RAM[0xA9 + Offset]
                 sjmp    code_BE1
 ; ---------------------------------------------------------------------------
 
-code_BD4:                               ; CODE XREF: IEX6_0:code_BCE↑j
+diff_less_than_3:                       ; CODE XREF: IEX6_0:code_BCE↑j
                 mov     A, RAM_10
                 add     A, #3
                 cjne    A, #3Ch, code_BDB ; '<'
 
 code_BDB:                               ; CODE XREF: IEX6_0+300↑j
-                jc      code_BDF
+                jc      r0bank2_plus_3_less_3c ; if (R0(bank2) + 3 < 0x3C)
+                                        ;   jump ...
                 subb    A, #3Ch ; '<'
 
-code_BDF:                               ; CODE XREF: IEX6_0:code_BDB↑j
-                mov     RAM_F, A
+r0bank2_plus_3_less_3c:                 ; CODE XREF: IEX6_0:code_BDB↑j
+                mov     RAM_F, A        ; if (R0(bank2) + 3 >= 0x3C)
+                                        ;   R7(bank1) = R0(bank2) + 3 - 0x3C
+                                        ; else
+                                        ;   R7(bank1) = R0(bank2) + 3
 
 code_BE1:                               ; CODE XREF: IEX6_0+2FA↑j
                 inc     R0
-                mov     RAM_14, @R0
+                mov     RAM_14, @R0     ; ++Offset
+                                        ; R4(bank2) = RAM[0xA9 + Offset]
 
 r6_neq_r7_bank1_impl:                   ; CODE XREF: IEX6_0:r6_neq_r7_bank1↑j
-                mov     A, R7
-                jb      ACC.0, set_ram_25_5_and_graceful_finish_ext_int_6 ; Accumulator
+                mov     A, R7           ; Acc = R7
+                jb      ACC.0, set_ram_25_5_and_graceful_finish_ext_int_6 ; if (CHECK_BIT_AT(R7, 0))
+                                        ;   jump ...
                 rr      A
-                mov     B, A            ; B-Register
+                mov     B, A            ; B = R7 >> 1
                 cjne    R7, #1Eh, code_BEE
 
 code_BEE:                               ; CODE XREF: IEX6_0+313↑j
-                jnc     set_ram_25_5_and_graceful_finish_ext_int_6
-                mov     ADCON1, #0Bh    ; A/D Converter Control Register 1
+                jnc     set_ram_25_5_and_graceful_finish_ext_int_6 ; if (R7 >= 0x1E)
+                                        ;   jump ...
+                mov     ADCON1, #0Bh    ; MAF sensor
                 orl     ADCON1, #40h    ; A/D Converter Control Register 1
                 mov     ADDATL, #0      ; A/D Converter Data Register, Low Byte
                 mov     A, B            ; B-Register
                 add     A, #8Ah
-                mov     R0, A
+                mov     R0, A           ; R0 = (R7 >> 1) + 0x8A
 
 code_BFE:                               ; CODE XREF: IEX6_0:code_BFE↓j
                 jb      ADCON0.4, code_BFE ; A/D Converter Control Register 0
-                mov     @R0, ADDATH     ; A/D Converter Data Register, High Byte
+                mov     @R0, ADDATH     ; RAM[0x8A + (R7 >> 1)] = HIGH(ADC(MAF))
 
 set_ram_25_5_and_graceful_finish_ext_int_6:
                                         ; CODE XREF: IEX6_0-AD↑j
                                         ; IEX6_0+30D↑j ...
-                setb    RAM_25.5
+                setb    RAM_25.5        ; SET_BIT_AT(RAM[0x25], 5)
 
 graceful_finish_ext_int_6:              ; CODE XREF: IEX6_0-85↑j
                                         ; IEX6_0-4E↑j
