@@ -14,6 +14,26 @@
 #include <typeinfo>
 #include <cstdio>
 
+namespace location {
+template <typename _Segment, int _LowPtr>
+class AsWord {
+public:
+  using Seg = _Segment;
+  static constexpr int LowPtr = _LowPtr;
+  static constexpr int HighPtr = _LowPtr + 1;
+
+  static word get() {
+    COMPOSE_WORD(seg::Segment<Seg>::get(HighPtr),
+                 seg::Segment<Seg>::get(LowPtr));
+  }
+
+  static void set(word V) {
+    seg::Segment<Seg>::get(HighPtr) = HIGH(V);
+    seg::Segment<Seg>::get(LowPtr) = LOW(V);
+  }
+};
+} // namespace location
+
 #define RANGE_END(from, len) ((from) + (len) - 1)
 
 // namespace for helpers on describing regions in memory segments
