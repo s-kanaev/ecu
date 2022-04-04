@@ -1,0 +1,22 @@
+#include "registers.hpp"
+
+#define DEFINE_REGISTER_INST(name)                                             \
+namespace Reg {                                                                \
+  name::Type &name::Inst = *reinterpret_cast<name::Type *>(&RAM[name::Loc]);   \
+}
+
+DEFINE_REGISTER_INST(SYSCON);
+DEFINE_REGISTER_INST(IP1);
+DEFINE_REGISTER_INST(IEN0);
+DEFINE_REGISTER_INST(S0CON);
+DEFINE_REGISTER_INST(TCON);
+DEFINE_REGISTER_INST(DPL);
+DEFINE_REGISTER_INST(DPH);
+DEFINE_REGISTER_INST(DPTR);
+DEFINE_REGISTER_INST(DPSEL);
+DEFINE_REGISTER_INST(PSW);
+DEFINE_REGISTER_INST(CCH3);
+DEFINE_REGISTER_INST(CCL3);
+DEFINE_REGISTER_INST(CC3);
+DEFINE_REGISTER_INST(IRCON0);
+DEFINE_REGISTER_INST(CCEN);

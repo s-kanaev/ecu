@@ -31,7 +31,7 @@ namespace Reg {                                                                \
     enum BitEnumT : Type {                                                     \
       __VA_ARGS__                                                              \
     };                                                                         \
-    static constexpr Type &Inst = *static_cast<Type *>(&RAM[address]);         \
+    static Type &Inst;                                                         \
     template <BitEnumT _Bit>                                                   \
     static constexpr byte bitN() {                                             \
       return (byte)(_Bit);                                                     \
@@ -106,21 +106,29 @@ DEFINE_REGISTER8(IP1, 0xB9, 0, PDIR, b6, b5, b4, b3, b2, b1, b0);
 DEFINE_REGISTER8(IEN0, 0xA8, 0, EAL, WDT, ET2, ES0, ET1, EX1, ET0, EX0);
 DEFINE_REGISTER8(S0CON, 0x98, 0, SM0, SM1, SM20, REN0, TB80, RB80, TI0, RI0);
 DEFINE_REGISTER8(TCON, 0x88, 0, TF1, TR1, TF0, TR0, IE1, IT1, IE0, IT0);
+
 DEFINE_REGISTER8_NB(DPL, 0x82, 0);
 DEFINE_REGISTER8_NB(DPH, 0x83, 0);
 DEFINE_REGISTER16_NB(DPTR, 0x82, 0);
+
 DEFINE_REGISTER8_NB(DPSEL, 0x92, 0);
+DEFINE_REGISTER8(PSW, 0xD0, 0, CY, AC, F0, RS1, RS0, OV, F1, P);
 
+DEFINE_REGISTER8_NB(CCH3, 0xC7, 0);
+DEFINE_REGISTER8_NB(CCL3, 0xC6, 0);
+DEFINE_REGISTER16_NB(CC3, 0xC6, 0);
 
+DEFINE_REGISTER8(IRCON0, 0xC0, 0, EXF2, TF2, IEX6, IEX5, IEX4, IEX3, IEX2, IADC);
+
+DEFINE_REGISTER8(CCEN, 0xC1, 0, COCAH3, COCAL3, COCAH2, COCAL2,
+                                COCAH1, COCAL1, COCAH0, COCAL0);
+
+// DPTR
 namespace Reg {
+// TODO rework this class to use RAM position of DPTR and DPSEL
 class DPTR_t {
   static constexpr unsigned int COUNT = 8;
-  word MValue[COUNT] = {0};
-  int MSelector = 0;
-
-  word &get() {
-    return MValue[MSelector];
-  }
+  static word MValue[COUNT];// = {0};
 
 public:
   DPTR_t(const DPTR_t &) = delete;
@@ -131,34 +139,136 @@ public:
 
   explicit DPTR_t() {}
 
-  void select(unsigned int Selector) {
+  // Change DPSEL
+  static void select(unsigned int Selector) {
     assert(Selector < COUNT);
-    MSelector = Selector;
+    DPSEL::Inst = Selector;
   }
 
-  word &operator[](unsigned int Selector) {
-    select(Selector);
-    DPL::Inst = LOW(get());
-    DPH::Inst = HIGH(get());
-    return get();
+  static word &get() {
+    return DPTR::Inst;
   }
-
-  DPTR_t &operator=(word Val) {
-    get() = Val;
-    return *this;
-  }
-
-  operator word&() { return get(); }
-
-  operator word() { return get(); }
-  operator int() { return get(); }
-  operator size_t() { return get(); }
 };
 } // namespace Reg
 
 using DPTR_t = Reg::DPTR_t;
 
 extern DPTR_t DPTR;
+
+// GPRs
+namespace Reg {
+template <int _Index>
+class GPR {
+public:
+  static constexpr int Index = _Index;
+  static_assert(Index >= 0 && Index < 8, "Index should be equal to [0..7]");
+
+  static byte &get() {
+    return RAM[(PSW::Inst & 0x18) + Index];
+  }
+};
+
+template <int _RS, int _Index>
+class GPRSel {
+public:
+  static constexpr int Index = _Index;
+  static constexpr int RS = _RS;
+  static_assert(Index >= 0 && Index < 8, "Index should be in range [0..7]");
+  static_assert(RS >= 0 && RS < 4, "Register bank selector should be in range [0..3]");
+
+  static byte &get() {
+    return RAM[(RS << 0x03) + Index];
+  }
+};
+
+using R0 = GPR<0>;
+using R1 = GPR<1>;
+using R2 = GPR<2>;
+using R3 = GPR<3>;
+using R4 = GPR<4>;
+using R5 = GPR<5>;
+using R6 = GPR<6>;
+using R7 = GPR<7>;
+
+template <int _RS>
+using R0Sel = GPRSel<_RS, 0>;
+template <int _RS>
+using R1Sel = GPRSel<_RS, 1>;
+template <int _RS>
+using R2Sel = GPRSel<_RS, 2>;
+template <int _RS>
+using R3Sel = GPRSel<_RS, 3>;
+template <int _RS>
+using R4Sel = GPRSel<_RS, 4>;
+template <int _RS>
+using R5Sel = GPRSel<_RS, 5>;
+template <int _RS>
+using R6Sel = GPRSel<_RS, 6>;
+template <int _RS>
+using R7Sel = GPRSel<_RS, 7>;
+
+
+template <int _BaseIndex>
+class GPRWord {
+public:
+  static constexpr int BaseIndex = _BaseIndex;
+  static_assert(BaseIndex % 2 == 0, "BaseIndex must be even");
+  using LowByte = GPR<BaseIndex>;
+  using HighByte = GPR<BaseIndex + 1>;
+
+  static word get() {
+    return COMPOSE_WORD(HighByte::get(), LowByte::get());
+  }
+
+  static void set(word W) {
+    HighByte::get() = HIGH(W);
+    LowByte::get() = LOW(W);
+  }
+};
+
+template <int _RS, int _BaseIndex>
+class GPRWordSel {
+public:
+  static constexpr int BaseIndex = _BaseIndex;
+  static constexpr int RS = _RS;
+  static_assert(BaseIndex % 2 == 0, "BaseIndex must be even");
+  using LowByte = GPRSel<RS, BaseIndex>;
+  using HighByte = GPRSel<RS, BaseIndex + 1>;
+
+  static word get() {
+    return COMPOSE_WORD(HighByte::get(), LowByte::get());
+  }
+
+  static void set(word W) {
+    HighByte::get() = HIGH(W);
+    LowByte::get() = LOW(W);
+  }
+};
+
+using R1_R0 = GPRWord<0>;
+using R3_R2 = GPRWord<2>;
+using R5_R4 = GPRWord<4>;
+using R7_R6 = GPRWord<6>;
+
+template <int _RS>
+using R1_R0Sel = GPRWordSel<_RS, 0>;
+template <int _RS>
+using R3_R2Sel = GPRWordSel<_RS, 2>;
+template <int _RS>
+using R5_R4Sel = GPRWordSel<_RS, 4>;
+template <int _RS>
+using R7_R6Sel = GPRWordSel<_RS, 6>;
+} // namespace Reg
+
+#define R1_R0 Reg::R1_R0
+#define R3_R2 Reg::R3_R2
+#define R5_R4 Reg::R5_R4
+#define R7_R6 Reg::R7_R6
+
+#define R1_R0Sel(rs) Reg::R1_R0Sel<rs>
+#define R3_R2Sel(rs) Reg::R3_R2Sel<rs>
+#define R5_R4Sel(rs) Reg::R5_R4Sel<rs>
+#define R7_R6Sel(rs) Reg::R7_R6Sel<rs>
 
 // ports
 extern byte P1;
