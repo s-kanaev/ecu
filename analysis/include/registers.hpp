@@ -104,6 +104,8 @@ DEFINE_REGISTER(name, addr, word, init, false, bf, be, bd, bc, bb, ba, b9, b8, \
 DEFINE_REGISTER8(SYSCON, 0xB1, 0, CLKP, PMOD, b5, RMAP, b3, b2, XMAP1, XMAP0);
 DEFINE_REGISTER8(IP1, 0xB9, 0, PDIR, b6, b5, b4, b3, b2, b1, b0);
 DEFINE_REGISTER8(IEN0, 0xA8, 0, EAL, WDT, ET2, ES0, ET1, EX1, ET0, EX0);
+DEFINE_REGISTER8(IEN1, 0xB8, 0, EXEN2, SWDT, EX6, EX5, EX4, EX3, EX2, EADC);
+DEFINE_REGISTER8(IEN2, 0x9A, 0, b7, b6, ECR, ECS, ECT, ECMP, b1, ES1);
 DEFINE_REGISTER8(S0CON, 0x98, 0, SM0, SM1, SM20, REN0, TB80, RB80, TI0, RI0);
 DEFINE_REGISTER8(TCON, 0x88, 0, TF1, TR1, TF0, TR0, IE1, IT1, IE0, IT0);
 
@@ -118,10 +120,27 @@ DEFINE_REGISTER8_NB(CCH3, 0xC7, 0);
 DEFINE_REGISTER8_NB(CCL3, 0xC6, 0);
 DEFINE_REGISTER16_NB(CC3, 0xC6, 0);
 
-DEFINE_REGISTER8(IRCON0, 0xC0, 0, EXF2, TF2, IEX6, IEX5, IEX4, IEX3, IEX2, IADC);
+DEFINE_REGISTER8_NB(CCH4, 0xCF, 0);
+DEFINE_REGISTER8_NB(CCL4, 0xCE, 0);
+DEFINE_REGISTER16_NB(CC4, 0xCE, 0);
+
+DEFINE_REGISTER8(IRCON0, 0xC0, 0, EXF2, TF2, IEX6, IEX5,
+                                  IEX4, IEX3, IEX2, IADC);
 
 DEFINE_REGISTER8(CCEN, 0xC1, 0, COCAH3, COCAL3, COCAH2, COCAL2,
                                 COCAH1, COCAL1, COCAH0, COCAL0);
+
+DEFINE_REGISTER8_NB(COMCLRL, 0xA3, 0);
+DEFINE_REGISTER8_NB(COMCLRH, 0xA4, 0);
+DEFINE_REGISTER16_NB(COMCLR, 0xA3, 0);
+
+DEFINE_REGISTER8_NB(SETMSK, 0xA5, 0);
+DEFINE_REGISTER8_NB(CLRMSK, 0xA6, 0);
+
+DEFINE_REGISTER8(CTCON, 0xE1, 0x40, T2PS1, CTP, ICR, ICS,
+                                    CTF, CLK2, CLK1, CLK0);
+DEFINE_REGISTER8(CT1CON, 0xE2, 0x40, b7, CT1P, b5, b4,
+                                     CT1F, CLK12, CLK11, CLK10);
 
 // DPTR
 namespace Reg {
@@ -157,9 +176,9 @@ extern DPTR_t DPTR;
 
 // GPRs
 namespace Reg {
+namespace impl {
 template <int _Index>
-class GPR {
-public:
+struct GPR {
   static constexpr int Index = _Index;
   static_assert(Index >= 0 && Index < 8, "Index should be equal to [0..7]");
 
@@ -169,8 +188,7 @@ public:
 };
 
 template <int _RS, int _Index>
-class GPRSel {
-public:
+struct GPRSel {
   static constexpr int Index = _Index;
   static constexpr int RS = _RS;
   static_assert(Index >= 0 && Index < 8, "Index should be in range [0..7]");
@@ -180,6 +198,147 @@ public:
     return RAM[(RS << 0x03) + Index];
   }
 };
+
+template <int _BaseIndex>
+struct GPRWord {
+  static constexpr int BaseIndex = _BaseIndex;
+  static_assert(BaseIndex % 2 == 0, "BaseIndex must be even");
+  using LowByte = GPR<BaseIndex>;
+  using HighByte = GPR<BaseIndex + 1>;
+
+  static word get() {
+    return COMPOSE_WORD(HighByte::get(), LowByte::get());
+  }
+
+  static void set(word W) {
+    HighByte::get() = HIGH(W);
+    LowByte::get() = LOW(W);
+  }
+};
+
+template <int _RS, int _BaseIndex>
+struct GPRWordSel {
+  static constexpr int BaseIndex = _BaseIndex;
+  static constexpr int RS = _RS;
+  static_assert(BaseIndex % 2 == 0, "BaseIndex must be even");
+  using LowByte = GPRSel<RS, BaseIndex>;
+  using HighByte = GPRSel<RS, BaseIndex + 1>;
+
+  static word get() {
+    return COMPOSE_WORD(HighByte::get(), LowByte::get());
+  }
+
+  static void set(word W) {
+    HighByte::get() = HIGH(W);
+    LowByte::get() = LOW(W);
+  }
+};
+} // namespace impl
+
+template <int _RS, int _Index>
+struct GPRSel;
+
+template <int _Index>
+struct GPR {
+  static constexpr int Index = _Index;
+  using Impl = impl::GPR<Index>;
+  using This = GPR<Index>;
+
+  operator byte &() {
+    return Impl::get();
+  }
+
+  This &operator=(byte V) {
+    Impl::get() = V;
+    return *this;
+  }
+
+  template <int OtherIndex>
+  This &operator=(GPR<OtherIndex> &V) {
+    Impl::get() = V;
+    return *this;
+  }
+
+  template <int RS, int OtherIndex>
+  This &operator=(GPRSel<RS, OtherIndex> &V) {
+    Impl::get() = V;
+    return *this;
+  }
+
+  This &operator+=(byte V) {
+    Impl::get() = Impl::get() + V;
+    return *this;
+  }
+};
+
+template <int _RS, int _Index>
+struct GPRSel {
+  static constexpr int RS = _RS;
+  static constexpr int Index = _Index;
+  using Impl = impl::GPRSel<RS, Index>;
+  using This = GPRSel<RS, Index>;
+
+  operator byte &() {
+    return Impl::get();
+  }
+
+  This &operator=(byte V) {
+    Impl::get() = V;
+    return *this;
+  }
+
+  This &operator+=(byte V) {
+    Impl::get() = Impl::get() + V;
+    return *this;
+  }
+};
+
+template <int _RS, int _BaseIndex>
+struct GPRWordSel;
+
+template <int _BaseIndex>
+struct GPRWord {
+  static constexpr int BaseIndex = _BaseIndex;
+  using Impl = impl::GPRWord<BaseIndex>;
+  using This = GPRWord<BaseIndex>;
+
+  operator word() {
+    return Impl::get();
+  }
+
+  This &operator=(word V) {
+    Impl::set(V);
+    return *this;
+  }
+
+  This &operator+=(word V) {
+    Impl::set(Impl::get() + V);
+    return *this;
+  }
+};
+
+template <int _RS, int _BaseIndex>
+struct GPRWordSel {
+  static constexpr int RS = _RS;
+  static constexpr int BaseIndex = _BaseIndex;
+  using Impl = impl::GPRWordSel<RS, BaseIndex>;
+  using This = GPRWordSel<RS, BaseIndex>;
+
+  operator word() {
+    return Impl::get();
+  }
+
+  This &operator=(word V) {
+    Impl::set(V);
+    return *this;
+  }
+
+  This &operator+=(word V) {
+    Impl::set(Impl::get() + V);
+    return *this;
+  }
+};
+
 
 using R0 = GPR<0>;
 using R1 = GPR<1>;
@@ -207,44 +366,6 @@ using R6Sel = GPRSel<_RS, 6>;
 template <int _RS>
 using R7Sel = GPRSel<_RS, 7>;
 
-
-template <int _BaseIndex>
-class GPRWord {
-public:
-  static constexpr int BaseIndex = _BaseIndex;
-  static_assert(BaseIndex % 2 == 0, "BaseIndex must be even");
-  using LowByte = GPR<BaseIndex>;
-  using HighByte = GPR<BaseIndex + 1>;
-
-  static word get() {
-    return COMPOSE_WORD(HighByte::get(), LowByte::get());
-  }
-
-  static void set(word W) {
-    HighByte::get() = HIGH(W);
-    LowByte::get() = LOW(W);
-  }
-};
-
-template <int _RS, int _BaseIndex>
-class GPRWordSel {
-public:
-  static constexpr int BaseIndex = _BaseIndex;
-  static constexpr int RS = _RS;
-  static_assert(BaseIndex % 2 == 0, "BaseIndex must be even");
-  using LowByte = GPRSel<RS, BaseIndex>;
-  using HighByte = GPRSel<RS, BaseIndex + 1>;
-
-  static word get() {
-    return COMPOSE_WORD(HighByte::get(), LowByte::get());
-  }
-
-  static void set(word W) {
-    HighByte::get() = HIGH(W);
-    LowByte::get() = LOW(W);
-  }
-};
-
 using R1_R0 = GPRWord<0>;
 using R3_R2 = GPRWord<2>;
 using R5_R4 = GPRWord<4>;
@@ -259,16 +380,6 @@ using R5_R4Sel = GPRWordSel<_RS, 4>;
 template <int _RS>
 using R7_R6Sel = GPRWordSel<_RS, 6>;
 } // namespace Reg
-
-#define R1_R0 Reg::R1_R0
-#define R3_R2 Reg::R3_R2
-#define R5_R4 Reg::R5_R4
-#define R7_R6 Reg::R7_R6
-
-#define R1_R0Sel(rs) Reg::R1_R0Sel<rs>
-#define R3_R2Sel(rs) Reg::R3_R2Sel<rs>
-#define R5_R4Sel(rs) Reg::R5_R4Sel<rs>
-#define R7_R6Sel(rs) Reg::R7_R6Sel<rs>
 
 // ports
 extern byte P1;

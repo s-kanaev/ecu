@@ -24,6 +24,8 @@ static inline void INIT_RAM() {
   // the rest (up to 0x7B, incl.) is initialized with nil
   [0x20] = 0x00,  // status byte
                   // bit 2 - ???
+                  // bit 4 - Timer0 Overflow interrupt overlap
+                  //         Crankshaft poistion sensor malfunction?
                   // bit 6 (bit address 0x06) = copy of PSW.F1 // watchdog triggered?
                   // bit 7 (bit address 0x07) = if xram check sum was not valid
 
