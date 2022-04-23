@@ -25,7 +25,7 @@ static inline void INIT_RAM() {
   [0x20] = 0x00,  // status byte
                   // bit 2 - ???
                   // bit 4 - Timer0 Overflow interrupt overlap
-                  //         Crankshaft poistion sensor malfunction?
+                  //         Crankshaft position sensor malfunction?
                   // bit 6 (bit address 0x06) = copy of PSW.F1 // watchdog triggered?
                   // bit 7 (bit address 0x07) = if xram check sum was not valid
 
@@ -46,10 +46,12 @@ static inline void INIT_RAM() {
                   // bit 4 - intake air temperature less than low limit
                   // bit 5 - intake air temperature higher than high limit
   [0x25] = 0x00,  // ???
+                  // bit 1 - ???
                   // bit 5 - ???
 
   [0x26] = 0,     // status byte:
-                  // bit 2 - ??
+                  // bit 2 - 1 iff next ExtInt6 triggers for compare on CC3
+                  //         0 iff next ExtInt6 triggers for capture on CC3
                   // bit 6 - ??
 
   [0x27] = 0x00,  // ???
@@ -79,6 +81,9 @@ static inline void INIT_RAM() {
                   // bit 1 - ???
 
   [0x30] = 0,     // Some counter?, can be changed by some interrupt along with 0x1C/0x1D?
+
+  [0x31] = 0,     // Low byte of temporary variable A, used in ExtInt6
+  [0x32] = 0,     // High byte of temporary variable A, used in ExtInt6
 
   [0x35] = 0,     // Counter for timer0 overflow interrupt, max val = 0x14?
 

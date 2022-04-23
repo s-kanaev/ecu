@@ -269,6 +269,20 @@ struct GPR {
     Impl::get() = Impl::get() + V;
     return *this;
   }
+
+  bool operator==(byte Rhs) const {
+    return Impl::get() == Rhs;
+  }
+
+  template <int OtherIndex>
+  bool operator==(const GPR<OtherIndex> &Rhs) const {
+    return Impl::get() == Rhs;
+  }
+
+  template <int RS, int OtherIndex>
+  bool operator==(const GPRSel<RS, OtherIndex> &Rhs) const {
+    return Impl::get() == Rhs;
+  }
 };
 
 template <int _RS, int _Index>
@@ -290,6 +304,20 @@ struct GPRSel {
   This &operator+=(byte V) {
     Impl::get() = Impl::get() + V;
     return *this;
+  }
+
+  bool operator==(byte Rhs) const {
+    return Impl::get() == Rhs;
+  }
+
+  template <int OtherIndex>
+  bool operator==(const GPR<OtherIndex> &Rhs) const {
+    return Impl::get() == Rhs;
+  }
+
+  template <int OtherRS, int OtherIndex>
+  bool operator==(const GPRSel<OtherRS, OtherIndex> &Rhs) const {
+    return Impl::get() == Rhs;
   }
 };
 
@@ -314,6 +342,20 @@ struct GPRWord {
   This &operator+=(word V) {
     Impl::set(Impl::get() + V);
     return *this;
+  }
+
+  bool operator==(word Rhs) const {
+    return Impl::get() == Rhs;
+  }
+
+  template <int OtherIndex>
+  bool operator==(const GPRWord<OtherIndex> &Rhs) const {
+    return Impl::get() == Rhs;
+  }
+
+  template <int OtherRS, int OtherIndex>
+  bool operator==(const GPRWordSel<OtherRS, OtherIndex> &Rhs) const {
+    return Impl::get() == Rhs;
   }
 };
 

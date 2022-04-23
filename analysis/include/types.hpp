@@ -20,6 +20,7 @@ typedef int8_t sbyte;
 typedef int16_t sword;
 typedef int32_t squad;
 typedef int pin;
+typedef int bit;
 
 enum Pin : pin {
   P0_0,
