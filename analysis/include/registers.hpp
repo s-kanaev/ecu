@@ -130,6 +130,10 @@ DEFINE_REGISTER8(IRCON0, 0xC0, 0, EXF2, TF2, IEX6, IEX5,
 DEFINE_REGISTER8(CCEN, 0xC1, 0, COCAH3, COCAL3, COCAH2, COCAL2,
                                 COCAH1, COCAL1, COCAH0, COCAL0);
 
+DEFINE_REGISTER8_NB(COMSETL, 0xA1, 0);
+DEFINE_REGISTER8_NB(COMSETH, 0xA2, 0);
+DEFINE_REGISTER16_NB(COMSET, 0xA1, 0);
+
 DEFINE_REGISTER8_NB(COMCLRL, 0xA3, 0);
 DEFINE_REGISTER8_NB(COMCLRH, 0xA4, 0);
 DEFINE_REGISTER16_NB(COMCLR, 0xA3, 0);
@@ -270,6 +274,11 @@ struct GPR {
     return *this;
   }
 
+  This &operator-=(byte V) {
+    Impl::get() = Impl::get() - V;
+    return *this;
+  }
+
   bool operator==(byte Rhs) const {
     return Impl::get() == Rhs;
   }
@@ -303,6 +312,11 @@ struct GPRSel {
 
   This &operator+=(byte V) {
     Impl::get() = Impl::get() + V;
+    return *this;
+  }
+
+  This &operator-=(byte V) {
+    Impl::get() = Impl::get() - V;
     return *this;
   }
 
@@ -344,6 +358,11 @@ struct GPRWord {
     return *this;
   }
 
+  This &operator-=(word V) {
+    Impl::set(Impl::get() - V);
+    return *this;
+  }
+
   bool operator==(word Rhs) const {
     return Impl::get() == Rhs;
   }
@@ -378,6 +397,25 @@ struct GPRWordSel {
   This &operator+=(word V) {
     Impl::set(Impl::get() + V);
     return *this;
+  }
+
+  This &operator-=(word V) {
+    Impl::set(Impl::get() - V);
+    return *this;
+  }
+
+  bool operator==(word Rhs) const {
+    return Impl::get() == Rhs;
+  }
+
+  template <int OtherIndex>
+  bool operator==(const GPRWord<OtherIndex> &Rhs) const {
+    return Impl::get() == Rhs;
+  }
+
+  template <int OtherRS, int OtherIndex>
+  bool operator==(const GPRWordSel<OtherRS, OtherIndex> &Rhs) const {
+    return Impl::get() == Rhs;
   }
 };
 
@@ -422,6 +460,12 @@ using R5_R4Sel = GPRWordSel<_RS, 4>;
 template <int _RS>
 using R7_R6Sel = GPRWordSel<_RS, 6>;
 } // namespace Reg
+
+#define USE_GPR(Rx) Reg::Rx Rx
+#define USE_GPR_WORD(Rx_Ry) Reg::Rx_Ry Rx_Ry
+#define USE_GPR_SEL(RS, Rx) Reg::Rx##Sel<RS> Rx##_bank##RS
+#define USE_GPR_WORD_SEL(RS, Rx_Ry) Reg::Rx_Ry##Sel<RS> Rx_Ry##_bank##RS
+
 
 // ports
 extern byte P1;
