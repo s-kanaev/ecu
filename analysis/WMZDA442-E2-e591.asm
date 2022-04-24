@@ -2276,11 +2276,6 @@ code_823:                               ; CODE XREF: IEX6_0-CC↑j
                 mov     R3, CCH3        ; R3:R2 = CC3
                 ljmp    set_ram_25_5_and_graceful_finish_ext_int_6
 ; ---------------------------------------------------------------------------
-!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-CONTINUE DECOMPILING HERE
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 either_r1_or_r5_neq_0:                  ; CODE XREF: IEX6_0+27↓j
                 mov     A, R0
@@ -2290,7 +2285,7 @@ either_r1_or_r5_neq_0:                  ; CODE XREF: IEX6_0+27↓j
                 mov     A, R1
                 subb    A, R5
                 mov     RAM_32, A
-                jnc     r1_r0_was_leq_than_r5_r4 ; OLD_R1R0 = R1:R0
+                jnc     r1_r0_was_greater_or_equal_than_r5_r4 ; OLD_R1R0 = R1:R0
                                         ; RAM[0x32]:RAM[0x31] = R1:R0 - R5:R4
                                         ;
                                         ; if (R1:R0 >= R5:R4)
@@ -2316,17 +2311,16 @@ code_84B:                               ; CODE XREF: IEX6_0-92↑j
                 ljmp    graceful_finish_ext_int_6
 ; ---------------------------------------------------------------------------
 
-r1_r0_was_leq_than_r5_r4:               ; CODE XREF: IEX6_0-A1↑j
+r1_r0_was_greater_or_equal_than_r5_r4:  ; CODE XREF: IEX6_0-A1↑j
                 mov     A, R5
                 mov     B, A            ; B-Register
                 mov     A, R4
                 clr     C
                 subb    A, RAM_31
                 mov     A, B            ; B-Register
-                subb    A, RAM_32       ; Old_W = RAM[0x32]:RAM[0x31]
-                                        ;
-                                        ; RAM[0x32]:RAM[0x31] -= R5:R4
-                jc      ram_32_ram_31_was_less_than_r5_r4_2 ; if (Old_W < R5:R4)
+                subb    A, RAM_32
+                jc      r5_r4_less_than_ram_32_ram_31 ; if (R5:R4 < RAM[0x32]:RAM[0x31])
+                                        ;   jump ...
                 ljmp    code_912
 ; ---------------------------------------------------------------------------
 
@@ -2340,7 +2334,7 @@ ram_26_1_set:                           ; CODE XREF: IEX6_0:code_84B↑j
                 sjmp    code_870
 ; ---------------------------------------------------------------------------
 
-ram_32_ram_31_was_less_than_r5_r4_2:    ; CODE XREF: IEX6_0-77↑j
+r5_r4_less_than_ram_32_ram_31:          ; CODE XREF: IEX6_0-77↑j
                                         ; IEX6_0+37↓j
                 setb    RAM_20.0        ; SET_BIT_IN(RAM[0x20], 0)
 
@@ -2350,7 +2344,7 @@ code_870:                               ; CODE XREF: IEX6_0-70↑j
                 mov     CLRMSK, #0      ; CLRMSK = SETMSK = 0
                 setb    P5.1            ; IGNITE_COIL(CoilE::C_1_4)
                 setb    P5.0            ; IGNITE_COIL(CoilE::C_2_3)
-                anl     IEN2, #0DFh     ; Disable Timer2 Interrupt
+                anl     IEN2, #0DFh     ; Disable COMCLR register compare match Interrupt
 
 code_87D:                               ; CODE XREF: IEX6_0-10↓j
                 mov     RAM_30, #0      ; RAM[0x30] = 0
@@ -2498,7 +2492,7 @@ both_r1_and_r5_eq_0:                    ; CODE XREF: IEX6_0+25↑j
 r4_shr_1_less_than_r0:                  ; CODE XREF: IEX6_0+2F↑j
                 add     A, R4           ; A = (R4 >> 1) - R0 + R4
                 jc      code_912
-                ljmp    ram_32_ram_31_was_less_than_r5_r4_2
+                ljmp    r5_r4_less_than_ram_32_ram_31
 ; ---------------------------------------------------------------------------
 
 code_912:                               ; CODE XREF: IEX6_0-90↑j
@@ -2533,7 +2527,8 @@ code_912:                               ; CODE XREF: IEX6_0-90↑j
 ; ---------------------------------------------------------------------------
 
 r6_neq_38:                              ; CODE XREF: IEX6_0+44↑j
-                jnc     r6_greater_than_38
+                jnc     r6_greater_or_equal_than_38 ; if (R6 >= 0x38)
+                                        ;   jump ...
                 mov     R4, RAM_18
                 mov     R5, RAM_19      ; R5:R4 = R1:R0
                 inc     R6              ; ++R6
@@ -2545,12 +2540,12 @@ r6_neq_38:                              ; CODE XREF: IEX6_0+44↑j
                 sjmp    r7_neq_1e
 ; ---------------------------------------------------------------------------
 
-r6_neq_3b:                              ; CODE XREF: IEX6_0:r6_greater_than_38↓j
+r6_neq_3b:                              ; CODE XREF: IEX6_0:r6_greater_or_equal_than_38↓j
                 setb    RAM_20.3        ; SET_BIT_IN(RAM[0x20], 3)
                 ljmp    code_870
 ; ---------------------------------------------------------------------------
 
-r6_greater_than_38:                     ; CODE XREF: IEX6_0:r6_neq_38↑j
+r6_greater_or_equal_than_38:            ; CODE XREF: IEX6_0:r6_neq_38↑j
                 cjne    R6, #3Bh, r6_neq_3b ; ';' ; if (R6 != 0x3B)
                                         ;   jump ...
 
@@ -2799,7 +2794,7 @@ ign_coil_14_adc_voltage_greater_or_equal_14:
                                         ; CODE XREF: IEX6_0+16F↑j
                                         ; IEX6_0:code_A4C↑j
                 mov     A, B            ; A = RAM[0x5C]
-                jc      ram_5c_neq_0
+                jc      ram_5c_neq_0    ; CY = 1 iff ign coil 1/4 voltage ADC >= 0x83
                 mov     COMCLRH, R1     ; Compare Clear Register, High Byte
                 mov     COMCLRL, R0     ; COMCLR = R1:R0
                 orl     CLRMSK, #2      ; Compare Clear Mask Register
