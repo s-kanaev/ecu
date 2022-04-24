@@ -11,9 +11,14 @@
 #include <registers.hpp>
 #include <mask_set.hpp>
 
+#include "e591/contants.hpp"
 #include "e591/memory-locations.hpp"
 #include "e591/impl.hpp"
 #include "e591/inlines.hpp"
+
+using Ram31WordT = location::AsWord<seg::RAM, 0x31>;
+using Ram36WordT = location::AsWord<seg::RAM, 0x36>;
+using Ram38WordT = location::AsWord<seg::RAM, 0x38>;
 
 inline byte registerBankMask(byte RS) {
   assert(RS >= 0 && RS < 4);
@@ -21,7 +26,7 @@ inline byte registerBankMask(byte RS) {
 }
 
 // _08C6:
-inline void _087D() {
+inline void reset_Calculus() {
   RAM[0x30] = 0;
   CLEAR_BIT_IN(RAM[0x25], 2);
   CLEAR_BIT_IN(RAM[0x25], 3);
@@ -31,14 +36,14 @@ inline void _087D() {
 // _08C6:
 inline void _08C6() {
   SET_BIT_IN(RAM[0x25], 5);
-  _087D();
+  reset_Calculus();
 }
 
 // _0823:
 inline void _0823() {
-  Reg::R1_R0 R1_R0;
-  Reg::R3_R2 R3_R2;
-  Reg::R5_R4 R5_R4;
+  USE_GPR_WORD(R1_R0);
+  USE_GPR_WORD(R3_R2);
+  USE_GPR_WORD(R5_R4);
 
   R5_R4 = R1_R0;
   R3_R2 = Reg::CC3::Inst;
@@ -46,6 +51,21 @@ inline void _0823() {
 }
 
 inline void regularToothCapturedImpl() {
+  USE_GPR_SEL(2, R0);
+  USE_GPR_SEL(2, R1);
+  USE_GPR_SEL(2, R2);
+  USE_GPR_SEL(2, R3);
+  USE_GPR_SEL(2, R4);
+  USE_GPR(R5);
+  USE_GPR_SEL(2, R5);
+  USE_GPR(R6);
+  USE_GPR_SEL(2, R6);
+  USE_GPR(R7);
+  USE_GPR_SEL(1, R7);
+  USE_GPR_WORD(R1_R0);
+  USE_GPR_WORD(R3_R2);
+  USE_GPR_WORD(R5_R4);
+
   if (R5 >= 4) {
     // _09BD:
     CLEAR_BIT_IN(RAM[0x25], 2);
@@ -72,10 +92,10 @@ inline void regularToothCapturedImpl() {
   if (equal(R6, R0_bank2)) {
     // _09EC:
     SET_BIT_IN(P5, 4);
-    Reg::R1_R0::set((QUAD(R5_R4) << 1) * Reg::R1Sel<2>::get() / 256);
+    R1_R0 = (QUAD(R5_R4) << 1) * R1_bank2 / 256;
 
     // _0A11:
-    Reg::R1_R0::set(R1_R0 + R3_R2);
+    R1_R0 = R1_R0 + R3_R2;
 
     if (R5_bank2 < 2) {
       RAM[0x5C] = R5_bank2;
@@ -117,7 +137,7 @@ inline void regularToothCapturedImpl() {
           }
           // Enable COMCLR Register compare interrupt
           {
-            Reg::Set<Reg::IEN0>{}.add<Reg::IEN0::ECR>();
+            Reg::Set<Reg::IEN2>{}.add<Reg::IEN2::ECR>();
           }
 
           CLEAR_BIT_IN(RAM[0x2E], 6);
@@ -157,7 +177,7 @@ inline void regularToothCapturedImpl() {
           }
           // Enable COMCLR Register compare interrupt
           {
-            Reg::Set<Reg::IEN0>{}.add<Reg::IEN0::ECR>();
+            Reg::Set<Reg::IEN2>{}.add<Reg::IEN2::ECR>();
           }
 
           CLEAR_BIT_IN(RAM[0x2E], 6);
@@ -187,14 +207,14 @@ inline void regularToothCapturedImpl() {
       case 2: {
         // _0B04:
         Reg::COMSET::Inst = R1_R0;
-        SET_BIT_IN(Reg::SETMSK, 1); // Ignite Coil 1/4 when Timer2 matches COMSET
+        SET_BIT_IN(Reg::SETMSK::Inst, 1); // Ignite Coil 1/4 when Timer2 matches COMSET
         break;
       }
       case 1:
       case 3: {
         // _0B0E:
         Reg::COMSET::Inst = R1_R0;
-        SET_BIT_IN(Reg::SETMSK, 0); // Ignite Coil 2/3 when Timer2 matches COMSET
+        SET_BIT_IN(Reg::SETMSK::Inst, 0); // Ignite Coil 2/3 when Timer2 matches COMSET
         break;
       }
     }
@@ -212,9 +232,9 @@ inline void regularToothCapturedImpl() {
         (!!CHECK_BIT_AT(RAM[0x26], 5) != !!CHECK_BIT_AT(RAM[0x25], 0))) {
       // _0B33:
       if (R5_bank2 < 2)
-        R5_bank2 += 2
+        R5_bank2 += BYTE(2);
       else /* R5(bank2) >= 2 */
-        R5_bank2 -= 2
+        R5_bank2 -= BYTE(2);
 
       // R5_bank2 ^= 0x02; // ???
     }
@@ -241,7 +261,7 @@ inline void regularToothCapturedImpl() {
       // _0B9A:
       // ram_2e_bit_1_not_set:
       RAM[0x6D] = FLASH[0x0785 + R6_bank2] - 1;
-      SET_BIT_AT(RAM[0x27], 1);
+      SET_BIT_IN(RAM[0x27], 1);
 
       // Request External Interrupt 0
       {
@@ -253,7 +273,7 @@ inline void regularToothCapturedImpl() {
 
       // _0B86:
       R1_R0 += R3_R2;
-      Reg::CC4::Inst = R1:R0;
+      Reg::CC4::Inst = R1_R0;
 
       // Reset P1.4/INT2/CC4 interrupt request
       {
@@ -268,7 +288,7 @@ inline void regularToothCapturedImpl() {
       // Set alternative input function for P1.4/INT2/CC4
       SET_BIT_IN(P1, 4);
 
-      SET_BIT_AT(RAM[0x25], 7);
+      SET_BIT_IN(RAM[0x25], 7);
     }
 
     // _0BAF:
@@ -319,7 +339,12 @@ inline void regularToothCapturedImpl() {
     RAM[0x8A + (R7 >> 1)] = ADC_8bit(MAF_PIN);
   }
 
-  //goto set_ram_25_5_and_graceful_finish_ext_int_6; // _0C03
+  // set_ram_25_5_and_graceful_finish_ext_int_6:
+  // _0C03:
+  SET_BIT_IN(RAM[0x25], 5);
+
+  // graceful_finish_ext_int_6:
+  // _0C05
 }
 
 // _0897:
@@ -333,10 +358,10 @@ inline void ExtInt6_CompareMatch() {
   // ram_26_2_is_set:
   Reg::PSW::Inst = registerBankMask(3);
 
-  Reg::R6 R6;
-  Reg::R7 R7;
-  Reg::R3_R2 R3_R2;
-  Reg::R5_R4 R5_R4;
+  USE_GPR(R6);
+  USE_GPR(R7);
+  USE_GPR_WORD(R3_R2);
+  USE_GPR_WORD(R5_R4);
 
   if (!CHECK_BIT_AT(RAM[0x25], 1)) {
     // Prepare for crankshaft revolution to begin?
@@ -348,7 +373,7 @@ inline void ExtInt6_CompareMatch() {
       Reg::Mask<Reg::CCEN>{}.add<Reg::CCEN::COCAH3, Reg::CCEN::COCAL3>();
     }
     {
-      Reg::Set<Reg::CCEN>{}.add<Reg::CCEN, COCAL3>();
+      Reg::Set<Reg::CCEN>{}.add<Reg::CCEN::COCAL3>();
     }
 
     _08C6(); // TODO
@@ -358,7 +383,18 @@ inline void ExtInt6_CompareMatch() {
     // _08A3:
     R3_R2 = Reg::CC3::Inst;
     // 0x39 = 57 (dec), maximum for [0..58=60-2) segment
-    if (R6 != 0x39) {
+    if (R6 == Const::SyncDiscLastRealTooth /* BYTE(0x39) */) {
+      /* Start of missing tooth region, can't capture, only compare */
+      // _08AA:
+      Reg::CC3::Inst += R5_R4;
+      {
+        Reg::Mask<Reg::IRCON0>{}.add<Reg::IRCON0::IEX6>();
+      }
+
+      // We think crankshaft has rotated for another tooth
+      ++R6;
+      ++R7;
+    } else {
       // Lets capture the next tooth timestamp
       // _08B9:
       // r6_neq_39:
@@ -369,18 +405,7 @@ inline void ExtInt6_CompareMatch() {
         Reg::Mask<Reg::CCEN>{}.add<Reg::CCEN::COCAH3, Reg::CCEN::COCAL3>();
       }
       {
-        Reg::Set<Reg::CCEN>{}.add<Reg::CCEN, COCAL3>();
-      }
-
-      // We think crankshaft has rotated for another tooth
-      ++R6;
-      ++R7;
-    } else /* R6 == 0x39 (57 dec) */ {
-      /* Start of missing tooth region, can't capture, only compare */
-      // _08AA:
-      Reg::CC3::Inst += R5_R4::get();
-      {
-        Reg::Mask<Reg::IRCON0>{}.add<Reg::IRCON0::IEX6>();
+        Reg::Set<Reg::CCEN>{}.add<Reg::CCEN::COCAL3>();
       }
 
       // We think crankshaft has rotated for another tooth
@@ -396,9 +421,12 @@ inline void ExtInt6_CompareMatch() {
 }
 
 inline void prepareForMissingToothRegion() {
-  Reg::R5_R4 R5_R4;
-  Reg::R1_R0 R1_R0;
-  Reg::R3_R2 R3_R2;
+  USE_GPR_WORD(R5_R4);
+  USE_GPR_WORD(R1_R0);
+  USE_GPR_WORD(R3_R2);
+
+  USE_GPR(R6);
+  USE_GPR(R7);
 
   // Missing tooth region is about to begin. Hence, schedule a compare match
   // within R1_R0 jiffies. Store R1_R0 in R5_R4 for the next event for checks.
@@ -410,7 +438,7 @@ inline void prepareForMissingToothRegion() {
     Reg::Mask<Reg::CCEN>{}.add<Reg::CCEN::COCAH3, Reg::CCEN::COCAL3>();
   }
   {
-    Reg::Set<Reg::CCEN>{}.add<Reg::CCEN, COCAH3>();
+    Reg::Set<Reg::CCEN>{}.add<Reg::CCEN::COCAH3>();
   }
 
   SET_BIT_IN(P1, 3); // enable alternate function of P1.3
@@ -426,9 +454,6 @@ inline void prepareForMissingToothRegion() {
 
   ++R6;
   ++R7;
-
-  //goto r7_neq_1e;
-  regularToothCapturedImpl(); // _09B7 TODO do the usual thing?
 }
 
 // _0955:
@@ -457,11 +482,12 @@ inline void firstToothAfterMissingOnesCaptured() {
       // _097B:
       // ram_2e_bit_0_not_set:
       bool CamshaftPositionIRQ =
-          !!Reg::Bit<Reg::IRCON0, Reg::IRCON0::IEX5>::get();
+          !!Reg::Bit<Reg::IRCON0, Reg::IRCON0::IEX5>{}.get();
 
       {
-        Reg::Mask<Reg::IRCON0>{}.add<IRCON0::IEX5>();
+        Reg::Mask<Reg::IRCON0>{}.add<Reg::IRCON0::IEX5>();
       }
+
       if (CamshaftPositionIRQ) {
         // TODO Check where it is used
         Reg::Mask<Reg::PSW>{}.add<Reg::PSW::CY>();
@@ -485,7 +511,7 @@ inline void firstToothAfterMissingOnesCaptured() {
     if (CHECK_AND_CLEAR_BIT(RAM[0x29], 6)) {
       // _09A1:
       // ram_29_bit_6_set:
-      if (Reg::Bit<Reg::PSW, Reg::PSW::CY>::get()) {
+      if (Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get()) {
         SET_BIT_IN(RAM[0x25], 0);
       } else {
         CLEAR_BIT_IN(RAM[0x25], 0);
@@ -493,7 +519,7 @@ inline void firstToothAfterMissingOnesCaptured() {
 
       CLEAR_BIT_IN(RAM[0x2D], 4);
       goto _09AB;
-    } else if (Reg::Bit<Reg::PSW, Reg::PSW::CY>::get()) {
+    } else if (Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get()) {
       // _098A:
       // camshaft_reference_mark_active:
       if (!CHECK_BIT_AT(RAM[0x25], 0)) {
@@ -535,7 +561,7 @@ inline void firstToothAfterMissingOnesCaptured() {
         SET_BIT_IN(RAM[0x25], 0);
 
       // _09AB:
-      if (!Reg::Bit<Reg::PSW, Reg::PSW::CY>::get()) {
+      if (!Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get()) {
         goto inc_ram_33_should_reset_to_0; // _09B2 TODO
       } else {
         goto ram_33_less_than_2; // _09AD TODO
@@ -548,21 +574,20 @@ inline void firstToothAfterMissingOnesCaptured() {
   }
 }
 
-// Just a fool-proof comparison for equality
-template <typename T1, typename T2>
-bool equal(const T1 lhs, const T2 rhs) {
-  return lhs == rhs;
-}
-
 // _093E:
 inline void regularToothCaptured() {
+  USE_GPR_WORD(R5_R4);
+  USE_GPR_WORD(R1_R0);
+  USE_GPR(R6);
+  USE_GPR(R7);
+
   // Regular tooth captured?
   // _093E:
   R5_R4 = R1_R0;
   ++R6;
   ++R7;
 
-  if (0x1E == R7) {
+  if (BYTE(0x1E) == R7) {
     R7 = 0;
     ++RAM[0x33];
   }
@@ -573,7 +598,7 @@ inline void regularToothCaptured() {
 }
 
 // _0870:
-inline void _0870() {
+inline void reset_Ignition_ClearAndSetMasks_Calculus() {
   // _0870:
   Reg::CLRMSK::Inst = 0;
   Reg::SETMSK::Inst = 0;
@@ -584,12 +609,12 @@ inline void _0870() {
     Reg::Mask<Reg::IEN2>{}.add<Reg::IEN2::ECR>();
   }
 
-  _087D();
+  reset_Calculus();
 }
 
 inline void _0912() {
-  Reg::R3_R2 R3_R2;
-  Reg::R6 R6;
+  USE_GPR_WORD(R3_R2);
+  USE_GPR(R6);
 
   // _0912:
   word CurrentEventTimestamp = Reg::CC3::Inst;
@@ -601,18 +626,23 @@ inline void _0912() {
   // 0x38 - 56 (dec)
   // 0x3B - 59 (dec)
 
-  if (0x38 == R6) {
+  if (Const::SyncDiscLastRealToothMinus1 /* 0x38 */ == R6) {
     // _091F:
     prepareForMissingToothRegion();
-  } else if (R6 < 0x38) {
+
+    //goto r7_neq_1e;
+    regularToothCapturedImpl(); // _09B7 do the usual thing?
+  } else if (R6 < Const::SyncDiscLastRealToothMinus1 /* 0x38 */) {
     regularToothCaptured();
-  } else if (0x3B == R6) {
+  } else if (Const::SyncDiscLastTooth /* 0x3B */ == R6) {
     firstToothAfterMissingOnesCaptured();
   } else /* (R6 > 0x38) && (R6 != 0x3B) */ {
+    // Seems to be some sort of failure - missing tooth gets captured instead of
+    // compare. Error condition ?
     // _094D:
     // r6_neq_3b:
     SET_BIT_IN(RAM[0x20], 3);
-    _0870(); // TODO
+    reset_Ignition_ClearAndSetMasks_Calculus(); // TODO
   }
 }
 
@@ -623,7 +653,7 @@ inline void _086E() {
   // r5_r4_less_than_ram_32_ram_31:
   SET_BIT_IN(RAM[0x20], 0);
 
-  _0870();
+  reset_Ignition_ClearAndSetMasks_Calculus();
   //goto graceful_finish_ext_int_6; // _0C05
 }
 
@@ -649,22 +679,19 @@ inline void _086E() {
 // R7 -
 inline void ExtInt6_CaptureEvent() {
   // non_even_zero_cross?:
-  using Ram31WordT = location::AsWord<seg::RAM, 0x31>;
-  using Ram36WordT = location::AsWord<seg::RAM, 0x36>;
-  using Ram38WordT = location::AsWord<seg::RAM, 0x38>;
 
-  Reg::R0Sel<2> R0_bank2;
-  Reg::R1Sel<2> R1_bank2;
-  Reg::R2Sel<2> R2_bank2;
-  Reg::R3Sel<2> R3_bank2;
-  Reg::R4Sel<2> R4_bank2;
-  Reg::R5Sel<2> R5_bank2;
-  Reg::R6Sel<2> R6_bank2;
-  Reg::R7Sel<1> R7_bank1;
+  USE_GPR_SEL(2, R0);
+  USE_GPR_SEL(2, R1);
+  USE_GPR_SEL(2, R2);
+  USE_GPR_SEL(2, R3);
+  USE_GPR_SEL(2, R4);
+  USE_GPR_SEL(2, R5);
+  USE_GPR_SEL(2, R6);
+  USE_GPR_SEL(1, R7);
 
-  Reg::R1_R0 R1_R0;
-  Reg::R3_R2 R3_R2;
-  Reg::R5_R4 R5_R4;
+  USE_GPR_WORD(R1_R0);
+  USE_GPR_WORD(R3_R2);
+  USE_GPR_WORD(R5_R4);
 
   Reg::PSW::Inst = registerBankMask(3);
   if (!CHECK_BIT_AT(RAM[0x25], 1)) {
@@ -752,9 +779,9 @@ inline void ExtInt6_CaptureEvent() {
                 RAM[0x30] = 3;
                 goto _0823; // TODO
               }
-              UNREACHABLE
+              UNREACHABLE;
             }
-            UNREACHABLE
+            UNREACHABLE;
           } else {
             // _07ED:
             quad Sum = QUAD(Ram31W) + (R5_R4 >> 1);
@@ -765,7 +792,7 @@ inline void ExtInt6_CaptureEvent() {
             } else {
               goto _0806; // TODO
             }
-            UNREACHABLE
+            UNREACHABLE;
           }
           UNREACHABLE;
         } else /* _07CB: */ if (!R5) {
@@ -802,9 +829,9 @@ inline void ExtInt6_CaptureEvent() {
         // _079A:
         goto no_overflow_on_ram32_ram31_plus_half_r5_r4; // => _0820 TODO
       }
-      UNREACHABLE
+      UNREACHABLE;
     }
-  } else /* _08F8: */ if (!R1 && !R5) {
+  } else /* _08F8: */ if (!HIGH(R1_R0) && !HIGH(R5_R4)) {
     // RAM[0x30] equals 4 here
     // _0902:
     // both_r1_and_r5_eq_0:
@@ -828,11 +855,11 @@ inline void ExtInt6_CaptureEvent() {
     // _082E:
     // either_r1_or_r5_neq_0:
 
-    if (R1_R0 >= (R5_R4 * 2) {
+    if (R1_R0 >= (R5_R4 * 2)) {
       // The first tooth after the missing ones is captured?
       _086E();
       return;
-    } else if ((R1_R0 >= R5_R4) || (R1_R0 >= (R5_R4 / 2)) {
+    } else if ((R1_R0 >= R5_R4) || (R1_R0 >= (R5_R4 / 2))) {
       // Crankshaft has rotated for yet another tooth. We captured the tooth.
       // _0912:
       // TODO
