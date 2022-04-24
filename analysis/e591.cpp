@@ -2086,13 +2086,6 @@ inline void _11F0() {
   _11F3();
 }
 
-static byte SET_CLEAR_MASKS_PER_COIL[static_cast<byte>(CoilE::CoilCount)] = {
-  // 0 = Coil 2/3
-  0xFE,
-  // 1 = Coil 1/4
-  0xFD,
-};
-
 // _12FF:
 inline void finishTimer0OverflowInterrupt() {
   // _12FF:
@@ -2662,235 +2655,6 @@ inline void _0823() {
   goto set_ram_25_5_and_graceful_finish_ext_int_6; // => _0C03 TODO
 }
 
-// _0897:
-// Called iff ExtInt6 is triggered for compare match on CC3
-// Uses register bank 3
-// R6 - synchronization disc tooth counter ?
-// R7 - same?
-// R3:R2 - assigned to CC3 if RAM[0x25].1 is set
-// R5:R4 - contains delta when to match compare on CC3 yet another time
-inline void ExtInt6_CompareMatch() {
-  // ram_26_2_is_set:
-  Reg::PSW::Inst = registerBankMask(3);
-
-  Reg::R6 R6;
-  Reg::R7 R7;
-  Reg::R3_R2 R3_R2;
-  Reg::R5_R4 R5_R4;
-
-  if (!CHECK_BIT_AT(RAM[0x25], 1)) {
-    // Prepare for crankshaft revolution to begin?
-    // _088D:
-    // ram_25_bit_1_not_set:
-    CLEAR_BIT_IN(RAM[0x26], 2);
-    // Capture on rising edge at P1.3/INT6/CC3
-    {
-      Reg::Mask<Reg::CCEN>{}.add<Reg::CCEN::COCAH3, Reg::CCEN::COCAL3>();
-    }
-    {
-      Reg::Set<Reg::CCEN>{}.add<Reg::CCEN, COCAL3>();
-    }
-
-    _08C6(); // TODO
-    goto graceful_finish_ext_int_6; // _0C05 TODO
-    UNREACHABLE;
-  } else {
-    // _08A3:
-    R3_R2 = Reg::CC3::Inst;
-    // 0x39 = 57 (dec), maximum for [0..58=60-2) segment
-    if (R6 != 0x39) {
-      // Lets capture the next tooth timestamp
-      // _08B9:
-      // r6_neq_39:
-      CLEAR_BIT_IN(RAM[0x26], 2);
-
-      // Capture on rising edge at P1.3/INT6/CC3
-      {
-        Reg::Mask<Reg::CCEN>{}.add<Reg::CCEN::COCAH3, Reg::CCEN::COCAL3>();
-      }
-      {
-        Reg::Set<Reg::CCEN>{}.add<Reg::CCEN, COCAL3>();
-      }
-
-      // We think crankshaft has rotated for another tooth
-      ++R6;
-      ++R7;
-    } else /* R6 == 0x39 (57 dec) */ {
-      /* Start of missing tooth region, can't capture, only compare */
-      // _08AA:
-      Reg::CC3::Inst += R5_R4::get();
-      {
-        Reg::Mask<Reg::IRCON0>{}.add<Reg::IRCON0::IEX6>();
-      }
-
-      // We think crankshaft has rotated for another tooth
-      ++R6;
-      ++R7;
-    }
-
-    goto r7_neq_1e; // _09B7 TODO do the usual thing?
-    UNREACHABLE;
-  }
-  UNREACHABLE;
-}
-
-inline void prepareForMissingToothRegion() {
-  Reg::R5_R4 R5_R4;
-  Reg::R1_R0 R1_R0;
-  Reg::R3_R2 R3_R2;
-
-  // Missing tooth region is about to begin. Hence, schedule a compare match
-  // within R1_R0 jiffies. Store R1_R0 in R5_R4 for the next event for checks.
-  // _091F:
-  R5_R4 = R1_R0;
-  SET_BIT_IN(RAM[0x26], 2);
-  // Compare mode for P1.3/INT6/CC3
-  {
-    Reg::Mask<Reg::CCEN>{}.add<Reg::CCEN::COCAH3, Reg::CCEN::COCAL3>();
-  }
-  {
-    Reg::Set<Reg::CCEN>{}.add<Reg::CCEN, COCAH3>();
-  }
-
-  SET_BIT_IN(P1, 3); // enable alternate function of P1.3
-
-  Reg::CC3::Inst = R3_R2 + R5_R4;
-
-  // IRCON0.IEX6 = 0
-  // should be cleared by H/W when processor vectors to interrupt
-  // routine
-  {
-    Reg::Mask<Reg::IRCON0>{}.add<Reg::IRCON0::IEX6>();
-  }
-
-  ++R6;
-  ++R7;
-
-  goto r7_neq_1e; // _09B7 TODO do the usual thing?
-}
-
-// _0955:
-inline void firstToothAfterMissingOnesCaptured() {
-  // The first tooth after missing one is captured?
-  // _0955:
-  R6 = 0;
-  R7 = 0;
-
-  if (CHECK_BIT_AT(RAM[0x25], 5)) {
-    // _095C:
-    location::AsWord<seg::RAM, 0x44>::set(
-        R3_R2 - location::AsWord<seg::RAM, 0x46>::get());
-  }
-
-  // _0967:
-  // ram_25_bit_2_not_set:
-  location::AsWord<seg::RAM, 0x46>::set(R3_R2);
-
-  SET_BIT_IN(RAM[0x25], 2);
-
-  if (CHECK_BIT_AT(RAM[0x2D], 7)) {
-    // _0974:
-    // ram_2d_bit_7_set:
-    if (!CHECK_BIT_AT(RAM[0x2E], 0)) {
-      // _097B:
-      // ram_2e_bit_0_not_set:
-      bool CamshaftPositionIRQ =
-          !!Reg::Bit<Reg::IRCON0, Reg::IRCON0::IEX5>::get();
-
-      {
-        Reg::Mask<Reg::IRCON0>{}.add<IRCON0::IEX5>();
-      }
-      if (CamshaftPositionIRQ) {
-        // TODO Check where it is used
-        Reg::Mask<Reg::PSW>{}.add<Reg::PSW::CY>();
-      } else {
-        // TODO Check where it is used
-        Reg::Set<Reg::PSW>{}.add<Reg::PSW::CY>();
-      }
-    } else {
-      // _0977:
-      bool CamshaftMarkActive = CHECK_BIT_AT(P1, 2);
-      if (CamshaftMarkActive) {
-        // TODO Check where it is used
-        Reg::Set<Reg::PSW>{}.add<Reg::PSW::CY>();
-      } else {
-        // TODO Check where it is used
-        Reg::Mask<Reg::PSW>{}.add<Reg::PSW::CY>();
-      }
-    }
-
-    // _0980:
-    if (CHECK_AND_CLEAR_BIT(RAM[0x29], 6)) {
-      // _09A1:
-      // ram_29_bit_6_set:
-      if (Reg::Bit<Reg::PSW, Reg::PSW::CY>::get()) {
-        SET_BIT_IN(RAM[0x25], 0);
-      } else {
-        CLEAR_BIT_IN(RAM[0x25], 0);
-      }
-
-      CLEAR_BIT_IN(RAM[0x2D], 4);
-      goto _09AB;
-    } else if (Reg::Bit<Reg::PSW, Reg::PSW::CY>::get()) {
-      // _098A:
-      // camshaft_reference_mark_active:
-      if (!CHECK_BIT_AT(RAM[0x25], 0)) {
-        goto ram_25_bit_0_not_set_2; // _09A7 TODO
-      } else {
-        goto ram_25_bit_0_not_set; // _098D TODO
-      }
-    } else if (!CHECK_BIT_AT(RAM[0x25], 0)) {
-      // _098D:
-      // ram_25_bit_0_not_set:
-      SET_BIT_IN(RAM[0x2D], 4);
-
-      // _098F:
-      byte Ram33 = RAM[0x33];
-
-      if (++Ram33 == 4)
-        Ram33 = 0;
-
-      if (!Ram33 || Ram33 > 2) {
-        // _09B2:
-        // inc_ram_33_should_reset_to_0:
-        RAM[0x33] = 0;
-        SET_BIT_IN(RAM[0x25], 6);
-      } else /* if (Ram33 <= 2) */ {
-        // _09AD:
-        // ram_33_less_than_2:
-        RAM[0x33] = 2;
-      }
-
-      goto r7_neq_1e; // _09B7 TODO
-    } else {
-      // _09A7:
-      // ram_25_bit_0_not_set_2:
-      CLEAR_BIT_IN(RAM[0x2D], 4);
-      if (CHECK_BIT_AT(RAM[0x25], 0))
-        CLEAR_BIT_IN(RAM[0x25], 0);
-      else
-        SET_BIT_IN(RAM[0x25], 0);
-
-      // _09AB:
-      if (!Reg::Bit<Reg::PSW, Reg::PSW::CY>::get()) {
-        goto inc_ram_33_should_reset_to_0; // _09B2 TODO
-      } else {
-        goto ram_33_less_than_2; // _09AD TODO
-      }
-    }
-  } else {
-    // _0970:
-    CLEAR_BIT_IN(RAM[0x2D], 4);
-    goto _098F;
-  }
-}
-
-// Just a fool-proof comparison for equality
-template <typename T1, typename T2>
-bool equal(const T1 lhs, const T2 rhs) {
-  return lhs == rhs;
-}
-
 inline void regularToothCapturedImpl() {
   if (R5 >= 4) {
     // _09BD:
@@ -3166,6 +2930,238 @@ inline void regularToothCapturedImpl() {
   }
 
   //goto set_ram_25_5_and_graceful_finish_ext_int_6; // _0C03
+}
+
+// _0897:
+// Called iff ExtInt6 is triggered for compare match on CC3
+// Uses register bank 3
+// R6 - synchronization disc tooth counter ?
+// R7 - same?
+// R3:R2 - assigned to CC3 if RAM[0x25].1 is set
+// R5:R4 - contains delta when to match compare on CC3 yet another time
+inline void ExtInt6_CompareMatch() {
+  // ram_26_2_is_set:
+  Reg::PSW::Inst = registerBankMask(3);
+
+  Reg::R6 R6;
+  Reg::R7 R7;
+  Reg::R3_R2 R3_R2;
+  Reg::R5_R4 R5_R4;
+
+  if (!CHECK_BIT_AT(RAM[0x25], 1)) {
+    // Prepare for crankshaft revolution to begin?
+    // _088D:
+    // ram_25_bit_1_not_set:
+    CLEAR_BIT_IN(RAM[0x26], 2);
+    // Capture on rising edge at P1.3/INT6/CC3
+    {
+      Reg::Mask<Reg::CCEN>{}.add<Reg::CCEN::COCAH3, Reg::CCEN::COCAL3>();
+    }
+    {
+      Reg::Set<Reg::CCEN>{}.add<Reg::CCEN, COCAL3>();
+    }
+
+    _08C6(); // TODO
+    goto graceful_finish_ext_int_6; // _0C05 TODO
+    UNREACHABLE;
+  } else {
+    // _08A3:
+    R3_R2 = Reg::CC3::Inst;
+    // 0x39 = 57 (dec), maximum for [0..58=60-2) segment
+    if (R6 != 0x39) {
+      // Lets capture the next tooth timestamp
+      // _08B9:
+      // r6_neq_39:
+      CLEAR_BIT_IN(RAM[0x26], 2);
+
+      // Capture on rising edge at P1.3/INT6/CC3
+      {
+        Reg::Mask<Reg::CCEN>{}.add<Reg::CCEN::COCAH3, Reg::CCEN::COCAL3>();
+      }
+      {
+        Reg::Set<Reg::CCEN>{}.add<Reg::CCEN, COCAL3>();
+      }
+
+      // We think crankshaft has rotated for another tooth
+      ++R6;
+      ++R7;
+    } else /* R6 == 0x39 (57 dec) */ {
+      /* Start of missing tooth region, can't capture, only compare */
+      // _08AA:
+      Reg::CC3::Inst += R5_R4::get();
+      {
+        Reg::Mask<Reg::IRCON0>{}.add<Reg::IRCON0::IEX6>();
+      }
+
+      // We think crankshaft has rotated for another tooth
+      ++R6;
+      ++R7;
+    }
+
+    //goto r7_neq_1e;
+    regularToothCapturedImpl(); // _09B7 TODO do the usual thing?
+    UNREACHABLE;
+  }
+  UNREACHABLE;
+}
+
+inline void prepareForMissingToothRegion() {
+  Reg::R5_R4 R5_R4;
+  Reg::R1_R0 R1_R0;
+  Reg::R3_R2 R3_R2;
+
+  // Missing tooth region is about to begin. Hence, schedule a compare match
+  // within R1_R0 jiffies. Store R1_R0 in R5_R4 for the next event for checks.
+  // _091F:
+  R5_R4 = R1_R0;
+  SET_BIT_IN(RAM[0x26], 2);
+  // Compare mode for P1.3/INT6/CC3
+  {
+    Reg::Mask<Reg::CCEN>{}.add<Reg::CCEN::COCAH3, Reg::CCEN::COCAL3>();
+  }
+  {
+    Reg::Set<Reg::CCEN>{}.add<Reg::CCEN, COCAH3>();
+  }
+
+  SET_BIT_IN(P1, 3); // enable alternate function of P1.3
+
+  Reg::CC3::Inst = R3_R2 + R5_R4;
+
+  // IRCON0.IEX6 = 0
+  // should be cleared by H/W when processor vectors to interrupt
+  // routine
+  {
+    Reg::Mask<Reg::IRCON0>{}.add<Reg::IRCON0::IEX6>();
+  }
+
+  ++R6;
+  ++R7;
+
+  //goto r7_neq_1e;
+  regularToothCapturedImpl(); // _09B7 TODO do the usual thing?
+}
+
+// _0955:
+inline void firstToothAfterMissingOnesCaptured() {
+  // The first tooth after missing one is captured?
+  // _0955:
+  R6 = 0;
+  R7 = 0;
+
+  if (CHECK_BIT_AT(RAM[0x25], 5)) {
+    // _095C:
+    location::AsWord<seg::RAM, 0x44>::set(
+        R3_R2 - location::AsWord<seg::RAM, 0x46>::get());
+  }
+
+  // _0967:
+  // ram_25_bit_2_not_set:
+  location::AsWord<seg::RAM, 0x46>::set(R3_R2);
+
+  SET_BIT_IN(RAM[0x25], 2);
+
+  if (CHECK_BIT_AT(RAM[0x2D], 7)) {
+    // _0974:
+    // ram_2d_bit_7_set:
+    if (!CHECK_BIT_AT(RAM[0x2E], 0)) {
+      // _097B:
+      // ram_2e_bit_0_not_set:
+      bool CamshaftPositionIRQ =
+          !!Reg::Bit<Reg::IRCON0, Reg::IRCON0::IEX5>::get();
+
+      {
+        Reg::Mask<Reg::IRCON0>{}.add<IRCON0::IEX5>();
+      }
+      if (CamshaftPositionIRQ) {
+        // TODO Check where it is used
+        Reg::Mask<Reg::PSW>{}.add<Reg::PSW::CY>();
+      } else {
+        // TODO Check where it is used
+        Reg::Set<Reg::PSW>{}.add<Reg::PSW::CY>();
+      }
+    } else {
+      // _0977:
+      bool CamshaftMarkActive = CHECK_BIT_AT(P1, 2);
+      if (CamshaftMarkActive) {
+        // TODO Check where it is used
+        Reg::Set<Reg::PSW>{}.add<Reg::PSW::CY>();
+      } else {
+        // TODO Check where it is used
+        Reg::Mask<Reg::PSW>{}.add<Reg::PSW::CY>();
+      }
+    }
+
+    // _0980:
+    if (CHECK_AND_CLEAR_BIT(RAM[0x29], 6)) {
+      // _09A1:
+      // ram_29_bit_6_set:
+      if (Reg::Bit<Reg::PSW, Reg::PSW::CY>::get()) {
+        SET_BIT_IN(RAM[0x25], 0);
+      } else {
+        CLEAR_BIT_IN(RAM[0x25], 0);
+      }
+
+      CLEAR_BIT_IN(RAM[0x2D], 4);
+      goto _09AB;
+    } else if (Reg::Bit<Reg::PSW, Reg::PSW::CY>::get()) {
+      // _098A:
+      // camshaft_reference_mark_active:
+      if (!CHECK_BIT_AT(RAM[0x25], 0)) {
+        goto ram_25_bit_0_not_set_2; // _09A7 TODO
+      } else {
+        goto ram_25_bit_0_not_set; // _098D TODO
+      }
+    } else if (!CHECK_BIT_AT(RAM[0x25], 0)) {
+      // _098D:
+      // ram_25_bit_0_not_set:
+      SET_BIT_IN(RAM[0x2D], 4);
+
+      // _098F:
+      byte Ram33 = RAM[0x33];
+
+      if (++Ram33 == 4)
+        Ram33 = 0;
+
+      if (!Ram33 || Ram33 > 2) {
+        // _09B2:
+        // inc_ram_33_should_reset_to_0:
+        RAM[0x33] = 0;
+        SET_BIT_IN(RAM[0x25], 6);
+      } else /* if (Ram33 <= 2) */ {
+        // _09AD:
+        // ram_33_less_than_2:
+        RAM[0x33] = 2;
+      }
+
+      //goto r7_neq_1e;
+      regularToothCapturedImpl(); // _09B7 TODO
+    } else {
+      // _09A7:
+      // ram_25_bit_0_not_set_2:
+      CLEAR_BIT_IN(RAM[0x2D], 4);
+      if (CHECK_BIT_AT(RAM[0x25], 0))
+        CLEAR_BIT_IN(RAM[0x25], 0);
+      else
+        SET_BIT_IN(RAM[0x25], 0);
+
+      // _09AB:
+      if (!Reg::Bit<Reg::PSW, Reg::PSW::CY>::get()) {
+        goto inc_ram_33_should_reset_to_0; // _09B2 TODO
+      } else {
+        goto ram_33_less_than_2; // _09AD TODO
+      }
+    }
+  } else {
+    // _0970:
+    CLEAR_BIT_IN(RAM[0x2D], 4);
+    goto _098F;
+  }
+}
+
+// Just a fool-proof comparison for equality
+template <typename T1, typename T2>
+bool equal(const T1 lhs, const T2 rhs) {
+  return lhs == rhs;
 }
 
 // _093E:

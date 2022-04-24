@@ -7,10 +7,32 @@
 #include <flash.hpp>
 #include <xram.hpp>
 #include <registers.hpp>
+#include <pins.hpp>
 
 #define WAIT_MACHINE_CYCLES_BY_2(x) /* waits for x*2 machine cycles, x = 0 is 0x100 */
 
 #define IGNITION_VOLTAGE_FACTOR BYTE(0x75)
+
+enum class CoilE : byte {
+  C_1_4 = 1,
+  C_2_3 = 0,
+
+  CoilCount = 2
+};
+
+static byte SET_CLEAR_MASKS_PER_COIL[static_cast<byte>(CoilE::CoilCount)] = {
+  // 0 = Coil 2/3
+  0xFE,
+  // 1 = Coil 1/4
+  0xFD,
+};
+
+static pin COIL_PIN[static_cast<byte>(CoilE::CoilCount)] = {
+  // 0 = Coil 2/3
+  IGNITION_COIL_23_PIN,
+  // 1 = Coil 1/4
+  IGNITION_COIL_14_PIN
+};
 
 void Inputs_Part1();
 word GetAdcValueFromTableAndAdjustForCalculus(word FlashPtr, word ADCValue);
@@ -98,13 +120,6 @@ inline bool kitting_has_knock_sensor() {
 inline bool kitting_should_adapt_throttle_position_sensor() {
   return CHECK_BIT_AT(GET_RNG_START_PTR(FLASH, KITTING)[2], 6);
 }
-
-enum class CoilE : byte {
-  C_1_4 = 1,
-  C_2_3 = 0,
-
-  CoilCount = 2
-};
 
 inline void START_CHARGING_IGNITION_COIL(CoilE Coil) {
   CLEAR_BIT_IN(P5, static_cast<byte>(Coil));
