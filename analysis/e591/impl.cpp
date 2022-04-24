@@ -449,3 +449,36 @@ word AbsWordByMSB(word V) {
 
   return V;
 }
+
+bool CAS(byte *Ptr, byte Expected, byte Desired) {
+  assert(false && "Not implemented");
+}
+
+bool CHECK_AND_CLEAR_BIT(byte &Ptr, bit Bit) {
+  bool Ret = false;
+
+  if (CHECK_BIT_AT(Ptr, Bit)) {
+    /* bit is set */
+    /* clear bit atomically */
+    for (;;) {
+      byte Expected = Ptr;
+      byte Desired = Expected;
+
+      if (!CHECK_BIT_AT(Expected, Bit))
+        break;
+
+      CLEAR_BIT_IN(Desired, Bit);
+
+      if (CAS(&Ptr, Expected, Desired)) {
+        Ret = true;
+        break;
+      }
+    }
+  } else {
+    /* bit is clear */
+    // EMPTY
+  }
+
+  return Ret;
+}
+

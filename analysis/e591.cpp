@@ -1044,38 +1044,6 @@ inline byte tripple_rotate_right(byte Data, byte Mask) {
   return Data & Mask;
 }
 
-bool CAS(byte *Ptr, byte Expected, byte Desired) {
-  assert(false && "Not implemented");
-}
-
-inline bool CHECK_AND_CLEAR_BIT(byte &Ptr, bit Bit) {
-  bool Ret = false;
-
-  if (CHECK_BIT_AT(Ptr, Bit)) {
-    /* bit is set */
-    /* clear bit atomically */
-    for (;;) {
-      byte Expected = Ptr;
-      byte Desired = Expected;
-
-      if (!CHECK_BIT_AT(Expected, Bit))
-        break;
-
-      CLEAR_BIT_IN(Desired, Bit);
-
-      if (CAS(&Ptr, Expected, Desired)) {
-        Ret = true;
-        break;
-      }
-    }
-  } else {
-    /* bit is clear */
-    // EMPTY
-  }
-
-  return Ret;
-}
-
 // _2950:
 // K/L-line communication?
 // funny_thing_with_ISO9141:

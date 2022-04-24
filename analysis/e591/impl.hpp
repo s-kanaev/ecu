@@ -195,3 +195,13 @@ inline bool setTxD_and_checkLO_MC33199(bool TxDVal) {
 
   return checkLO_MC33199();
 }
+
+// MISCELLANEOUS
+bool CAS(byte *Ptr, byte Expected, byte Desired);
+bool CHECK_AND_CLEAR_BIT(byte &Ptr, bit Bit);
+
+// Just a fool-proof comparison for equality
+template <typename T1, typename T2>
+bool equal(const T1 lhs, const T2 rhs) {
+  return lhs == rhs;
+}
