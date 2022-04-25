@@ -34,7 +34,7 @@ inline void reset_Calculus() {
 }
 
 // _08C6:
-inline void _08C6() {
+inline void set_RAM25_bit5_and_reset_Calculus() {
   SET_BIT_IN(RAM[0x25], 5);
   reset_Calculus();
 }
@@ -48,6 +48,73 @@ inline void _0823() {
   R5_R4 = R1_R0;
   R3_R2 = Reg::CC3::Inst;
   goto set_ram_25_5_and_graceful_finish_ext_int_6; // => _0C03 TODO
+}
+
+template <CoilE Coil>
+void scheduleChargingOfIgnitionCoil(word scheduledTimestamp) {
+  //USE_GPR_WORD(R1_R0);
+  //R1_R0 = scheduledTimestamp;
+
+  byte IgnCoilADCV = ADC_8bit(COIL_PIN[static_cast<byte>(Coil)]);
+  bool IgnCoilADCVAboveLimit = false;
+
+  if (IgnCoilADCV >= 0x83) {
+    SET_BIT_IN(RAM[0x89], (static_cast<byte>(Coil) * 2));
+    IgnCoilADCVAboveLimit = true;
+  } else if (IgnCoilADCV < 0x14) {
+    SET_BIT_IN(RAM[0x89], (static_cast<byte>(Coil) * 2 + 1));
+  }
+
+  if (!IgnCoilADCVAboveLimit) {
+    Reg::COMCLR::Inst = scheduledTimestamp; //R1_R0;
+
+    // Start charging Ignition Coil when COMCLR matches Timer2
+    if constexpr (Coil == CoilE::C_1_4) {
+      {
+        Reg::Set<Reg::CLRMSK>{}.add<Reg::CLRMSK::b1>();
+      }
+      {
+        Reg::Mask<Reg::SETMSK>{}.add<Reg::SETMSK::b1>();
+      }
+    } else if constexpr (Coil == CoilE::C_2_3) {
+      {
+        Reg::Set<Reg::CLRMSK>{}.add<Reg::CLRMSK::b1>();
+      }
+      {
+        Reg::Mask<Reg::SETMSK>{}.add<Reg::SETMSK::b1>();
+      }
+    }
+//     Reg::CLRMSK::Inst |= SET_CLEAR_MASKS_PER_COIL[static_cast<byte>(Coil)];
+//     Reg::SETMSK::Inst &= ~SET_CLEAR_MASKS_PER_COIL[static_cast<byte>(Coil)];
+
+    // Reset COMCLR Register compare interrupt request
+    {
+      Reg::Mask<Reg::CTCON>{}.add<Reg::CTCON::ICR>();
+    }
+    // Enable COMCLR Register compare interrupt
+    {
+      Reg::Set<Reg::IEN2>{}.add<Reg::IEN2::ECR>();
+    }
+
+    CLEAR_BIT_IN(RAM[0x2E], 6);
+    CLEAR_BIT_IN(RAM[0x2E], 7);
+  }
+}
+
+template <CoilE Coil>
+void scheduleDischargeOfIgnitionCoil(word scheduledTimestamp) {
+  // R1_R0 = scheduledTimestamp;
+  Reg::COMSET::Inst = scheduledTimestamp;
+
+  if constexpr (Coil == CoilE::C_1_4) {
+    {
+      Reg::Set<Reg::SETMSK>{}.add<Reg::SETMSK::b1>();
+    }
+  } else if constexpr (Coil == CoilE::C_2_3) {
+    {
+      Reg::Set<Reg::SETMSK>{}.add<Reg::SETMSK::b0>();
+    }
+  }
 }
 
 inline void regularToothCapturedImpl() {
@@ -92,10 +159,12 @@ inline void regularToothCapturedImpl() {
   if (equal(R6, R0_bank2)) {
     // _09EC:
     SET_BIT_IN(P5, 4);
-    R1_R0 = (QUAD(R5_R4) << 1) * R1_bank2 / 256;
+    word scheduledTimestamp = (QUAD(R5_R4) << 1) * R1_bank2 / 256;
 
     // _0A11:
-    R1_R0 = R1_R0 + R3_R2;
+    scheduledTimestamp += R3_R2;
+
+    // R1_R0 = scheduledTimestamp;
 
     if (R5_bank2 < 2) {
       RAM[0x5C] = R5_bank2;
@@ -106,88 +175,18 @@ inline void regularToothCapturedImpl() {
     switch (RAM[0x5C]) {
       case 0x00: {
         // _0A25:
-        byte IgnCoil14ADCV = ADC_8bit(IGNITION_COIL_14_PIN);
-        bool IgnCoil14ADCVAboveLimit = false;
-
-        if (IgnCoil14ADCV >= 0x83) {
-          // _0A3A:
-          RAM[0x89] |= 4;
-          IgnCoil14ADCVAboveLimit = true;
-        } else if (IgnCoil14ADCV < 0x14) {
-          // _0A4E:
-          RAM[0x89] |= 8;
-        }
-
-        // _0A5B:
-        // ign_coil_14_adc_voltage_greater_or_equal_14:
-        if (!IgnCoil14ADCVAboveLimit) {
-          // _0A5F:
-          Reg::COMCLR::Inst = R1_R0;
-
-          // Start charging Ignition Coil 1/4 when COMCLR matches Timer2
-          {
-            Reg::Set<Reg::CLRMSK>{}.add<Reg::CLRMSK::b1>();
-          }
-          {
-            Reg::Mask<Reg::SETMSK>{}.add<Reg::SETMSK::b1>();
-          }
-          // Reset COMCLR Register compare interrupt request
-          {
-            Reg::Mask<Reg::CTCON>{}.add<Reg::CTCON::ICR>();
-          }
-          // Enable COMCLR Register compare interrupt
-          {
-            Reg::Set<Reg::IEN2>{}.add<Reg::IEN2::ECR>();
-          }
-
-          CLEAR_BIT_IN(RAM[0x2E], 6);
-          CLEAR_BIT_IN(RAM[0x2E], 7);
-        }
+        scheduleChargingOfIgnitionCoil<CoilE::C_1_4>(scheduledTimestamp);
+        break;
       }
       case 0x01: {
         // _0A76:
-        byte IgnCoil23ADCV = ADC_8bit(IGNITION_COIL_23_PIN);
-        bool IgnCoil23ADCVAboveLimit = false;
-
-        if (IgnCoil23ADCV >= 0x83) {
-          // _0A8B:
-          RAM[0x89] |= 1;
-          IgnCoil23ADCVAboveLimit = true;
-        } else if (IgnCoil23ADCV < 0x14) {
-          // _0A9F:
-          RAM[0x89] |= 2;
-        }
-
-        // _0AAC:
-        // ign_coil_23_adc_voltage_greater_or_equal_14:
-        if (!IgnCoil23ADCVAboveLimit) {
-          // _0AB0:
-          Reg::COMCLR::Inst = R1_R0;
-
-          // Start charging Ignition Coil 2/3 when COMCLR matches Timer2
-          {
-            Reg::Set<Reg::CLRMSK>{}.add<Reg::CLRMSK::b0>();
-          }
-          {
-            Reg::Mask<Reg::SETMSK>{}.add<Reg::SETMSK::b0>();
-          }
-          // Reset COMCLR Register compare interrupt request
-          {
-            Reg::Mask<Reg::CTCON>{}.add<Reg::CTCON::ICR>();
-          }
-          // Enable COMCLR Register compare interrupt
-          {
-            Reg::Set<Reg::IEN2>{}.add<Reg::IEN2::ECR>();
-          }
-
-          CLEAR_BIT_IN(RAM[0x2E], 6);
-          CLEAR_BIT_IN(RAM[0x2E], 7);
-        }
+        scheduleChargingOfIgnitionCoil<CoilE::C_2_3>(scheduledTimestamp);
+        break;
       }
     }
 
     //goto r6_bank_3_neq_r0_bank_2_impl; // _0AC5
-  }
+  } // if (equal(R6, R0_bank2))
 
   // _09E9:
   // r6_bank_3_neq_r0_bank_2:
@@ -197,24 +196,23 @@ inline void regularToothCapturedImpl() {
   if (equal(R6, R2_bank2)) {
     // _0ACD:
     CLEAR_BIT_IN(P5, 4);
-    R1_R0 = QUAD(R5_R4) * R3_bank2 / 256;
+    word scheduledTimestamp = QUAD(R5_R4) * R3_bank2 / 256;
 
     // _0AF2:
-    R1_R0 += R3_R2;
+    scheduledTimestamp += R3_R2;
+    // R1_R0 = scheduledTimestamp;
 
     switch (R5_bank2) {
       case 0:
       case 2: {
         // _0B04:
-        Reg::COMSET::Inst = R1_R0;
-        SET_BIT_IN(Reg::SETMSK::Inst, 1); // Ignite Coil 1/4 when Timer2 matches COMSET
+        scheduleDischargeOfIgnitionCoil<CoilE::C_1_4>(scheduledTimestamp);
         break;
       }
       case 1:
       case 3: {
         // _0B0E:
-        Reg::COMSET::Inst = R1_R0;
-        SET_BIT_IN(Reg::SETMSK::Inst, 0); // Ignite Coil 2/3 when Timer2 matches COMSET
+        scheduleDischargeOfIgnitionCoil<CoilE::C_2_3>(scheduledTimestamp);
         break;
       }
     }
@@ -227,7 +225,7 @@ inline void regularToothCapturedImpl() {
       R5_bank2 = 0;
 
     // _0B22:
-    if (CHECK_BIT_AT(RAM[0x2D], 7) &&
+    if (CHECK_BIT_AT(RAM[0x2D], 7) /* if there's a camshaft position sensor */ &&
         !CHECK_BIT_AT(RAM[0x2D], 4) &&
         (!!CHECK_BIT_AT(RAM[0x26], 5) != !!CHECK_BIT_AT(RAM[0x25], 0))) {
       // _0B33:
@@ -247,7 +245,7 @@ inline void regularToothCapturedImpl() {
     R3_bank2 = RAM[0x99 + (R5_bank2 << 2) + 3];
 
     //goto r6_bank_3_neq_r6_bank_2_impl; // _0B58
-  }
+  } // if (equal(R6, R2_bank2))
 
   // _0ACA:
   // r6_bank_3_neq_r2_bank_2
@@ -258,6 +256,7 @@ inline void regularToothCapturedImpl() {
     // _0B60:
     // r6_eq_r7_bank1:
     if (!CHECK_BIT_AT(RAM[0x2E], 1)) {
+      // No knock sensor available
       // _0B9A:
       // ram_2e_bit_1_not_set:
       RAM[0x6D] = FLASH[0x0785 + R6_bank2] - 1;
@@ -324,10 +323,9 @@ inline void regularToothCapturedImpl() {
 
     // _0BE1:
     R4_bank2 = RAM[0xA9 + Offset + 1];
-    R0 = Offset + 1;
 
     //goto r6_neq_r7_bank1_impl; // _0BE4
-  }
+  } // if (equal(R6, R7_bank1))
 
   // _0B5D:
   // r6_neq_r7_bank1:
@@ -336,6 +334,7 @@ inline void regularToothCapturedImpl() {
   // _0BE4:
   if (!CHECK_BIT_AT(R7, 0) && (R7 < 0x1E)) {
     // _0BF0:
+    // Get MAF data once per two teeth
     RAM[0x8A + (R7 >> 1)] = ADC_8bit(MAF_PIN);
   }
 
@@ -376,14 +375,13 @@ inline void ExtInt6_CompareMatch() {
       Reg::Set<Reg::CCEN>{}.add<Reg::CCEN::COCAL3>();
     }
 
-    _08C6(); // TODO
-    goto graceful_finish_ext_int_6; // _0C05 TODO
-    UNREACHABLE;
+    set_RAM25_bit5_and_reset_Calculus(); // TODO
+    //goto graceful_finish_ext_int_6; // _0C05 TODO
   } else {
     // _08A3:
     R3_R2 = Reg::CC3::Inst;
     // 0x39 = 57 (dec), maximum for [0..58=60-2) segment
-    if (R6 == Const::SyncDiscLastRealTooth /* BYTE(0x39) */) {
+    if (equal(R6, Const::SyncDiscLastRealTooth /* BYTE(0x39) */)) {
       /* Start of missing tooth region, can't capture, only compare */
       // _08AA:
       Reg::CC3::Inst += R5_R4;
@@ -414,10 +412,8 @@ inline void ExtInt6_CompareMatch() {
     }
 
     //goto r7_neq_1e;
-    regularToothCapturedImpl(); // _09B7 TODO do the usual thing?
-    UNREACHABLE;
+    regularToothCapturedImpl(); // _09B7 do the usual thing?
   }
-  UNREACHABLE;
 }
 
 inline void prepareForMissingToothRegion() {
@@ -458,6 +454,10 @@ inline void prepareForMissingToothRegion() {
 
 // _0955:
 inline void firstToothAfterMissingOnesCaptured() {
+  USE_GPR(R6);
+  USE_GPR(R7);
+  USE_GPR_WORD(R3_R2);
+
   // The first tooth after missing one is captured?
   // _0955:
   R6 = 0;
@@ -479,10 +479,11 @@ inline void firstToothAfterMissingOnesCaptured() {
     // _0974:
     // ram_2d_bit_7_set:
     if (!CHECK_BIT_AT(RAM[0x2E], 0)) {
+      // If Camshaft Position Sensor corss-section is NOT aligned with TDC
       // _097B:
       // ram_2e_bit_0_not_set:
       bool CamshaftPositionIRQ =
-          !!Reg::Bit<Reg::IRCON0, Reg::IRCON0::IEX5>{}.get();
+          !Reg::Bit<Reg::IRCON0, Reg::IRCON0::IEX5>{}.get();
 
       {
         Reg::Mask<Reg::IRCON0>{}.add<Reg::IRCON0::IEX5>();
@@ -495,7 +496,8 @@ inline void firstToothAfterMissingOnesCaptured() {
         // TODO Check where it is used
         Reg::Set<Reg::PSW>{}.add<Reg::PSW::CY>();
       }
-    } else {
+    } /* if (!CHECK_BIT_AT(RAM[0x2E], 0)) */ else {
+      // If Camshaft Position Sensor corss-section is aligned with TDC
       // _0977:
       bool CamshaftMarkActive = CHECK_BIT_AT(P1, 2);
       if (CamshaftMarkActive) {
@@ -505,7 +507,7 @@ inline void firstToothAfterMissingOnesCaptured() {
         // TODO Check where it is used
         Reg::Mask<Reg::PSW>{}.add<Reg::PSW::CY>();
       }
-    }
+    } /* if (!CHECK_BIT_AT(RAM[0x2E], 0)) - else */
 
     // _0980:
     if (CHECK_AND_CLEAR_BIT(RAM[0x29], 6)) {
@@ -519,7 +521,7 @@ inline void firstToothAfterMissingOnesCaptured() {
 
       CLEAR_BIT_IN(RAM[0x2D], 4);
       goto _09AB;
-    } else if (Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get()) {
+    } /* if (CHECK_AND_CLEAR_BIT(RAM[0x29], 6)) */ else if (Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get()) {
       // _098A:
       // camshaft_reference_mark_active:
       if (!CHECK_BIT_AT(RAM[0x25], 0)) {
@@ -527,7 +529,7 @@ inline void firstToothAfterMissingOnesCaptured() {
       } else {
         goto ram_25_bit_0_not_set; // _098D TODO
       }
-    } else if (!CHECK_BIT_AT(RAM[0x25], 0)) {
+    } else /* if (Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get()) */ if (!CHECK_BIT_AT(RAM[0x25], 0)) {
       // _098D:
       // ram_25_bit_0_not_set:
       SET_BIT_IN(RAM[0x2D], 4);
@@ -551,7 +553,7 @@ inline void firstToothAfterMissingOnesCaptured() {
 
       //goto r7_neq_1e;
       regularToothCapturedImpl(); // _09B7 TODO
-    } else {
+    } /* if (!CHECK_BIT_AT(RAM[0x25], 0)) */ else {
       // _09A7:
       // ram_25_bit_0_not_set_2:
       CLEAR_BIT_IN(RAM[0x2D], 4);
@@ -566,12 +568,12 @@ inline void firstToothAfterMissingOnesCaptured() {
       } else {
         goto ram_33_less_than_2; // _09AD TODO
       }
-    }
-  } else {
+    } /* if (!CHECK_BIT_AT(RAM[0x25], 0)) - else */
+  } /* if (CHECK_BIT_AT(RAM[0x2D], 7)) */ else {
     // _0970:
     CLEAR_BIT_IN(RAM[0x2D], 4);
-    goto _098F;
-  }
+    goto _098F; // TODO
+  } /* if (CHECK_BIT_AT(RAM[0x2D], 7)) - else */
 }
 
 // _093E:
@@ -648,13 +650,34 @@ inline void _0912() {
 
 // should return after this proc
 // _086E:
-inline void _086E() {
+inline void set_RAM20_bit0_and_reset_Ignition_ClearAndSetMasks_Calculus() {
   // _086E:
   // r5_r4_less_than_ram_32_ram_31:
   SET_BIT_IN(RAM[0x20], 0);
 
   reset_Ignition_ClearAndSetMasks_Calculus();
   //goto graceful_finish_ext_int_6; // _0C05
+}
+
+// _084B:
+inline void _084B() {
+  // _084B:
+  if (CHECK_BIT_AT(RAM[0x26], 1)) {
+    // _086A:
+    // ram_26_1_set:
+    SET_BIT_IN(RAM[0x20], 1);
+    goto _0870; // TODO
+  } else if (CHECK_BIT_AT(RAM[0x26], 0)) {
+    // _0866:
+    // ram_26_0_set:
+    SET_BIT_IN(RAM[0x20], 2)
+    goto _0870; // TODO
+  } else {
+    // _0851:
+    SET_BIT_IN(RAM[0x26], 1);
+    //goto graceful_finish_ext_int_6; // => _0C05 TODO
+    return;
+  }
 }
 
 // _08E1:
@@ -694,8 +717,9 @@ inline void ExtInt6_CaptureEvent() {
   USE_GPR_WORD(R5_R4);
 
   Reg::PSW::Inst = registerBankMask(3);
+
   if (!CHECK_BIT_AT(RAM[0x25], 1)) {
-    _08C6(); // TODO
+    set_RAM25_bit5_and_reset_Calculus(); // TODO
     //goto graceful_finish_ext_int_6;
     return;
   }
@@ -717,7 +741,7 @@ inline void ExtInt6_CaptureEvent() {
       ++RAM[0x30];
 
       _0823(); // TODO
-    } else {
+    } else /* RAM[0x30] >= 2 */ {
       // _08D0:
       // goto _0791;
       // _0791:
@@ -765,7 +789,7 @@ inline void ExtInt6_CaptureEvent() {
                 // psw_f0_set:
                 if (RAM[0x30] != 3) {
                   goto no_overflow_on_ram32_ram31_plus_half_r5_r4; // => _0820 TODO
-                } else {
+                } else /* RAM[0x30] == 3 */ {
                   // _0813:
                   R3_R2 = Reg::CC3::Inst;
                   ++RAM[0x30];
@@ -838,16 +862,14 @@ inline void ExtInt6_CaptureEvent() {
 
     if (R1_R0 < R5_R4 / 2) {
       // Malfunction of crankshaft position sensor or rapid acceleration?
-      // _084B:
-      // TODO
+      _084B();
     } else if (R1_R0 < 3 * R5_R4 / 2) {
       // Crankshaft has rotated for yet another tooth. We captured the tooth.
-      // _0912:
-      // TODO
+      _0912();
     } else /* if (R1_R0 >= 3 * R5_R4 / 2) */ {
       // The first tooth after the missing ones is captured?
       // _086E:
-      _086E();
+      set_RAM20_bit0_and_reset_Ignition_ClearAndSetMasks_Calculus();
       return;
     }
   } else {
@@ -857,31 +879,14 @@ inline void ExtInt6_CaptureEvent() {
 
     if (R1_R0 >= (R5_R4 * 2)) {
       // The first tooth after the missing ones is captured?
-      _086E();
+      set_RAM20_bit0_and_reset_Ignition_ClearAndSetMasks_Calculus();
       return;
     } else if ((R1_R0 >= R5_R4) || (R1_R0 >= (R5_R4 / 2))) {
       // Crankshaft has rotated for yet another tooth. We captured the tooth.
-      // _0912:
-      // TODO
+      _0912();
     } else /* if (R1_R0 < (R5_R4 / 2)) */ {
       // Malfunction of crankshaft position sensor or rapid acceleration?
-      // _084B:
-      if (CHECK_BIT_AT(RAM[0x26], 1)) {
-        // _086A:
-        // ram_26_1_set:
-        SET_BIT_IN(RAM[0x20], 1);
-        goto _0870; // TODO
-      } else if (CHECK_BIT_AT(RAM[0x26], 0)) {
-        // _0866:
-        // ram_26_0_set:
-        SET_BIT_IN(RAM[0x20], 2)
-        goto _0870; // TODO
-      } else {
-        // _0851:
-        SET_BIT_IN(RAM[0x26], 1);
-        //goto graceful_finish_ext_int_6; // => _0C05 TODO
-        return;
-      }
+      _084B();
     }
   }
 }

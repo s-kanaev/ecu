@@ -46,12 +46,14 @@ static inline void INIT_RAM() {
                   // bit 4 - intake air temperature less than low limit
                   // bit 5 - intake air temperature higher than high limit
   [0x25] = 0x00,  // ???
+                  // bit 0 - ???
                   // bit 1 - ???
                   // bit 5 - ???
 
   [0x26] = 0,     // status byte:
                   // bit 2 - 1 iff next ExtInt6 triggers for compare on CC3
                   //         0 iff next ExtInt6 triggers for capture on CC3
+                  // bit 5 - ???
                   // bit 6 - ??
 
   [0x27] = 0x00,  // ???
