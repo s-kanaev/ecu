@@ -48,15 +48,23 @@ static inline void INIT_RAM() {
   [0x25] = 0x00,  // ???
                   // bit 0 - ???
                   // bit 1 - ???
-                  // bit 5 - ???
+                  // bit 2 - true if the first tooth after missing ones is met
+                  //         cleared if expected time to the next event >= 0x0400
+                  // bit 3 - ???
+                  // bit 4 - ???
+                  // bit 5 - true iff RAM[0x47]:RAM[0x46] is initialized
+                  // bit 6 - ???
 
   [0x26] = 0,     // status byte:
+                  // bit 0 - ???, error condition?
+                  // bit 1 - ???, error condition?
                   // bit 2 - 1 iff next ExtInt6 triggers for compare on CC3
                   //         0 iff next ExtInt6 triggers for capture on CC3
                   // bit 5 - ???
                   // bit 6 - ??
 
   [0x27] = 0x00,  // ???
+                  // bit 0 set when external interrupt 0 is requested
                   // bit 1 (bit address 0x39) ???
                   // bit 2 (bit address 0x3A), 1 if MDU was used by interrupt etc.
                   // bit 3 (bit address 0x3B) = copy of PSW.F0
@@ -67,7 +75,9 @@ static inline void INIT_RAM() {
                   // bit 3 - ???
                   // bit 4 - ignition switch voltage above threshold @ FLASH[0x8096]
                   // bit 6 - ???, set when XRAM[0xF679] >= FLASH[0x809B] && RAM[0x49] >= FLASH[0x809A]
-  [0x29] = 0x00,  // bit 1 - ???, cleared when ignition performed in Timer0 Overflow interrupt
+  [0x29] = 0x00,  // bit 1 - cleared when ignition performed in Timer0
+                  //         Overflow interrupt
+                  // bit 6 - ???
   [0x2A] = 0x00,  // some status word
                   // bit 0 ???
                   // bit 3 ???
@@ -75,8 +85,10 @@ static inline void INIT_RAM() {
                   // bit 4 ???
                   // bit 7 ???
   [0x2C] = 0x00,
-  [0x2D] = 0x00,  // bit 7 = FLASH[0x873F] bit 4, is there camshaft position sensor
-  [0x2E] = 0x00,  // bit 0 = FLASH[0x873F] bit 5, camshaft position sensor cross-section is aligned with TDC
+  [0x2D] = 0x00,  // bit 4 - ???
+                  // bit 7 = FLASH[0x873F] bit 4, is there camshaft position sensor
+  [0x2E] = 0x00,  // bit 0 = FLASH[0x873F] bit 5, camshaft position sensor
+                  //         cross-section is aligned with TDC
                   // bit 1 = FLASH[0x873F] bit 2, is there knock sensor
 
   [0x2F] = 0,     // bit 0 - ???
@@ -87,7 +99,15 @@ static inline void INIT_RAM() {
   [0x31] = 0,     // Low byte of temporary variable A, used in ExtInt6
   [0x32] = 0,     // High byte of temporary variable A, used in ExtInt6
 
+  [0x33] = 0,     // number of half revolutions of a crankshaft.
+                  // Incremented when R7(bank3) increments to 30 and resets.
+                  // Valid values = [0..3].
+                  // Denotes which phase is taking place in a cylinder within
+                  // the two revolutions per cycle.
+
   [0x35] = 0,     // Counter for timer0 overflow interrupt, max val = 0x14?
+  [0x36..0x37] = 0, // ???
+  [0x38..0x39] = 0, // ???
 
   [0x3A] = 0,     // Adjusted coolant temperature,
                   // saturated to 0 at -38..-39C, saturated to 204 at 165C
@@ -111,11 +131,13 @@ static inline void INIT_RAM() {
   [0x40] = 0,     // Initial value for XRAM[0xF6AD] and XRAM[0xF6AF]
   [0x41..0x43] = 0,
 
-  [0x44] = 0,     // Divisor (of what?), low byte, can be changed by some interrupt?
-  [0x45] = 0,     // Divisor (of what?), high byte, can be changed by some interrupt?
-                  // For the previous two, the result is stored @ XRAM[0xF6BB], XRAM[0xF6BC]
+  [0x44..0x45] = 0, // Last cranckshaft tooth timestamp - RAM[0x47]:RAM[0x46]
+                  // Time length of last crankshaft revolution
+                  // Divisor (of what?), set in IEX6/Crankshaft
+                  // For the previous one, the result is stored @ XRAM[0xF6BB], XRAM[0xF6BC]
 
-  [0x46..0x47] = 0,
+  [0x46..0x47] = 0, // Previous timestamp, when first tooth after missing ones
+                  // was captured
   [0x48] = 0,     // ???
   [0x49] = 0,     // XRAM[0xF6BC] + 0x80, saturated at 0xFF
   [0x4A] = 0,     // interpolated value of XRAM[0xF6BC/0xF6BB], table at FLASH[0x83B0], size unknown, TODO
