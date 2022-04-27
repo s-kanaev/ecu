@@ -38,10 +38,14 @@ do {                          \
 
 #define NEGATE(x) ((~(x)) + 1)
 
-#define COPY_BIT(Dst, DstBit, Src, SrcBit)  \
-do {                                        \
-  if (CHECK_BIT_AT(Src, SrcBit))            \
-    SET_BIT_IN(Dst, DstBit);                \
-  else                                      \
-    CLEAR_BIT_IN(Dst, DstBit);              \
+#define SET_BIT_IN_IF(Dst, DstBit, If)  \
+do {                                    \
+  if (!!(If)) {                         \
+    SET_BIT_IN(Dst, DstBit);            \
+  } else {                              \
+    CLEAR_BIT_IN(Dst, DstBit);          \
+  }                                     \
 } while (0)
+
+#define COPY_BIT(Dst, DstBit, Src, SrcBit)  \
+  SET_BIT_IN_IF(Dst, DstBit, CHECK_BIT_AT(Src, SrcBit))
