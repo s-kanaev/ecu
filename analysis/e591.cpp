@@ -7,6 +7,7 @@
 #include "include/undefined.hpp"
 #include "include/pins.hpp"
 #include "include/registers.hpp"
+#include <e591/memory-locations.hpp>
 #include <mask_set.hpp>
 
 #include "e591/memory-locations.hpp"
@@ -1082,8 +1083,8 @@ void init_xram_f6bb_f6bc_and_ram_48_49_4a_4b_4c(bool SkipIntro) {
 _2A32:
 
   CLEAR_BIT_IN(IEN0, 7); // disable all interrupts
-  byte Ram44 = RAM[0x44];
-  byte Ram45 = RAM[0x45];
+  word TimeLengthOfLastCrankshaftRevolution =
+      location::AsWord<seg::RAM, 0x44>::get();
   SET_BIT_IN(IEN0, 7); // allow interrupts
 
   quad Dividend;
@@ -1092,16 +1093,16 @@ _2A32:
   bool DivisionSkipped = false;
   word QuotW;
 
-  if (Ram44 || Ram45) {
+  if (TimeLengthOfLastCrankshaftRevolution) {
     // _2A7C:
-    Dividend = 0x01E84800;
-    Divisor = COMPOSE_WORD(Ram45, Ram44);
+    Dividend = 0x01E84800; // TODO name this magic variable
+    Divisor = TimeLengthOfLastCrankshaftRevolution;
     Quot = Dividend / Divisor;
   } else {
     CLEAR_BIT_IN(IEN0, 7); // disable all interrupts
     byte Ram30 = RAM[0x30];
-    byte Ram1C = RAM[0x1C];
-    byte Ram1D = RAM[0x1D];
+    USE_GPR_WORD_SEL(3, R5_R4);
+    word ExpectedTimeToTheNextTooth = R5_R4_bank3;
     SET_BIT_IN(IEN0, 7); // allow interrupts
 
     if (Ram30 != 4) {
@@ -1109,8 +1110,8 @@ _2A32:
       DivisionSkipped = true;
     } else {
       // _2A4B:
-      Dividend = 0x00082300;
-      Divisor = COMPOSE_WORD(Ram1D, Ram1C);
+      Dividend = 0x00082300; // TODO name this magic variable
+      Divisor = ExpectedTimeToTheNextTooth;
       Quot = Dividend / Divisor;
     }
   }
@@ -1402,7 +1403,7 @@ void MAIN_LOOP() {
     XRAM[0xF6B9] = 0xFF;
   } else {
     // _29BF:
-    if (CHECK_AND_CLEAR_BIT(&RAM[0x25], 5)) {
+    if (CHECK_AND_CLEAR_BIT(RAM[0x25], 5)) {
       init_xram_f6bb_f6bc_and_ram_48_49_4a_4b_4c(false);
       InitProcDone = true;
     }
