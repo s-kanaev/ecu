@@ -117,6 +117,8 @@ void scheduleDischargeOfIgnitionCoil(word scheduledTimestamp) {
   }
 }
 
+// _09B7:
+// r7_neq_1e:
 inline void regularToothCapturedImpl() {
   USE_GPR_SEL(2, R0);
   USE_GPR_SEL(2, R1);
@@ -452,13 +454,48 @@ inline void prepareForMissingToothRegion() {
   ++R7;
 }
 
+inline bool isCamshaftMarkActive() {
+  bool CamshaftMarkActive;
+
+  if (!CHECK_BIT_AT(RAM[0x2E], 0)) {
+    // If Camshaft Position Sensor cross-section is NOT aligned with TDC
+    // _097B:
+    // ram_2e_bit_0_not_set:
+    bool CamshaftPositionIRQ =
+        Reg::Bit<Reg::IRCON0, Reg::IRCON0::IEX5>{}.get();
+
+    {
+      Reg::Mask<Reg::IRCON0>{}.add<Reg::IRCON0::IEX5>();
+    }
+
+    CamshaftMarkActive = !CamshaftPositionIRQ;
+
+    if (CamshaftPositionIRQ) {
+      Reg::Mask<Reg::PSW>{}.add<Reg::PSW::CY>();
+    } else {
+      Reg::Set<Reg::PSW>{}.add<Reg::PSW::CY>();
+    }
+  } /* if (!CHECK_BIT_AT(RAM[0x2E], 0)) */ else {
+    // If Camshaft Position Sensor corss-section is aligned with TDC
+    // _0977:
+    CamshaftMarkActive = CHECK_BIT_AT(P1, 2);
+    if (CamshaftMarkActive) {
+      Reg::Set<Reg::PSW>{}.add<Reg::PSW::CY>();
+    } else {
+      Reg::Mask<Reg::PSW>{}.add<Reg::PSW::CY>();
+    }
+  } /* if (!CHECK_BIT_AT(RAM[0x2E], 0)) - else */
+
+  return CamshaftMarkActive;
+}
+
 // _0955:
 inline void firstToothAfterMissingOnesCaptured() {
   USE_GPR(R6);
   USE_GPR(R7);
   USE_GPR_WORD(R3_R2);
 
-  // The first tooth after missing one is captured?
+  // The first tooth after missing one is captured, reset tooth counters
   // _0955:
   R6 = 0;
   R7 = 0;
@@ -476,52 +513,22 @@ inline void firstToothAfterMissingOnesCaptured() {
   SET_BIT_IN(RAM[0x25], 2);
 
   if (CHECK_BIT_AT(RAM[0x2D], 7)) {
+    // There is a camshaft position sensor
     // _0974:
     // ram_2d_bit_7_set:
-    if (!CHECK_BIT_AT(RAM[0x2E], 0)) {
-      // If Camshaft Position Sensor corss-section is NOT aligned with TDC
-      // _097B:
-      // ram_2e_bit_0_not_set:
-      bool CamshaftPositionIRQ =
-          !Reg::Bit<Reg::IRCON0, Reg::IRCON0::IEX5>{}.get();
-
-      {
-        Reg::Mask<Reg::IRCON0>{}.add<Reg::IRCON0::IEX5>();
-      }
-
-      if (CamshaftPositionIRQ) {
-        // TODO Check where it is used
-        Reg::Mask<Reg::PSW>{}.add<Reg::PSW::CY>();
-      } else {
-        // TODO Check where it is used
-        Reg::Set<Reg::PSW>{}.add<Reg::PSW::CY>();
-      }
-    } /* if (!CHECK_BIT_AT(RAM[0x2E], 0)) */ else {
-      // If Camshaft Position Sensor corss-section is aligned with TDC
-      // _0977:
-      bool CamshaftMarkActive = CHECK_BIT_AT(P1, 2);
-      if (CamshaftMarkActive) {
-        // TODO Check where it is used
-        Reg::Set<Reg::PSW>{}.add<Reg::PSW::CY>();
-      } else {
-        // TODO Check where it is used
-        Reg::Mask<Reg::PSW>{}.add<Reg::PSW::CY>();
-      }
-    } /* if (!CHECK_BIT_AT(RAM[0x2E], 0)) - else */
+    const bool CamshaftMarkActive = isCamshaftMarkActive();
 
     // _0980:
     if (CHECK_AND_CLEAR_BIT(RAM[0x29], 6)) {
       // _09A1:
       // ram_29_bit_6_set:
-      if (Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get()) {
-        SET_BIT_IN(RAM[0x25], 0);
-      } else {
-        CLEAR_BIT_IN(RAM[0x25], 0);
-      }
+      SET_BIT_IN_IF(
+          RAM[0x25], 0,
+          CamshaftMarkActive /*Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get()*/);
 
       CLEAR_BIT_IN(RAM[0x2D], 4);
       goto _09AB;
-    } /* if (CHECK_AND_CLEAR_BIT(RAM[0x29], 6)) */ else if (Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get()) {
+    } else if (CamshaftMarkActive /* Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get() */) {
       // _098A:
       // camshaft_reference_mark_active:
       if (!CHECK_BIT_AT(RAM[0x25], 0)) {
@@ -529,7 +536,7 @@ inline void firstToothAfterMissingOnesCaptured() {
       } else {
         goto ram_25_bit_0_not_set; // _098D TODO
       }
-    } else /* if (Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get()) */ if (!CHECK_BIT_AT(RAM[0x25], 0)) {
+    } else if (!CHECK_BIT_AT(RAM[0x25], 0)) {
       // _098D:
       // ram_25_bit_0_not_set:
       SET_BIT_IN(RAM[0x2D], 4);
@@ -537,6 +544,7 @@ inline void firstToothAfterMissingOnesCaptured() {
       // _098F:
       byte Ram33 = RAM[0x33];
 
+      // Choose, which phase the engine/crankshaft is in now
       if (++Ram33 == 4)
         Ram33 = 0;
 
@@ -557,19 +565,17 @@ inline void firstToothAfterMissingOnesCaptured() {
       // _09A7:
       // ram_25_bit_0_not_set_2:
       CLEAR_BIT_IN(RAM[0x2D], 4);
-      if (CHECK_BIT_AT(RAM[0x25], 0))
-        CLEAR_BIT_IN(RAM[0x25], 0);
-      else
-        SET_BIT_IN(RAM[0x25], 0);
+      SET_BIT_IN_IF(RAM[0x25], 0, !CHECK_BIT_AT(RAM[0x25], 0));
 
       // _09AB:
-      if (!Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get()) {
+      if (!CamshaftMarkActive /*Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get()*/) {
         goto inc_ram_33_should_reset_to_0; // _09B2 TODO
       } else {
         goto ram_33_less_than_2; // _09AD TODO
       }
     } /* if (!CHECK_BIT_AT(RAM[0x25], 0)) - else */
   } /* if (CHECK_BIT_AT(RAM[0x2D], 7)) */ else {
+    // There is a NO camshaft position sensor
     // _0970:
     CLEAR_BIT_IN(RAM[0x2D], 4);
     goto _098F; // TODO
@@ -591,6 +597,7 @@ inline void regularToothCaptured() {
 
   if (BYTE(0x1E) == R7) {
     R7 = 0;
+    // half revolution of crankshaft, switch phase
     ++RAM[0x33];
   }
 
@@ -629,6 +636,8 @@ inline void _0912() {
   // 0x3B - 59 (dec)
 
   if (Const::SyncDiscLastRealToothMinus1 /* 0x38 */ == R6) {
+    // This is the last tooth (increment of R6, the tooth counter, will happen
+    // in the end). Hence, prepare for missing tooth region
     // _091F:
     prepareForMissingToothRegion();
 
@@ -666,12 +675,12 @@ inline void _084B() {
     // _086A:
     // ram_26_1_set:
     SET_BIT_IN(RAM[0x20], 1);
-    goto _0870; // TODO
+    reset_Ignition_ClearAndSetMasks_Calculus();
   } else if (CHECK_BIT_AT(RAM[0x26], 0)) {
     // _0866:
     // ram_26_0_set:
-    SET_BIT_IN(RAM[0x20], 2)
-    goto _0870; // TODO
+    SET_BIT_IN(RAM[0x20], 2);
+    reset_Ignition_ClearAndSetMasks_Calculus();
   } else {
     // _0851:
     SET_BIT_IN(RAM[0x26], 1);
@@ -684,22 +693,34 @@ inline void _084B() {
 // Called iff ExtInt6 is triggered for capture and P1.3 (crankshaft) is active,
 // alias high, alias set, alias equal 1.
 // Uses register bank 3 (main), register bank2, register bank 1
+// RAM[0x30] - ??? TODO
+// RAM[0x33] - number of half revolutions of a crankshaft.
+//             Incremented when R7(bank3) increments to 30 and resets.
+//             Valid values = [0..3].
+//             Denotes which phase is taking place in a cylinder within the two
+//             revolutions per cycle.
+//
 // Bank 3 (main)
-// R1:R0 -
-// R3:R2 -
-// R5:R4 -
+// R1:R0 - Time since last event or temporary variable
+// R3:R2 - Last event timestamp
+// R5:R4 - Expected time to the next event
+// R6 - Tooth counter [0..Const::SyncDiscTeethCount-1]
+// R7 - Tooth counter [0..Const::SyncDiscTeethCount/2-1]
 //
 // Bank 2
-// R0 -
-// R1 -
-// R2 -
-// R3 -
-// R4 -
-// R5 -
-// R6 -
+// R0 - Tooth number, when to schedule ignition coil to start charging
+// R1 - R1/256 is fraction of R5:R4(bank3) when charging of ignition coil should
+//      start
+// R2 - Tooth number, when to schedule ignition coil to discharge
+// R3 - R3/256 is fraction of R5:R4(bank3) when discharge of ignition coil
+//      should happen
+// R4 - R4/256 is fraction of R5:R4(bank3) when to schedule CC4/knock sensor
+// R5 - cylinder number in order of ignition, 0,1,2,3 = 1,3,4,2,
+//      gets incremented
+// R6 - previous value of R5(bank2)
 //
 // Bank 1
-// R7 -
+// R7 - tooth when to schedule/check for knock sensor(?) or CC4
 inline void ExtInt6_CaptureEvent() {
   // non_even_zero_cross?:
 
