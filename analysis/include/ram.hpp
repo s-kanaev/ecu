@@ -104,6 +104,7 @@ static inline void INIT_RAM() {
                   // Valid values = [0..3].
                   // Denotes which phase is taking place in a cylinder within
                   // the two revolutions per cycle.
+                  // Denotes stroke of the first cylinder.
 
   [0x35] = 0,     // Counter for timer0 overflow interrupt, max val = 0x14?
   [0x36..0x37] = 0, // ???
@@ -131,7 +132,7 @@ static inline void INIT_RAM() {
   [0x40] = 0,     // Initial value for XRAM[0xF6AD] and XRAM[0xF6AF]
   [0x41..0x43] = 0,
 
-  [0x44..0x45] = 0, // Last cranckshaft tooth timestamp - RAM[0x47]:RAM[0x46]
+  [0x44..0x45] = 0, // Last crankshaft tooth timestamp - RAM[0x47]:RAM[0x46]
                   // Time length of last crankshaft revolution
                   // Divisor (of what?), set in IEX6/Crankshaft
                   // For the previous one, the result is stored @ XRAM[0xF6BB], XRAM[0xF6BC]

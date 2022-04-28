@@ -489,6 +489,44 @@ inline bool isCamshaftMarkActive() {
   return CamshaftMarkActive;
 }
 
+// _09B2:
+inline void updateStrokeTo0() {
+  SET_MEM_BYTE(RAM, FIRST_CYLINDER_STROKE, 0);
+  SET_BIT_IN(RAM[0x25], 6);
+}
+
+// _09AD:
+inline void updateStrokeTo2() {
+  SET_MEM_BYTE(RAM, FIRST_CYLINDER_STROKE, 2);
+}
+
+// _098F:
+inline void updateStroke() {
+  byte Stroke = GET_MEM_BYTE(RAM, FIRST_CYLINDER_STROKE);
+
+  // Choose, which phase the engine/crankshaft is in now
+  if (Stroke > 1) {
+    // _09B2:
+    // inc_ram_33_should_reset_to_0:
+    updateStrokeTo0();
+  } else /* if (Ram33 <= 1) */ {
+    // _09AD:
+    // ram_33_less_than_2:
+    updateStrokeTo2();
+  }
+}
+
+// _09AB:
+inline void updateStroke(bool CamshaftMarkActive) {
+  if (!CamshaftMarkActive /*Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get()*/) {
+    // goto inc_ram_33_should_reset_to_0
+    updateStrokeTo0();
+  } else {
+    // goto ram_33_less_than_2
+    updateStrokeTo2();
+  }
+}
+
 // _0955:
 inline void firstToothAfterMissingOnesCaptured() {
   USE_GPR(R6);
@@ -502,13 +540,14 @@ inline void firstToothAfterMissingOnesCaptured() {
 
   if (CHECK_BIT_AT(RAM[0x25], 5)) {
     // _095C:
-    location::AsWord<seg::RAM, 0x44>::set(
-        R3_R2 - location::AsWord<seg::RAM, 0x46>::get());
+    SET_MEM_WORD(
+        RAM, LAST_CRANKSHAFT_REVOLUTION_TIME_LENGTH,
+        R3_R2 - GET_MEM_WORD(RAM, SYNC_DISC_FIRST_TOOTH_LAST_TIMESTAMP));
   }
 
   // _0967:
   // ram_25_bit_2_not_set:
-  location::AsWord<seg::RAM, 0x46>::set(R3_R2);
+  SET_MEM_WORD(RAM, SYNC_DISC_FIRST_TOOTH_LAST_TIMESTAMP, R3_R2);
 
   SET_BIT_IN(RAM[0x25], 2);
 
@@ -527,59 +566,35 @@ inline void firstToothAfterMissingOnesCaptured() {
           CamshaftMarkActive /*Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get()*/);
 
       CLEAR_BIT_IN(RAM[0x2D], 4);
-      goto _09AB;
-    } else if (CamshaftMarkActive /* Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get() */) {
-      // _098A:
-      // camshaft_reference_mark_active:
-      if (!CHECK_BIT_AT(RAM[0x25], 0)) {
-        goto ram_25_bit_0_not_set_2; // _09A7 TODO
-      } else {
-        goto ram_25_bit_0_not_set; // _098D TODO
-      }
-    } else if (!CHECK_BIT_AT(RAM[0x25], 0)) {
+      //goto _09AB;
+      updateStroke(CamshaftMarkActive);
+    } if (!!CHECK_BIT_AT(RAM[0x25], 0) == CamshaftMarkActive) {
       // _098D:
       // ram_25_bit_0_not_set:
       SET_BIT_IN(RAM[0x2D], 4);
 
       // _098F:
-      byte Ram33 = RAM[0x33];
-
-      // Choose, which phase the engine/crankshaft is in now
-      if (++Ram33 == 4)
-        Ram33 = 0;
-
-      if (!Ram33 || Ram33 > 2) {
-        // _09B2:
-        // inc_ram_33_should_reset_to_0:
-        RAM[0x33] = 0;
-        SET_BIT_IN(RAM[0x25], 6);
-      } else /* if (Ram33 <= 2) */ {
-        // _09AD:
-        // ram_33_less_than_2:
-        RAM[0x33] = 2;
-      }
-
-      //goto r7_neq_1e;
-      regularToothCapturedImpl(); // _09B7 TODO
-    } /* if (!CHECK_BIT_AT(RAM[0x25], 0)) */ else {
+      updateStroke();
+    } else if (!!CHECK_BIT_AT(RAM[0x25], 0) != CamshaftMarkActive) {
       // _09A7:
       // ram_25_bit_0_not_set_2:
       CLEAR_BIT_IN(RAM[0x2D], 4);
       SET_BIT_IN_IF(RAM[0x25], 0, !CHECK_BIT_AT(RAM[0x25], 0));
 
       // _09AB:
-      if (!CamshaftMarkActive /*Reg::Bit<Reg::PSW, Reg::PSW::CY>{}.get()*/) {
-        goto inc_ram_33_should_reset_to_0; // _09B2 TODO
-      } else {
-        goto ram_33_less_than_2; // _09AD TODO
-      }
-    } /* if (!CHECK_BIT_AT(RAM[0x25], 0)) - else */
+      updateStroke(CamshaftMarkActive);
+    }
   } /* if (CHECK_BIT_AT(RAM[0x2D], 7)) */ else {
-    // There is a NO camshaft position sensor
+    // There is NO camshaft position sensor
     // _0970:
     CLEAR_BIT_IN(RAM[0x2D], 4);
-    goto _098F; // TODO
+
+    //goto _098F;
+    updateStroke();
   } /* if (CHECK_BIT_AT(RAM[0x2D], 7)) - else */
+
+  //goto r7_neq_1e;
+  regularToothCapturedImpl(); // _09B7
 }
 
 // _093E:
