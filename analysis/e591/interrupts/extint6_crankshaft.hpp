@@ -40,7 +40,7 @@ inline void set_RAM25_bit5_and_reset_Calculus() {
 }
 
 // _0823:
-inline void _0823() {
+inline void update_lastEventTimestamp_expectedTimeToNextEvent() {
   USE_GPR_WORD(R1_R0);
   USE_GPR_WORD(R3_R2);
   USE_GPR_WORD(R5_R4);
@@ -664,11 +664,11 @@ inline void _0912() {
     firstToothAfterMissingOnesCaptured();
   } else /* (R6 > 0x38) && (R6 != 0x3B) */ {
     // Seems to be some sort of failure - missing tooth gets captured instead of
-    // compare. Error condition ?
+    // compare. Error condition ? TODO
     // _094D:
     // r6_neq_3b:
     SET_BIT_IN(RAM[0x20], 3);
-    reset_Ignition_ClearAndSetMasks_Calculus(); // TODO
+    reset_Ignition_ClearAndSetMasks_Calculus();
   }
 }
 
@@ -701,6 +701,99 @@ inline void _084B() {
     SET_BIT_IN(RAM[0x26], 1);
     //goto graceful_finish_ext_int_6; // => _0C05 TODO
     return;
+  }
+}
+
+// _0820:
+inline void updateRam30To2() {
+  // _0820:
+  // no_overflow_on_ram32_ram31_plus_half_r5_r4:
+  RAM[0x30] = 2;
+
+  // _0823:
+  update_lastEventTimestamp_expectedTimeToNextEvent();
+}
+
+// _08CB:
+inline void ram30Neq4() {
+  USE_GPR_WORD(R1_R0);
+  USE_GPR_WORD(R3_R2);
+  USE_GPR_WORD(R5_R4);
+
+  USE_GPR(R5);
+
+  // _08CB:
+  // ram_30_neq_4:
+  if (RAM[0x30] < 2) {
+    // _08D3:
+    ++RAM[0x30];
+    update_lastEventTimestamp_expectedTimeToNextEvent();
+    return;
+
+  }
+
+  assert(RAM[0x30] >= 2);
+
+  // _08D0:
+  // goto _0791;
+  // _0791:
+
+  if (CHECK_BIT_AT(R5_R4, 15)) {
+    // _079A:
+    // goto no_overflow_on_ram32_ram31_plus_half_r5_r4; // => _0820
+    updateRam30To2();
+  }
+
+  word R5_R4x2 = R5_R4 << 1;
+
+  // _079D:
+  // r5_r4_shl_1_bit_15_not_set:
+  word AbsDiff = R1_R0 - R5_R4x2;
+  bool DiffIsPositive = true;
+
+  if (R1_R0 < R5_R4x2) {
+    // _07AE:
+    DiffIsPositive = false;
+    AbsDiff = NEGATE(AbsDiff);
+  }
+
+  // _07BE:
+  // r1_r0_was_larger_than_r5_r4_shl_1:
+  if (AbsDiff >= (R5_R4 >> 2) &&
+      ((R5 && (AbsDiff < 3 * R5_R4 / 2)) ||
+        (!R5 && (AbsDiff < 2 * R5_R4)))) {
+    // R5_R4 / 2 <= abs(R1_R0 - R5_R4 * 2) < 3 * R5_R4 / 2
+    // OR R5_R4 / 2 <= abs(R1_R0 - R5_R4 * 2) < 2 * R5_R4
+    // Abs difference is within limits
+    updateRam30To2();
+  } else {
+    // abs(R1_R0 - R5_R4 * 2) < R5_R4 / 2
+    // OR abs(R1_R0 - R5_R4 * 2) >= 3 * R5_R4 / 2 if (R5 != 0)
+    // OR abs(R1_R0 - R5_R4 * 2) >= 2 * R5_R4 if (R5 == 0)
+    // _0806:
+    if (DiffIsPositive /* Reg::Bit<Reg::PSW, Reg::PSW::F0>{}.get() */) {
+      // _080E:
+      // psw_f0_set:
+      if (RAM[0x30] != 3) {
+        // goto no_overflow_on_ram32_ram31_plus_half_r5_r4; // => _0820
+        updateRam30To2();
+      } else /* RAM[0x30] == 3 */ {
+        // _0813:
+        R3_R2 = Reg::CC3::Inst;
+        ++RAM[0x30];
+        CLEAR_BIT_IN(RAM[0x26], 1);
+        CLEAR_BIT_IN(RAM[0x26], 0);
+        // goto _0955;
+        firstToothAfterMissingOnesCaptured();
+      }
+      UNREACHABLE;
+    } else {
+      // Difference is negative
+      // _0809:
+      RAM[0x30] = 3;
+      // goto _0823;
+      update_lastEventTimestamp_expectedTimeToNextEvent();
+    }
   }
 }
 
@@ -767,130 +860,7 @@ inline void ExtInt6_CaptureEvent() {
 
   if (RAM[0x30] != 4) {
     // _08CB:
-    // ram_30_neq_4:
-    if (RAM[0x30] < 2) {
-      // _08D3:
-      {
-        Reg::Set<Reg::PSW> S;
-        S.add<Reg::PSW::CY>(); // TODO where is it used?
-      }
-      ++RAM[0x30];
-
-      _0823(); // TODO
-    } else /* RAM[0x30] >= 2 */ {
-      // _08D0:
-      // goto _0791;
-      // _0791:
-      word R5_R4x2 = R5_R4 << 1;
-      RAM[0x31] = LOW(R5_R4x2);
-
-      if (!CHECK_BIT_AT(R5_R4, 15)) {
-        // _079D:
-        // r5_r4_shl_1_bit_15_not_set:
-        RAM[0x32] = HIGH(R5_R4x2);
-
-        Ram31WordT::set(R1_R0 - R5_R4x2);
-        {
-          // TODO Find where it's used and pass it as a bool parameter
-          Reg::Set<Reg::PSW>{}.add<Reg::PSW::F0>();
-        }
-
-        if (R1_R0 < R5_R4x2) {
-          // _07AE:
-          {
-            // TODO Find where it's used and pass it as a bool parameter
-            Reg::Mask<Reg::PSW>{}.add<Reg::PSW::F0>();
-          }
-
-          Ram31WordT::set(NEGATE(Ram31WordT::get()));
-        }
-        // _07BE:
-        // r1_r0_was_larger_than_r5_r4_shl_1:
-        word Ram31W = Ram31WordT::get();
-        Ram31WordT::set(Ram31W - R5_R4);
-
-        if (Ram31W >= R5_R4) {
-          // _07EA:
-          // ram_32_ram_31_was_greater_or_equal_than_r5_r4:
-          if (!R5) {
-            // _07FB:
-            Ram31WordT::set(Ram31W - (R5_R4 >> 1));
-
-            if (Ram31W < (R5_R4 >> 1)) {
-              goto no_overflow_on_ram32_ram31_plus_half_r5_r4; // _0820 TODO
-            } else {
-              // _0806
-              if (Reg::Bit<Reg::PSW, Reg::PSW::F0>{}.get()) {
-                // _080E:
-                // psw_f0_set:
-                if (RAM[0x30] != 3) {
-                  goto no_overflow_on_ram32_ram31_plus_half_r5_r4; // => _0820 TODO
-                } else /* RAM[0x30] == 3 */ {
-                  // _0813:
-                  R3_R2 = Reg::CC3::Inst;
-                  ++RAM[0x30];
-                  CLEAR_BIT_IN(RAM[0x26], 1);
-                  CLEAR_BIT_IN(RAM[0x26], 0);
-                  goto _0955; // TODO
-                }
-                UNREACHABLE;
-              } else {
-                // _0809:
-                RAM[0x30] = 3;
-                goto _0823; // TODO
-              }
-              UNREACHABLE;
-            }
-            UNREACHABLE;
-          } else {
-            // _07ED:
-            quad Sum = QUAD(Ram31W) + (R5_R4 >> 1);
-            Ram31WordT::set(LOW_W(Sum));
-
-            if (Sum <= 0xFFFF) {
-              goto no_overflow_on_ram32_ram31_plus_half_r5_r4; // => _0820 TODO
-            } else {
-              goto _0806; // TODO
-            }
-            UNREACHABLE;
-          }
-          UNREACHABLE;
-        } else /* _07CB: */ if (!R5) {
-          // _07DE:
-          // r5_eq_0:
-          quad Sum = QUAD(Ram31W) + (R5_R4 >> 1);
-          Ram31WordT::set(LOW_W(Sum));
-
-          if (Sum <= 0xFFFF) {
-            goto no_overflow_on_ram32_ram31_plus_half_r5_r4; // => _0820 TODO
-          } else {
-            goto _0806; // TODO
-          }
-          UNREACHABLE;
-        } else /* R5 != 0 */ {
-          // _07CE:
-          quad Sum = QUAD(Ram31W) + (R5_R4 >> 1);
-          Ram31WordT::set(LOW_W(Sum));
-
-          if (Sum <= 0xFFFF) {
-            // _0820:
-            // no_overflow_on_ram32_ram31_plus_half_r5_r4:
-            RAM[0x30] = 2;
-
-            // _0823:
-            _0823();
-          } else {
-            goto _0806; // TODO
-          }
-          UNREACHABLE;
-        }
-        UNREACHABLE;
-      } else {
-        // _079A:
-        goto no_overflow_on_ram32_ram31_plus_half_r5_r4; // => _0820 TODO
-      }
-      UNREACHABLE;
-    }
+    ram30Neq4();
   } else /* _08F8: */ if (!HIGH(R1_R0) && !HIGH(R5_R4)) {
     // RAM[0x30] equals 4 here
     // _0902:
