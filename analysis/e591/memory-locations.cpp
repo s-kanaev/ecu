@@ -151,8 +151,12 @@ namespace seg {
 
 #if __E591_HOST_COMPILATION
 # define MEM_LOC_CTOR(type, rtype, segment, tag, ...)         \
-  type<segment, tag>::type() {  \
-    Registrar::rtype<Segment, Tag>(__VA_ARGS__);              \
+  bool type<segment, tag>::Initialized = false;               \
+  type<segment, tag>::type() {                                \
+    if (!Initialized) {                                       \
+      Registrar::rtype<Segment, Tag>(__VA_ARGS__);            \
+      Initialized = true;                                     \
+    }                                                         \
   }
 # define REGISTER_MEM_LOC(type, segment, tag)                 \
   location::type<seg::segment, location::tags::MEM_TAG(tag)>  \
@@ -305,4 +309,8 @@ DEFINE_MEMORY_BYTE_METHODS(FLASH, MAXIMUM_IGNITION_VOLTAGE);
 DEFINE_MEMORY_WORD_METHODS(RAM, LAST_CRANKSHAFT_REVOLUTION_TIME_LENGTH);
 DEFINE_MEMORY_WORD_METHODS(RAM, SYNC_DISC_FIRST_TOOTH_LAST_TIMESTAMP);
 DEFINE_MEMORY_BYTE_METHODS(RAM, FIRST_CYLINDER_STROKE);
-
+DEFINE_MEMORY_WORD_METHODS(RAM, TIME_SINCE_LAST_CRANKSHAFT_EVENT);
+DEFINE_MEMORY_WORD_METHODS(RAM, LAST_CRANKSHAFT_EVENT_TIMESTAMP);
+DEFINE_MEMORY_WORD_METHODS(RAM, ETA_TO_NEXT_CRANKSHAFT_EVENT);
+DEFINE_MEMORY_BYTE_METHODS(RAM, TOOTH_COUNTER);
+DEFINE_MEMORY_BYTE_METHODS(RAM, TOOTH_COUNTER_WITHIN_HALF_REVOLUTION);

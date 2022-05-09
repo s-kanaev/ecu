@@ -23,8 +23,8 @@ public:
   static constexpr int HighPtr = _LowPtr + 1;
 
   static word get() {
-    COMPOSE_WORD(seg::Segment<Seg>::get(HighPtr),
-                 seg::Segment<Seg>::get(LowPtr));
+    return COMPOSE_WORD(seg::Segment<Seg>::get(HighPtr),
+                        seg::Segment<Seg>::get(LowPtr));
   }
 
   static void set(word V) {
@@ -64,7 +64,8 @@ namespace location { namespace tags {       \
 
 #if __E591_HOST_COMPILATION
 # define DECLARE_MEM_LOC_CTOR(type) \
-    type();
+    type(); \
+    static bool Initialized;
 #else // __E591_HOST_COMPILATION
 # define DECLARE_MEM_LOC_CTOR(type)
 #endif // !__E591_HOST_COMPILATION
@@ -127,6 +128,7 @@ namespace location {                                        \
   struct Byte<seg::segment, location::tags::MEM_TAG(tag)> { \
     using Segment = seg::segment;                           \
     using Tag = location::tags::MEM_TAG(tag);               \
+    using This = Byte<Segment, Tag>;                        \
                                                             \
     static constexpr int Offset = (position);               \
     static constexpr int Size = 1;                          \
@@ -144,6 +146,40 @@ namespace location {                                        \
     static byte get();                                      \
                                                             \
     static void set(byte Value);                            \
+                                                            \
+    template <typename OtherSeg, typename OtherTag>         \
+    Byte(const Byte<OtherSeg, OtherTag> &) = delete;        \
+                                                            \
+    operator byte&() {                                      \
+      return *begin();                                      \
+    }                                                       \
+    operator const byte&() const {                          \
+      return *begin();                                      \
+    }                                                       \
+    bool operator==(byte V) const {                         \
+      return get() == V;                                    \
+    }                                                       \
+    This &operator++() {                                    \
+      ++(*begin());                                         \
+      return *this;                                         \
+    }                                                       \
+    This &operator+=(byte V) {                              \
+      (*begin()) += V;                                      \
+      return *this;                                         \
+    }                                                       \
+    This &operator-=(byte V) {                              \
+      (*begin()) -= V;                                      \
+      return *this;                                         \
+    }                                                       \
+    This &operator=(byte V) {                               \
+      set(V);                                               \
+      return *this;                                         \
+    }                                                       \
+    template <typename OtherSeg, typename OtherTag>         \
+    This &operator=(const Byte<OtherSeg, OtherTag> &V) {    \
+      set(V.get());                                         \
+      return *this;                                         \
+    }                                                       \
   };                                                        \
 }
 
@@ -159,6 +195,8 @@ do {                                                          \
       ::set((value));                                         \
 } while (0)
 
+#define USE_MEM_BYTE(segment, name) \
+  location::Byte<seg::segment, location::tags::MEM_TAG(name)>
 
 // Define a word in memory segment. The word is
 // referred to with a tag. The word is stored with
@@ -172,6 +210,7 @@ namespace location {                                        \
   struct Word<seg::segment, location::tags::MEM_TAG(tag)> { \
     using Segment = seg::segment;                           \
     using Tag = location::tags::MEM_TAG(tag);               \
+    using This = Word<Segment, Tag>;                        \
                                                             \
     static constexpr int Offset = (position);               \
     static constexpr int Size = 2;                          \
@@ -189,6 +228,40 @@ namespace location {                                        \
     static word get();                                      \
                                                             \
     static void set(word Value);                            \
+                                                            \
+    template <typename OtherSeg, typename OtherTag>         \
+    Word(const Word<OtherSeg, OtherTag> &) = delete;        \
+                                                            \
+    operator word&() {                                      \
+      return *begin();                                      \
+    }                                                       \
+    operator const word&() const {                          \
+      return *begin();                                      \
+    }                                                       \
+    bool operator==(word V) const {                         \
+      return get() == V;                                    \
+    }                                                       \
+    This &operator++() {                                    \
+      ++(*begin());                                         \
+      return *this;                                         \
+    }                                                       \
+    This &operator+=(word V) {                              \
+      (*begin()) += V;                                      \
+      return *this;                                         \
+    }                                                       \
+    This &operator-=(word V) {                              \
+      (*begin()) -= V;                                      \
+      return *this;                                         \
+    }                                                       \
+    This &operator=(word V) {                               \
+      set(V);                                               \
+      return *this;                                         \
+    }                                                       \
+    template <typename OtherSeg, typename OtherTag>         \
+    This &operator=(const Word<OtherSeg, OtherTag> &V) {    \
+      set(V.get());                                         \
+      return *this;                                         \
+    }                                                       \
   };                                                        \
 }
 
@@ -203,6 +276,9 @@ do {                                                          \
   location::Word<seg::segment, location::tags::MEM_TAG(name)> \
       ::set((value));                                         \
 } while (0)
+
+#define USE_MEM_WORD(segment, name) \
+  location::Word<seg::segment, location::tags::MEM_TAG(name)>
 
 #define WORD_MEM_IDX(segment, name) \
 location::Word<seg::segment, location::tags::MEM_TAG(name)>::Offset
@@ -273,3 +349,13 @@ DECLARE_MEMORY_WORD(RAM, LAST_CRANKSHAFT_REVOLUTION_TIME_LENGTH, 0x44);
 DECLARE_MEMORY_WORD(RAM, SYNC_DISC_FIRST_TOOTH_LAST_TIMESTAMP, 0x46);
 DECLARE_MEMORY_BYTE(RAM, FIRST_CYLINDER_STROKE, 0x33);
 
+// R1_R0(bank3)
+DECLARE_MEMORY_WORD(RAM, TIME_SINCE_LAST_CRANKSHAFT_EVENT, 0x18);
+// R3_R2(bank3)
+DECLARE_MEMORY_WORD(RAM, LAST_CRANKSHAFT_EVENT_TIMESTAMP, 0x1A);
+// R5_R4(bank3)
+DECLARE_MEMORY_WORD(RAM, ETA_TO_NEXT_CRANKSHAFT_EVENT, 0x1C);
+// R6
+DECLARE_MEMORY_BYTE(RAM, TOOTH_COUNTER, 0x1E);
+// R7
+DECLARE_MEMORY_BYTE(RAM, TOOTH_COUNTER_WITHIN_HALF_REVOLUTION, 0x1F);
