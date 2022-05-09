@@ -41,13 +41,16 @@ inline void set_RAM25_bit5_and_reset_Calculus() {
 
 // _0823:
 inline void update_lastEventTimestamp_expectedTimeToNextEvent() {
-  USE_GPR_WORD(R1_R0);
-  USE_GPR_WORD(R3_R2);
-  USE_GPR_WORD(R5_R4);
+//   USE_GPR_WORD(R1_R0);
+//   USE_GPR_WORD(R3_R2);
+//   USE_GPR_WORD(R5_R4);
+  USE_MEM_WORD(RAM, TIME_SINCE_LAST_CRANKSHAFT_EVENT) TimeSinceLastEvent;
+  USE_MEM_WORD(RAM, LAST_CRANKSHAFT_EVENT_TIMESTAMP) LastEventTimestamp;
+  USE_MEM_WORD(RAM, ETA_TO_NEXT_CRANKSHAFT_EVENT) EtaToNextCrankshaftEvent;
 
-  R5_R4 = R1_R0;
-  R3_R2 = Reg::CC3::Inst;
-  goto set_ram_25_5_and_graceful_finish_ext_int_6; // => _0C03 TODO
+  EtaToNextCrankshaftEvent = TimeSinceLastEvent;
+  LastEventTimestamp = Reg::CC3::Inst;
+  //goto set_ram_25_5_and_graceful_finish_ext_int_6; // => _0C03
 }
 
 template <CoilE Coil>
@@ -125,17 +128,22 @@ inline void regularToothCapturedImpl() {
   USE_GPR_SEL(2, R2);
   USE_GPR_SEL(2, R3);
   USE_GPR_SEL(2, R4);
-  USE_GPR(R5);
+//   USE_GPR(R5);
   USE_GPR_SEL(2, R5);
-  USE_GPR(R6);
+//   USE_GPR(R6);
   USE_GPR_SEL(2, R6);
-  USE_GPR(R7);
+//   USE_GPR(R7);
   USE_GPR_SEL(1, R7);
-  USE_GPR_WORD(R1_R0);
-  USE_GPR_WORD(R3_R2);
-  USE_GPR_WORD(R5_R4);
+//   USE_GPR_WORD(R1_R0);
+//   USE_GPR_WORD(R3_R2);
+//   USE_GPR_WORD(R5_R4);
 
-  if (R5 >= 4) {
+  USE_MEM_WORD(RAM, LAST_CRANKSHAFT_EVENT_TIMESTAMP) LastEventTimestamp;
+  USE_MEM_WORD(RAM, ETA_TO_NEXT_CRANKSHAFT_EVENT) EtaToNextCrankshaftEvent;
+  USE_MEM_BYTE(RAM, TOOTH_COUNTER) ToothCounter;
+  USE_MEM_BYTE(RAM, TOOTH_COUNTER_WITHIN_HALF_REVOLUTION) ToothCounterHalf;
+
+  if (HIGH(EtaToNextCrankshaftEvent) >= 4) {
     // _09BD:
     CLEAR_BIT_IN(RAM[0x25], 2);
     RAM[0x44] = RAM[0x45] = 0;
@@ -143,7 +151,7 @@ inline void regularToothCapturedImpl() {
 
   // r5_less_than_4:
   // _09C5:
-  if (!CHECK_AND_CLEAR_BIT(RAM[0x25], 4) && R7 == RAM[0x36]) {
+  if (!CHECK_AND_CLEAR_BIT(RAM[0x25], 4) && ToothCounterHalf == RAM[0x36]) {
     // _09D5:
     RAM[0x34] = (RAM[0x33] >= RAM[0x37]) ? (RAM[0x33] - RAM[0x37]) : (RAM[0x33] - RAM[0x37] + 4);
     SET_BIT_IN(RAM[0x27], 0);
@@ -158,13 +166,13 @@ inline void regularToothCapturedImpl() {
 
   // _09E3:
   // ram_25_bit_4_set_or_r7_neq_ram_36:
-  if (equal(R6, R0_bank2)) {
+  if (equal(ToothCounter, R0_bank2)) {
     // _09EC:
     SET_BIT_IN(P5, 4);
-    word scheduledTimestamp = (QUAD(R5_R4) << 1) * R1_bank2 / 256;
+    word scheduledTimestamp = (QUAD(EtaToNextCrankshaftEvent) << 1) * R1_bank2 / 256;
 
     // _0A11:
-    scheduledTimestamp += R3_R2;
+    scheduledTimestamp += LastEventTimestamp;
 
     // R1_R0 = scheduledTimestamp;
 
@@ -195,13 +203,13 @@ inline void regularToothCapturedImpl() {
   // goto r6_bank_3_neq_r0_bank_2_impl // _0AC5
   // _0AC5:
   // r6_bank_3_neq_r0_bank_2_impl:
-  if (equal(R6, R2_bank2)) {
+  if (equal(ToothCounter, R2_bank2)) {
     // _0ACD:
     CLEAR_BIT_IN(P5, 4);
-    word scheduledTimestamp = QUAD(R5_R4) * R3_bank2 / 256;
+    word scheduledTimestamp = QUAD(EtaToNextCrankshaftEvent) * R3_bank2 / 256;
 
     // _0AF2:
-    scheduledTimestamp += R3_R2;
+    scheduledTimestamp += LastEventTimestamp;
     // R1_R0 = scheduledTimestamp;
 
     switch (R5_bank2) {
@@ -254,7 +262,7 @@ inline void regularToothCapturedImpl() {
   // goto r6_bank_3_neq_r6_bank_2_impl; // _0B58
   // r6_bank_3_neq_r6_bank_2_impl:
   // _0B58:
-  if (equal(R6, R7_bank1)) {
+  if (equal(ToothCounter, R7_bank1)) {
     // _0B60:
     // r6_eq_r7_bank1:
     if (!CHECK_BIT_AT(RAM[0x2E], 1)) {
@@ -270,11 +278,11 @@ inline void regularToothCapturedImpl() {
       }
     } else {
       // _0B63:
-      R1_R0 = (QUAD(R5_R4) << 1) * R4_bank2 / 256;
+      word scheduledTimestamp = (QUAD(EtaToNextCrankshaftEvent) << 1) * R4_bank2 / 256;
 
       // _0B86:
-      R1_R0 += R3_R2;
-      Reg::CC4::Inst = R1_R0;
+      scheduledTimestamp += LastEventTimestamp;
+      Reg::CC4::Inst = scheduledTimestamp;
 
       // Reset P1.4/INT2/CC4 interrupt request
       {
@@ -334,10 +342,10 @@ inline void regularToothCapturedImpl() {
   // goto r6_neq_r7_bank1_impl; // _0BE4
   // r6_neq_r7_bank1_impl:
   // _0BE4:
-  if (!CHECK_BIT_AT(R7, 0) && (R7 < 0x1E)) {
+  if (!CHECK_BIT_AT(ToothCounterHalf, 0) && (ToothCounterHalf < 0x1E)) {
     // _0BF0:
     // Get MAF data once per two teeth
-    RAM[0x8A + (R7 >> 1)] = ADC_8bit(MAF_PIN);
+    RAM[0x8A + (ToothCounterHalf >> 1)] = ADC_8bit(MAF_PIN);
   }
 
   // set_ram_25_5_and_graceful_finish_ext_int_6:
@@ -350,6 +358,7 @@ inline void regularToothCapturedImpl() {
 
 // _0897:
 // Called iff ExtInt6 is triggered for compare match on CC3
+// Called for missing teeth region.
 // Uses register bank 3
 // R6 - synchronization disc tooth counter ?
 // R7 - same?
@@ -359,10 +368,13 @@ inline void ExtInt6_CompareMatch() {
   // ram_26_2_is_set:
   Reg::PSW::Inst = registerBankMask(3);
 
-  USE_GPR(R6);
-  USE_GPR(R7);
-  USE_GPR_WORD(R3_R2);
-  USE_GPR_WORD(R5_R4);
+//   USE_GPR(R6);
+//   USE_GPR(R7);
+//   USE_GPR_WORD(R3_R2);
+//   USE_GPR_WORD(R5_R4);
+  USE_MEM_WORD(RAM, LAST_CRANKSHAFT_EVENT_TIMESTAMP) LastEventTimestamp;
+  USE_MEM_BYTE(RAM, TOOTH_COUNTER) ToothCounter;
+  USE_MEM_BYTE(RAM, TOOTH_COUNTER_WITHIN_HALF_REVOLUTION) ToothCounterHalf;
 
   if (!CHECK_BIT_AT(RAM[0x25], 1)) {
     // Prepare for crankshaft revolution to begin?
@@ -377,23 +389,23 @@ inline void ExtInt6_CompareMatch() {
       Reg::Set<Reg::CCEN>{}.add<Reg::CCEN::COCAL3>();
     }
 
-    set_RAM25_bit5_and_reset_Calculus(); // TODO
-    //goto graceful_finish_ext_int_6; // _0C05 TODO
+    set_RAM25_bit5_and_reset_Calculus();
+    //goto graceful_finish_ext_int_6; // _0C05
   } else {
     // _08A3:
-    R3_R2 = Reg::CC3::Inst;
+    LastEventTimestamp = WORD(Reg::CC3::Inst);
     // 0x39 = 57 (dec), maximum for [0..58=60-2) segment
-    if (equal(R6, Const::SyncDiscLastRealTooth /* BYTE(0x39) */)) {
+    if (ToothCounter == Const::SyncDiscLastRealTooth /* BYTE(0x39) */) {
       /* Start of missing tooth region, can't capture, only compare */
       // _08AA:
-      Reg::CC3::Inst += R5_R4;
+      Reg::CC3::Inst += GET_MEM_WORD(RAM, ETA_TO_NEXT_CRANKSHAFT_EVENT);
       {
         Reg::Mask<Reg::IRCON0>{}.add<Reg::IRCON0::IEX6>();
       }
 
       // We think crankshaft has rotated for another tooth
-      ++R6;
-      ++R7;
+      ++ToothCounter;
+      ++ToothCounterHalf;
     } else {
       // Lets capture the next tooth timestamp
       // _08B9:
@@ -409,8 +421,8 @@ inline void ExtInt6_CompareMatch() {
       }
 
       // We think crankshaft has rotated for another tooth
-      ++R6;
-      ++R7;
+      ++ToothCounter;
+      ++ToothCounterHalf;
     }
 
     //goto r7_neq_1e;
@@ -419,17 +431,24 @@ inline void ExtInt6_CompareMatch() {
 }
 
 inline void prepareForMissingToothRegion() {
-  USE_GPR_WORD(R5_R4);
-  USE_GPR_WORD(R1_R0);
-  USE_GPR_WORD(R3_R2);
+//   USE_GPR_WORD(R5_R4);
+//   USE_GPR_WORD(R1_R0);
+//   USE_GPR_WORD(R3_R2);
+//
+//   USE_GPR(R6);
+//   USE_GPR(R7);
 
-  USE_GPR(R6);
-  USE_GPR(R7);
+  USE_MEM_WORD(RAM, TIME_SINCE_LAST_CRANKSHAFT_EVENT) TimeSinceLastEvent;
+  USE_MEM_WORD(RAM, LAST_CRANKSHAFT_EVENT_TIMESTAMP) LastEventTimestamp;
+  USE_MEM_WORD(RAM, ETA_TO_NEXT_CRANKSHAFT_EVENT) EtaToNextCrankshaftEvent;
+
+  USE_MEM_BYTE(RAM, TOOTH_COUNTER) ToothCounter;
+  USE_MEM_BYTE(RAM, TOOTH_COUNTER_WITHIN_HALF_REVOLUTION) ToothCounterHalf;
 
   // Missing tooth region is about to begin. Hence, schedule a compare match
   // within R1_R0 jiffies. Store R1_R0 in R5_R4 for the next event for checks.
   // _091F:
-  R5_R4 = R1_R0;
+  EtaToNextCrankshaftEvent = TimeSinceLastEvent;
   SET_BIT_IN(RAM[0x26], 2);
   // Compare mode for P1.3/INT6/CC3
   {
@@ -441,7 +460,7 @@ inline void prepareForMissingToothRegion() {
 
   SET_BIT_IN(P1, 3); // enable alternate function of P1.3
 
-  Reg::CC3::Inst = R3_R2 + R5_R4;
+  Reg::CC3::Inst = LastEventTimestamp + EtaToNextCrankshaftEvent;
 
   // IRCON0.IEX6 = 0
   // should be cleared by H/W when processor vectors to interrupt
@@ -450,8 +469,8 @@ inline void prepareForMissingToothRegion() {
     Reg::Mask<Reg::IRCON0>{}.add<Reg::IRCON0::IEX6>();
   }
 
-  ++R6;
-  ++R7;
+  ++ToothCounter;
+  ++ToothCounterHalf;
 }
 
 inline bool isCamshaftMarkActive() {
@@ -529,25 +548,31 @@ inline void updateStroke(bool CamshaftMarkActive) {
 
 // _0955:
 inline void firstToothAfterMissingOnesCaptured() {
-  USE_GPR(R6);
-  USE_GPR(R7);
-  USE_GPR_WORD(R3_R2);
+//   USE_GPR(R6);
+//   USE_GPR(R7);
+//   USE_GPR_WORD(R3_R2);
+
+  USE_MEM_BYTE(RAM, TOOTH_COUNTER) ToothCounter;
+  USE_MEM_BYTE(RAM, TOOTH_COUNTER_WITHIN_HALF_REVOLUTION) ToothCounterHalf;
+  USE_MEM_WORD(RAM, LAST_CRANKSHAFT_EVENT_TIMESTAMP) LastEventTimestamp;
+  USE_MEM_WORD(RAM, SYNC_DISC_FIRST_TOOTH_LAST_TIMESTAMP)
+      LastFirstToothTimestamp;
+  USE_MEM_WORD(RAM, LAST_CRANKSHAFT_REVOLUTION_TIME_LENGTH)
+      LastRevolutionTimeLength;
 
   // The first tooth after missing one is captured, reset tooth counters
   // _0955:
-  R6 = 0;
-  R7 = 0;
+  ToothCounter = 0;
+  ToothCounterHalf = 0;
 
   if (CHECK_BIT_AT(RAM[0x25], 5)) {
     // _095C:
-    SET_MEM_WORD(
-        RAM, LAST_CRANKSHAFT_REVOLUTION_TIME_LENGTH,
-        R3_R2 - GET_MEM_WORD(RAM, SYNC_DISC_FIRST_TOOTH_LAST_TIMESTAMP));
+    LastRevolutionTimeLength = LastEventTimestamp - LastFirstToothTimestamp;
   }
 
   // _0967:
   // ram_25_bit_2_not_set:
-  SET_MEM_WORD(RAM, SYNC_DISC_FIRST_TOOTH_LAST_TIMESTAMP, R3_R2);
+  LastFirstToothTimestamp = LastEventTimestamp;
 
   SET_BIT_IN(RAM[0x25], 2);
 
@@ -599,21 +624,27 @@ inline void firstToothAfterMissingOnesCaptured() {
 
 // _093E:
 inline void regularToothCaptured() {
-  USE_GPR_WORD(R5_R4);
-  USE_GPR_WORD(R1_R0);
-  USE_GPR(R6);
-  USE_GPR(R7);
+//   USE_GPR_WORD(R5_R4);
+//   USE_GPR_WORD(R1_R0);
+//   USE_GPR(R6);
+//   USE_GPR(R7);
+
+  USE_MEM_WORD(RAM, ETA_TO_NEXT_CRANKSHAFT_EVENT) EtaToNextCrankshaftEvent;
+  USE_MEM_WORD(RAM, TIME_SINCE_LAST_CRANKSHAFT_EVENT) TimeSinceLastEvent;
+  USE_MEM_BYTE(RAM, TOOTH_COUNTER) ToothCounter;
+  USE_MEM_BYTE(RAM, TOOTH_COUNTER_WITHIN_HALF_REVOLUTION) ToothCounterHalf;
+  USE_MEM_BYTE(RAM, FIRST_CYLINDER_STROKE) Stroke;
 
   // Regular tooth captured?
   // _093E:
-  R5_R4 = R1_R0;
-  ++R6;
-  ++R7;
+  EtaToNextCrankshaftEvent = TimeSinceLastEvent;
+  ++ToothCounter;
+  ++ToothCounterHalf;
 
-  if (BYTE(0x1E) == R7) {
-    R7 = 0;
+  if (BYTE(0x1E) == ToothCounterHalf) {
+    ToothCounterHalf = 0;
     // half revolution of crankshaft, switch phase
-    ++RAM[0x33];
+    ++Stroke;
   }
 
   // _09B7:
@@ -637,12 +668,14 @@ inline void reset_Ignition_ClearAndSetMasks_Calculus() {
 }
 
 inline void _0912() {
-  USE_GPR_WORD(R3_R2);
-  USE_GPR(R6);
+//   USE_GPR_WORD(R3_R2);
+//   USE_GPR(R6);
+  USE_MEM_WORD(RAM, LAST_CRANKSHAFT_EVENT_TIMESTAMP) CurrentEventTimestamp;
+  USE_MEM_BYTE(RAM, TOOTH_COUNTER) ToothCounter;
 
   // _0912:
-  word CurrentEventTimestamp = Reg::CC3::Inst;
-  R3_R2 = CurrentEventTimestamp;
+  CurrentEventTimestamp = Reg::CC3::Inst;
+
   COPY_BIT(RAM[0x26], 0, RAM[0x26], 1);
   CLEAR_BIT_IN(RAM[0x26], 1);
 
@@ -650,7 +683,7 @@ inline void _0912() {
   // 0x38 - 56 (dec)
   // 0x3B - 59 (dec)
 
-  if (Const::SyncDiscLastRealToothMinus1 /* 0x38 */ == R6) {
+  if (Const::SyncDiscLastRealToothMinus1 /* 0x38 */ == ToothCounter) {
     // This is the last tooth (increment of R6, the tooth counter, will happen
     // in the end). Hence, prepare for missing tooth region
     // _091F:
@@ -658,13 +691,13 @@ inline void _0912() {
 
     //goto r7_neq_1e;
     regularToothCapturedImpl(); // _09B7 do the usual thing?
-  } else if (R6 < Const::SyncDiscLastRealToothMinus1 /* 0x38 */) {
+  } else if (ToothCounter < Const::SyncDiscLastRealToothMinus1 /* 0x38 */) {
     regularToothCaptured();
-  } else if (Const::SyncDiscLastTooth /* 0x3B */ == R6) {
+  } else if (Const::SyncDiscLastTooth /* 0x3B */ == ToothCounter) {
     firstToothAfterMissingOnesCaptured();
   } else /* (R6 > 0x38) && (R6 != 0x3B) */ {
     // Seems to be some sort of failure - missing tooth gets captured instead of
-    // compare. Error condition ? TODO
+    // compare. Error condition ?
     // _094D:
     // r6_neq_3b:
     SET_BIT_IN(RAM[0x20], 3);
@@ -699,7 +732,7 @@ inline void _084B() {
   } else {
     // _0851:
     SET_BIT_IN(RAM[0x26], 1);
-    //goto graceful_finish_ext_int_6; // => _0C05 TODO
+    //goto graceful_finish_ext_int_6; // => _0C05
     return;
   }
 }
@@ -716,11 +749,15 @@ inline void updateRam30To2() {
 
 // _08CB:
 inline void ram30Neq4() {
-  USE_GPR_WORD(R1_R0);
-  USE_GPR_WORD(R3_R2);
-  USE_GPR_WORD(R5_R4);
+//   USE_GPR_WORD(R1_R0);
+//   USE_GPR_WORD(R3_R2);
+//   USE_GPR_WORD(R5_R4);
+//
+//   USE_GPR(R5);
 
-  USE_GPR(R5);
+  USE_MEM_WORD(RAM, TIME_SINCE_LAST_CRANKSHAFT_EVENT) TimeSinceLastEvent;
+  USE_MEM_WORD(RAM, LAST_CRANKSHAFT_EVENT_TIMESTAMP) LastEventTimestamp;
+  USE_MEM_WORD(RAM, ETA_TO_NEXT_CRANKSHAFT_EVENT) EtaToNextCrankshaftEvent;
 
   // _08CB:
   // ram_30_neq_4:
@@ -729,7 +766,6 @@ inline void ram30Neq4() {
     ++RAM[0x30];
     update_lastEventTimestamp_expectedTimeToNextEvent();
     return;
-
   }
 
   assert(RAM[0x30] >= 2);
@@ -738,20 +774,21 @@ inline void ram30Neq4() {
   // goto _0791;
   // _0791:
 
-  if (CHECK_BIT_AT(R5_R4, 15)) {
+  if (CHECK_BIT_AT(EtaToNextCrankshaftEvent, 15)) {
     // _079A:
     // goto no_overflow_on_ram32_ram31_plus_half_r5_r4; // => _0820
     updateRam30To2();
+    return;
   }
 
-  word R5_R4x2 = R5_R4 << 1;
+  word R5_R4x2 = EtaToNextCrankshaftEvent << 1;
 
   // _079D:
   // r5_r4_shl_1_bit_15_not_set:
-  word AbsDiff = R1_R0 - R5_R4x2;
+  word AbsDiff = TimeSinceLastEvent - R5_R4x2;
   bool DiffIsPositive = true;
 
-  if (R1_R0 < R5_R4x2) {
+  if (TimeSinceLastEvent < R5_R4x2) {
     // _07AE:
     DiffIsPositive = false;
     AbsDiff = NEGATE(AbsDiff);
@@ -759,9 +796,9 @@ inline void ram30Neq4() {
 
   // _07BE:
   // r1_r0_was_larger_than_r5_r4_shl_1:
-  if (AbsDiff >= (R5_R4 >> 2) &&
-      ((R5 && (AbsDiff < 3 * R5_R4 / 2)) ||
-        (!R5 && (AbsDiff < 2 * R5_R4)))) {
+  if (AbsDiff >= (EtaToNextCrankshaftEvent >> 2) &&
+      ((HIGH(EtaToNextCrankshaftEvent) && (AbsDiff < 3 * EtaToNextCrankshaftEvent / 2)) ||
+        (!HIGH(EtaToNextCrankshaftEvent) && (AbsDiff < 2 * EtaToNextCrankshaftEvent)))) {
     // R5_R4 / 2 <= abs(R1_R0 - R5_R4 * 2) < 3 * R5_R4 / 2
     // OR R5_R4 / 2 <= abs(R1_R0 - R5_R4 * 2) < 2 * R5_R4
     // Abs difference is within limits
@@ -779,7 +816,7 @@ inline void ram30Neq4() {
         updateRam30To2();
       } else /* RAM[0x30] == 3 */ {
         // _0813:
-        R3_R2 = Reg::CC3::Inst;
+        LastEventTimestamp = Reg::CC3::Inst;
         ++RAM[0x30];
         CLEAR_BIT_IN(RAM[0x26], 1);
         CLEAR_BIT_IN(RAM[0x26], 0);
@@ -841,9 +878,13 @@ inline void ExtInt6_CaptureEvent() {
   USE_GPR_SEL(2, R6);
   USE_GPR_SEL(1, R7);
 
-  USE_GPR_WORD(R1_R0);
-  USE_GPR_WORD(R3_R2);
-  USE_GPR_WORD(R5_R4);
+//   USE_GPR_WORD(R1_R0);
+//   USE_GPR_WORD(R3_R2);
+//   USE_GPR_WORD(R5_R4);
+
+  USE_MEM_WORD(RAM, LAST_CRANKSHAFT_EVENT_TIMESTAMP) LastEventTimestamp;
+  USE_MEM_WORD(RAM, ETA_TO_NEXT_CRANKSHAFT_EVENT) EtaToNextCrankshaftEvent;
+  USE_MEM_WORD(RAM, TIME_SINCE_LAST_CRANKSHAFT_EVENT) TimeSinceLastEvent;
 
   Reg::PSW::Inst = registerBankMask(3);
 
@@ -854,22 +895,20 @@ inline void ExtInt6_CaptureEvent() {
   }
 
   // _08ED:
-  word LastEventTimestap = R3_R2;
-  word TimeSinceLastEvent = Reg::CC3::Inst - LastEventTimestap;
-  R1_R0 = TimeSinceLastEvent;
+  TimeSinceLastEvent = Reg::CC3::Inst - LastEventTimestamp;
 
   if (RAM[0x30] != 4) {
     // _08CB:
     ram30Neq4();
-  } else /* _08F8: */ if (!HIGH(R1_R0) && !HIGH(R5_R4)) {
+  } else /* _08F8: */ if (!HIGH(TimeSinceLastEvent) && !HIGH(EtaToNextCrankshaftEvent)) {
     // RAM[0x30] equals 4 here
     // _0902:
     // both_r1_and_r5_eq_0:
 
-    if (R1_R0 < R5_R4 / 2) {
+    if (TimeSinceLastEvent < EtaToNextCrankshaftEvent / 2) {
       // Malfunction of crankshaft position sensor or rapid acceleration?
       _084B();
-    } else if (R1_R0 < 3 * R5_R4 / 2) {
+    } else if (TimeSinceLastEvent < 3 * EtaToNextCrankshaftEvent / 2) {
       // Crankshaft has rotated for yet another tooth. We captured the tooth.
       _0912();
     } else /* if (R1_R0 >= 3 * R5_R4 / 2) */ {
@@ -883,11 +922,11 @@ inline void ExtInt6_CaptureEvent() {
     // _082E:
     // either_r1_or_r5_neq_0:
 
-    if (R1_R0 >= (R5_R4 * 2)) {
+    if (TimeSinceLastEvent >= (EtaToNextCrankshaftEvent * 2)) {
       // The first tooth after the missing ones is captured?
       set_RAM20_bit0_and_reset_Ignition_ClearAndSetMasks_Calculus();
       return;
-    } else if ((R1_R0 >= R5_R4) || (R1_R0 >= (R5_R4 / 2))) {
+    } else if ((TimeSinceLastEvent >= EtaToNextCrankshaftEvent) || (TimeSinceLastEvent >= (EtaToNextCrankshaftEvent / 2))) {
       // Crankshaft has rotated for yet another tooth. We captured the tooth.
       _0912();
     } else /* if (R1_R0 < (R5_R4 / 2)) */ {
