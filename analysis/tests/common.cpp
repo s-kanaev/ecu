@@ -9,6 +9,7 @@ std::string getTestName() {
     CASE(IntakeAirTempADC);
     CASE(IgnitionSwitchADC);
     CASE(CoolantTempADC2);
+    CASE(CoolantTempADC3);
     default:
       die(false, "Invalid test name");
       return "N / A";

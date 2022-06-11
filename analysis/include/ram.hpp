@@ -29,7 +29,9 @@ static inline void INIT_RAM() {
                   // bit 6 (bit address 0x06) = copy of PSW.F1 // watchdog triggered?
                   // bit 7 (bit address 0x07) = if xram check sum was not valid
 
-  [0x21] = 0x00,  // bit 0 (bit address 0x08) = 1 if failed to read first 0x42 bytes from eeprom
+  [0x21] = 0x00,  // error codes ?
+                  // bit 0 (bit address 0x08) = 1 if failed to read first 0x42 bytes from eeprom
+                  // bit 4 - ?
   [0x22] = 0x00,  // error codes ?
                   // bit 4 - ignition switch voltage less than low limit
                   // bit 5 - ignition switch voltage higher than high limit
@@ -96,8 +98,8 @@ static inline void INIT_RAM() {
 
   [0x30] = 0,     // Some counter?, can be changed by some interrupt along with 0x1C/0x1D?
 
-  [0x31] = 0,     // Low byte of temporary variable A, used in ExtInt6
-  [0x32] = 0,     // High byte of temporary variable A, used in ExtInt6
+  [0x31] = 0,     // Low byte of temporary variable, used in ExtInt6
+  [0x32] = 0,     // High byte of temporary variable, used in ExtInt6
 
   [0x33] = 0,     // number of half revolutions of a crankshaft.
                   // Incremented when R7(bank3) increments to 30 and resets.

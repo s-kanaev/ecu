@@ -42,6 +42,7 @@ enum class TestName : int {
   INIT = 0,
   CoolantTempADC = INIT,
   CoolantTempADC2,
+  CoolantTempADC3,
   IntakeAirTempADC,
   IgnitionSwitchADC,
   TESTS_COUNT,

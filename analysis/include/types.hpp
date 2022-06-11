@@ -15,6 +15,12 @@ TYPES:
 
 typedef uint8_t byte;
 typedef uint16_t word;
+
+// struct word_t {
+//
+// };
+
+//typedef word_t word;
 typedef uint32_t quad;
 typedef int8_t sbyte;
 typedef int16_t sword;

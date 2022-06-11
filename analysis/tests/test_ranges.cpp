@@ -50,7 +50,8 @@ namespace ADC_Mocks {
       ADCMockT CoolantTemperatrueADC;
       VectorWithIdx<word> Values{130 - (-45) + 2};
 
-      for (int T = -70; T <= 200; ++T) {
+//       for (int T = -70; T <= 200; ++T) {
+      for (int T = -40; T <= 120; ++T) {
         Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(T), VoltageRail));
       }
 
@@ -81,6 +82,23 @@ namespace ADC_Mocks {
       die(It.second, "Couldn't insert ADC Mock");
 
       ADCMock[TestName::CoolantTempADC2] = CoolantTemperatrueADC;
+    }
+
+    {
+      ADCMockT CoolantTempADC;
+      VectorWithIdx<word> Values{130 - (-45) + 2};
+
+      for (int T = -40; T <= 120; ++T) {
+        Values.V().push_back(makeADCValue(TEMPERATURE_CHARACTERISTIC(T), VoltageRail));
+      }
+
+      auto It = CoolantTempADC.emplace(
+        std::make_pair(COOLANT_TEMP_PIN, Values)
+      );
+
+      die(It.second, "Couldn't insert ADC Mock");
+
+      ADCMock[TestName::CoolantTempADC3] = CoolantTempADC;
     }
   }
 
@@ -288,6 +306,37 @@ void test_60BA() {
   fprintf(stderr, "%s", OutputS.str().data());
 }
 
+template <typename _Container>
+typename std::enable_if<
+  std::is_same<typename _Container::value_type, double>::value ||
+  std::is_same<typename _Container::value_type, float>::value
+>::type matlabOutputArray(const _Container &V, const char *MVarName, FILE *OutF) {
+  auto It = V.begin();
+
+  die(It != V.end(), std::string("Empty vector for ") + MVarName);
+
+  fprintf(OutF, "%s = [ %g", MVarName, static_cast<double>(*It));
+  for (++It; It != V.end(); ++It)
+    fprintf(OutF, ", %g", static_cast<double>(*It));
+  fprintf(OutF, "];\n");
+}
+
+template <typename _Container>
+typename std::enable_if<
+  std::is_same<typename _Container::value_type, byte>::value ||
+  std::is_same<typename _Container::value_type, word>::value ||
+  std::is_same<typename _Container::value_type, quad>::value
+>::type matlabOutputArray(const _Container &V, const char *MVarName, FILE *OutF) {
+  auto It = V.begin();
+
+  die(It != V.end(), std::string("Empty vector for ") + MVarName);
+
+  fprintf(OutF, "%s = [ %u", MVarName, static_cast<unsigned int>(*It));
+  for (++It; It != V.end(); ++It)
+    fprintf(OutF, ", %u", static_cast<unsigned int>(*It));
+  fprintf(OutF, "];\n");
+}
+
 int main() {
   INIT_FLASH();
   INIT_RAM();
@@ -334,11 +383,13 @@ int main() {
     std::vector<double> Temperature;
     std::vector<byte> Ram3A;
     std::vector<byte> Ram3D;
+    std::vector<word> ADCVal;
 
     FILE *OutF = stderr;
     testADC(&Inputs_Part1_CoolantTemp, [&, OutF](const std::map<pin, word> &Test) {
       word ADCV = Test.at(COOLANT_TEMP_PIN);
 
+      ADCVal.push_back(ADCV);
       Temperature.push_back(REVERSE_TEMP_CHAR(unADCValue(ADCV, ADC_Mocks::VoltageRail)));
       Ram3A.push_back(RAM[0x3A]);
       Ram3D.push_back(RAM[0x3D]);
@@ -354,36 +405,75 @@ int main() {
       );
     }, { COOLANT_TEMP_PIN });
 
-    {
-      auto It = Temperature.begin();
+    matlabOutputArray(Temperature, "temp", OutF);
+    matlabOutputArray(ADCVal, "temp_adc", OutF);
+    matlabOutputArray(Ram3A, "ram_3a", OutF);
+    matlabOutputArray(Ram3D, "ram_3d", OutF);
+  }
 
-      die(It != Temperature.end(), "Empty vector of temperatures");
+  switchToTest(TestName::CoolantTempADC3);
 
-      fprintf(OutF, "temp = [ %g", *It);
-      for (++It; It != Temperature.end(); ++It)
-        fprintf(OutF, ", %g", *It);
-      fprintf(OutF, "];\n");
-    }
-    {
-      auto It = Ram3A.begin();
+  {
+    std::vector<double> Temperature;
+    std::vector<word> AdjustedCoolantTemps;
+    std::vector<word> ADCVal;
 
-      die(It != Ram3A.end(), "Empty vector of RAM[0x3A] values");
+    FILE *OutF = stderr;
+    testADC(
+      [&, OutF] {
+        word CoolantTemp = ADC_10bit(COOLANT_TEMP_PIN);
+        SET_MEM_BYTE(XRAM, ADC_COOLANT_TEMP, HIGH(CoolantTemp));
+        bool CoolantTempNotInLimits = false;
 
-      fprintf(OutF, "ram_3a = [ %u", (unsigned)(*It));
-      for (++It; It != Ram3A.end(); ++It)
-        fprintf(OutF, ", %u", (unsigned)(*It));
-      fprintf(OutF, "];\n");
-    }
-    {
-      auto It = Ram3D.begin();
+        if (!FLASH[0x805D]) {
+          if (HIGH(CoolantTemp) < FLASH[0x8057]) {
+            // coolant_temp_less_than_low_limit
+            SET_BIT_IN(RAM[0x23], 2);
+            CLEAR_BIT_IN(RAM[0x23], 3);
 
-      die(It != Ram3D.end(), "Empty vector of RAM[0x3D] values");
+            CoolantTempNotInLimits = true;
+          } else
+            if (HIGH(CoolantTemp) > FLASH[0x8058]) {
+            // coolant_temp_larger_than_high_limit
+            CLEAR_BIT_IN(RAM[0x23], 2);
+            SET_BIT_IN(RAM[0x23], 3);
 
-      fprintf(OutF, "ram_3d = [ %u", (unsigned)(*It));
-      for (++It; It != Ram3D.end(); ++It)
-        fprintf(OutF, ", %u", (unsigned)(*It));
-      fprintf(OutF, "];\n");
-    }
+            CoolantTempNotInLimits = true;
+          }
+        }
+
+        word AdjustedCoolantTemp;
+
+        // CoolantTempNotInLimits = false in both examples
+        if (!CoolantTempNotInLimits || FLASH[0x805D]) {
+          CLEAR_BIT_IN(RAM[0x23], 2);
+          CLEAR_BIT_IN(RAM[0x23], 3);
+
+          // 1. AdjustedCoolantTemp: 0x2F84
+          // 2. AdjustedCoolantTemp: 0x0000
+          AdjustedCoolantTemp = GetAdcValueFromTableAndAdjustForCalculus(
+              RNG_START_IDX(FLASH, COOLANT_TEMPERATURE_TABLE_1), CoolantTemp);
+        } else if (CoolantTempNotInLimits) /* CoolantTempNotInLimits && !FLASH[0x805D] */ {
+          AdjustedCoolantTemp = COMPOSE_WORD(FLASH[0x8A4B], 0);
+        }
+#if __E591_HOST_COMPILATION
+        else {
+          assert(false && "Shouldn't get here");
+        }
+#endif
+        AdjustedCoolantTemps.push_back(AdjustedCoolantTemp);
+      },
+      [&, OutF](const std::map<pin, word> &Test) {
+        word ADCV = Test.at(COOLANT_TEMP_PIN);
+
+        ADCVal.push_back(ADCV);
+        Temperature.push_back(REVERSE_TEMP_CHAR(unADCValue(ADCV, ADC_Mocks::VoltageRail)));
+      },
+      { COOLANT_TEMP_PIN });
+
+    matlabOutputArray(Temperature, "temp", OutF);
+    matlabOutputArray(ADCVal, "temp_adc", OutF);
+    matlabOutputArray(AdjustedCoolantTemps, "adj_temp", OutF);
   }
 
   test_60BA();

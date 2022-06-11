@@ -25,9 +25,9 @@ namespace seg {
   struct FLASH;
   struct RAM;
 
-template <typename _Seg>
+  template <typename _Seg>
   struct Segment {
-    using SelfSeg = _Seg;
+    using Seg = _Seg;
 
     static byte &get(std::size_t Idx);
   };

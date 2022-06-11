@@ -16,6 +16,16 @@ do {                          \
   v &= ~(SET_BIT(bit));       \
 } while (0)
 
+// template <typename T>
+// inline void SET_BIT_IN(T &V, bit B) {
+//   V |= SET_BIT(B);
+// }
+//
+// template <typename T>
+// inline void CLEAR_BIT_IN(T &V, bit B) {
+//   V &= ~(SET_BIT(B));
+// }
+
 /* CHECK_BIT_AT(0x10, 4) is true */
 #define CHECK_BIT_AT(val, bit) ((val) & SET_BIT(bit))
 

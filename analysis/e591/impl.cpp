@@ -15,7 +15,7 @@
 
 #include <pins.hpp>
 #include <undefined.hpp>
-#include <ports.hpp>
+//#include <ports.hpp>
 
 #if __E591_HOST_COMPILATION
 byte P1;

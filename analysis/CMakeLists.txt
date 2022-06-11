@@ -2,6 +2,8 @@ project(ecu CXX)
 
 cmake_minimum_required(VERSION 3.17)
 
+set(CXX_FLAGS -std=c++20)
+
 include_directories(include)
 include_directories(.)
 
