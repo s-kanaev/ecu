@@ -49,7 +49,7 @@ namespace Reg { namespace detail {                                             \
 }}
 
 #define DEFINE_REGISTER8(name, addr, init, b7, b6, b5, b4, b3, b2, b1, b0)     \
-DEFINE_REGISTER(name, addr, byte, init, false, b7, b6, b5, b4, b3, b2, b1, b0);\
+DEFINE_REGISTER(name, addr, byte, init, false, b0, b1, b2, b3, b4, b5, b6, b7);\
   DEFINE_REG_BIT(name, b7);                                                    \
   DEFINE_REG_BIT(name, b6);                                                    \
   DEFINE_REG_BIT(name, b5);                                                    \
@@ -60,7 +60,7 @@ DEFINE_REGISTER(name, addr, byte, init, false, b7, b6, b5, b4, b3, b2, b1, b0);\
   DEFINE_REG_BIT(name, b0);
 
 #define DEFINE_REGISTER8_NB(name, addr, init)                                  \
-DEFINE_REGISTER(name, addr, byte, init, false, b7, b6, b5, b4, b3, b2, b1, b0);\
+DEFINE_REGISTER(name, addr, byte, init, false, b0, b1, b2, b3, b4, b5, b6, b7);\
   DEFINE_REG_BIT(name, b7);                                                    \
   DEFINE_REG_BIT(name, b6);                                                    \
   DEFINE_REG_BIT(name, b5);                                                    \
@@ -71,7 +71,7 @@ DEFINE_REGISTER(name, addr, byte, init, false, b7, b6, b5, b4, b3, b2, b1, b0);\
   DEFINE_REG_BIT(name, b0);
 
 #define DEFINE_REGISTER8_MAP(name, addr, init, b7, b6, b5, b4, b3, b2, b1, b0) \
-DEFINE_REGISTER(name, addr, byte, init, true, b7, b6, b5, b4, b3, b2, b1, b0); \
+DEFINE_REGISTER(name, addr, byte, init, true, b0, b1, b2, b3, b4, b5, b6, b7); \
   DEFINE_REG_BIT(name, b7);                                                    \
   DEFINE_REG_BIT(name, b6);                                                    \
   DEFINE_REG_BIT(name, b5);                                                    \
@@ -82,8 +82,8 @@ DEFINE_REGISTER(name, addr, byte, init, true, b7, b6, b5, b4, b3, b2, b1, b0); \
   DEFINE_REG_BIT(name, b0);
 
 #define DEFINE_REGISTER16_NB(name, addr, init)                                 \
-DEFINE_REGISTER(name, addr, word, init, false, bf, be, bd, bc, bb, ba, b9, b8, \
-                b7, b6, b5, b4, b3, b2, b1, b0);\
+DEFINE_REGISTER(name, addr, word, init, false, b0, b1, b2, b3, b4, b5, b6, b7, \
+                b8, b9, ba, bb, bc, bd, be, bf);\
   DEFINE_REG_BIT(name, bf);                                                    \
   DEFINE_REG_BIT(name, be);                                                    \
   DEFINE_REG_BIT(name, bd);                                                    \
