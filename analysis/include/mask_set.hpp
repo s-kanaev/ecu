@@ -5,6 +5,21 @@
 #include <registers.hpp>
 
 namespace Reg {
+  /** Helper class to get certain named bits from memory location (a register).
+   * \tparam _Reg register type to be accessed
+   * The register type should contain type definitions for:
+   * <li> it's type Type (e.g. uint8 for a single-byte register)
+   * <li> bits enumeration BitEnumT to name bits
+   *
+   * `detail::BitVal<_Reg, _Reg::BitEnumT::x>` should be available to get values for each bit.
+   *
+   * Example usage:
+   * <code>
+   * if (Bits<PSWRegisterT>{}.OR<PSWRegisterT::BitEnumT::ShouldSleep>().OR<PSWRegisterT::BitEnumT::AlreadySlept>().get()) {
+   *   ...
+   * }
+   * </code>
+   */
   template <typename _Reg>
   class Bits {
   public:
@@ -34,8 +49,22 @@ namespace Reg {
     ValT get() const {
       return RegT::Inst & MMask;
     }
+
+    ValT getMask() const {
+      return MMask;
+    }
   };
 
+  /** Same as `Bits` class but with a preset bit in mask.
+   * This allows to eliminate one call to OR function in user code.
+   *
+   * Example usage:
+   * <code>
+   * if (Bit<PSWRegisterT, PSWRegisterT::BitEnumT::ShouldSleep>{}.get()) {
+   *   ...
+   * }
+   * </code>
+   */
   template <typename _Reg, typename _Reg::BitEnumT _Bit>
   class Bit {
   public:
@@ -87,9 +116,9 @@ namespace Reg {
       }
 
       if constexpr (_MaskOrSet) {
-        RegT::Inst &= ~(MBitSet.get());
+        RegT::Inst &= ~(MBitSet.getMask());
       } else {
-        RegT::Inst |= MBitSet.get();
+        RegT::Inst |= MBitSet.getMask();
       }
     }
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "types.hpp"
+
 #define COOLANT_TEMP_PIN ((pin)0x07)
 #define INTAKE_AIR_TEMP_PIN ((pin)0x0E)
 #define CO_POT_PIN ((pin)0x08)
