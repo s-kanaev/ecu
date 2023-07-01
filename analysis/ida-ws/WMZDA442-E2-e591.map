@@ -307,43 +307,43 @@
  00000000:00001334       IEX3_0
  00000000:00001361       IEX4_0
  00000000:0000138E       IE0_0
- 00000000:000013A1       code_13A1
- 00000000:000013AE       code_13AE
+ 00000000:000013A1       ram_27_bit_1_set
+ 00000000:000013AE       there_is_knock_sensor
  00000000:000013C2       code_13C2
- 00000000:000013C8       code_13C8
+ 00000000:000013C8       xram_f7bc_is_nil_or_greater_than_5
  00000000:000013CA       code_13CA
  00000000:000013D1       code_13D1
  00000000:000013E0       code_13E0
  00000000:0000140C       code_140C
- 00000000:00001414       code_1414
+ 00000000:00001414       dont_fill_xram_f7b3
  00000000:00001420       code_1420
  00000000:0000142D       code_142D
- 00000000:00001431       code_1431
+ 00000000:00001431       ram_49_less_than_flash_8092
  00000000:00001443       code_1443
- 00000000:0000144B       code_144B
+ 00000000:0000144B       dont_fill_xram_f7b4
  00000000:0000145C       code_145C
  00000000:00001466       code_1466
- 00000000:0000146D       code_146D
- 00000000:00001476       code_1476
+ 00000000:0000146D       dont_fill_xram_f7b5
+ 00000000:00001476       dont_fill_xram_f7b1
  00000000:00001485       code_1485
- 00000000:0000148D       code_148D
- 00000000:00001493       code_1493
+ 00000000:0000148D       dont_fill_xram_f7b2
+ 00000000:00001493       ram_6d_neq_0
  00000000:000014A3       code_14A3
  00000000:000014C4       code_14C4
  00000000:000014C5       code_14C5
  00000000:000014CA       code_14CA
  00000000:000014CE       code_14CE
- 00000000:000014D6       code_14D6
- 00000000:000014D8       code_14D8
- 00000000:000014DB       code_14DB
- 00000000:000014F7       code_14F7
- 00000000:000014FD       code_14FD
- 00000000:00001513       code_1513
+ 00000000:000014D6       dont_fill_xram_f7b6
+ 00000000:000014D8       flash_8792_greater_than_ram_6e
+ 00000000:000014DB       ram_2a_bit_7_set
+ 00000000:000014F7       get_xram_f7b7
+ 00000000:000014FD       dont_fill_xram_f7b7
+ 00000000:00001513       dont_fill_xram_f7b6_2
  00000000:00001519       code_1519
- 00000000:0000152F       code_152F
+ 00000000:0000152F       acc_was_greater_or_equal_than_r3
  00000000:00001538       code_1538
- 00000000:00001549       code_1549
- 00000000:00001553       code_1553
+ 00000000:00001549       no_knock_sensor_available
+ 00000000:00001553       ram_27_bit_1_not_set
  00000000:00001559       code_1559
  00000000:00001563       code_1563
  00000000:0000157C       code_157C
@@ -1288,12 +1288,12 @@
  00000000:000060D6       code_60D6
  00000000:000060DF       shr_word_3_times
  00000000:000060E2       code_60E2
- 00000000:000060EB       code_60EB
- 00000000:000060FB       code_60FB
- 00000000:000060FE       code_60FE
- 00000000:00006101       code_6101
- 00000000:00006104       code_6104
- 00000000:00006107       code_6107
+ 00000000:000060EB       r1_r0_shr_4
+ 00000000:000060FB       set_acc_ff
+ 00000000:000060FE       set_acc_0
+ 00000000:00006101       set_acc_7f
+ 00000000:00006104       set_acc_80
+ 00000000:00006107       sum_a_b_saturate_ff
  00000000:00006116       code_6116
  00000000:0000611E       code_611E
  00000000:00006121       code_6121
@@ -1601,31 +1601,31 @@
  00000000:0000C53D       code_C53D
  00000000:0000C542       code_C542
  00000000:0000C54D       code_C54D
- 00000000:0000C553       code_C553
- 00000000:0000C55C       code_C55C
- 00000000:0000C55F       code_C55F
- 00000000:0000C56A       code_C56A
- 00000000:0000C57C       code_C57C
+ 00000000:0000C553       ram_2f_bit_1_not_set
+ 00000000:0000C55C       ram_77_neq_4
+ 00000000:0000C55F       ram_77_eq_4
+ 00000000:0000C56A       ram_2f_bit_4_set
+ 00000000:0000C57C       ram_2f_bit_0_not_set
  00000000:0000C585       code_C585
  00000000:0000C591       code_C591
  00000000:0000C593       code_C593
  00000000:0000C598       code_C598
  00000000:0000C59E       code_C59E
  00000000:0000C5A1       code_C5A1
- 00000000:0000C5A8       code_C5A8
- 00000000:0000C5AB       code_C5AB
- 00000000:0000C5CE       code_C5CE
- 00000000:0000C5DC       code_C5DC
+ 00000000:0000C5A8       ram_77_neq_4_2
+ 00000000:0000C5AB       ram_77_eq_4_2
+ 00000000:0000C5CE       xram_f9a2_or_xram_f9a3_neq_nil
+ 00000000:0000C5DC       ram_2f_bit_0_set
  00000000:0000C5F5       code_C5F5
- 00000000:0000C5FA       code_C5FA
+ 00000000:0000C5FA       xram_f980_geq_xram_0xf98e
  00000000:0000C607       code_C607
- 00000000:0000C60C       code_C60C
- 00000000:0000C627       code_C627
+ 00000000:0000C60C       xram_f98d_and_xram_f98e_eq_nil_or_xram_f97f_geq_xram_f98d
+ 00000000:0000C627       xram_f9a2_and_xram_f9a3_eq_nil
  00000000:0000C62D       code_C62D
  00000000:0000C641       code_C641
- 00000000:0000C64F       code_C64F
+ 00000000:0000C64F       xram_f980_less_xram_0xf98e
  00000000:0000C654       code_C654
- 00000000:0000C65B       code_C65B
+ 00000000:0000C65B       ram_2f_bit_1_set_or_ram_77_neq_4
  00000000:0000C65C       code_C65C
  00000000:0000C678       code_C678
  00000000:0000C67B       code_C67B
@@ -1785,38 +1785,38 @@
  00000000:0000CC8D       code_CC8D
  00000000:0000CC8F       code_CC8F
  00000000:0000D000       code_D000
- 00000000:0000D001       code_D001
- 00000000:0000D010       code_D010
- 00000000:0000D01A       code_D01A
- 00000000:0000D03B       code_D03B
- 00000000:0000D051       code_D051
+ 00000000:0000D003       code_D003
+ 00000000:0000D010       xram_f9a0_plus_fd_overflows
+ 00000000:0000D01A       xram_f9a4_bit_7_set
+ 00000000:0000D03B       xram_f9a4_and_3f_neq_zero
+ 00000000:0000D051       xram_f9a0_eq_xram_fe21
  00000000:0000D06C       code_D06C
- 00000000:0000D097       code_D097
- 00000000:0000D0B4       code_D0B4
- 00000000:0000D0BE       code_D0BE
- 00000000:0000D0C7       code_D0C7
- 00000000:0000D0D2       code_D0D2
- 00000000:0000D0D9       code_D0D9
- 00000000:0000D0E0       code_D0E0
- 00000000:0000D0E7       code_D0E7
- 00000000:0000D0EE       code_D0EE
- 00000000:0000D0F5       code_D0F5
- 00000000:0000D0FC       code_D0FC
- 00000000:0000D103       code_D103
- 00000000:0000D10A       code_D10A
- 00000000:0000D111       code_D111
- 00000000:0000D118       code_D118
- 00000000:0000D11F       code_D11F
- 00000000:0000D126       code_D126
- 00000000:0000D130       code_D130
- 00000000:0000D136       code_D136
- 00000000:0000D144       code_D144
- 00000000:0000D195       code_D195
- 00000000:0000D1ED       code_D1ED
+ 00000000:0000D097       r5_xor_80_less_than_r3_xor_80
+ 00000000:0000D0B4       r6_eq_xram__f9a4_plus_xram_fe21_minus_1_
+ 00000000:0000D0BE       xram_f9a5_equal_10
+ 00000000:0000D0C7       xram_f9a4_bit_0_not_set
+ 00000000:0000D0D2       xram_fe25_neq_81
+ 00000000:0000D0D9       xram_fe25_neq_82
+ 00000000:0000D0E0       xram_fe25_neq_10
+ 00000000:0000D0E7       xram_fe25_neq_20
+ 00000000:0000D0EE       xram_fe25_neq_3e
+ 00000000:0000D0F5       xram_fe25_neq_1a
+ 00000000:0000D0FC       xram_fe25_neq_21
+ 00000000:0000D103       xram_fe25_neq_23
+ 00000000:0000D10A       xram_fe25_neq_2c
+ 00000000:0000D111       xram_fe25_neq_3b
+ 00000000:0000D118       xram_fe25_neq_18
+ 00000000:0000D11F       xram_fe25_neq_14
+ 00000000:0000D126       xram_fe25_neq_30
+ 00000000:0000D130       xram_f9a0_plus_fd_doesnt_overflow
+ 00000000:0000D136       set_xram_faab_xram_fe25_or_40
+ 00000000:0000D144       update_some_xram_values_todo_rename_2
+ 00000000:0000D195       update_some_xram_values_todo_rename
+ 00000000:0000D1ED       xram_fe24_plus_c0_overflows
  00000000:0000D202       code_D202
  00000000:0000D213       code_D213
- 00000000:0000D22B       code_D22B
- 00000000:0000D250       code_D250
+ 00000000:0000D22B       xram_fe02_less_than_r7
+ 00000000:0000D250       xram_fe2e_eq_81
  00000000:0000D265       code_D265
  00000000:0000D270       code_D270
  00000000:0000D284       code_D284
@@ -1826,61 +1826,61 @@
  00000000:0000D313       code_D313
  00000000:0000D335       code_D335
  00000000:0000D33E       code_D33E
- 00000000:0000D354       code_D354
+ 00000000:0000D354       update_acc_r4_r5_xram_fe00_todo_rename
  00000000:0000D35B       code_D35B
- 00000000:0000D37A       code_D37A
+ 00000000:0000D37A       inc_r7_and_loop
  00000000:0000D37D       code_D37D
- 00000000:0000D387       code_D387
+ 00000000:0000D387       update_some_xram_values_todo_rename_3
  00000000:0000D3C0       code_D3C0
  00000000:0000D3D0       code_D3D0
  00000000:0000D3F3       code_D3F3
- 00000000:0000D401       code_D401
- 00000000:0000D418       code_D418
- 00000000:0000D436       code_D436
+ 00000000:0000D401       xram_fe04_larger_than_xram_fe03
+ 00000000:0000D418       xram_fe06_less_or_equal_ef_or_greater_f9
+ 00000000:0000D436       xram_fe07_neq_2
  00000000:0000D440       code_D440
- 00000000:0000D451       code_D451
- 00000000:0000D459       code_D459
- 00000000:0000D462       code_D462
+ 00000000:0000D451       xram_fe07_neq_0
+ 00000000:0000D459       xram_fe07_neq_1
+ 00000000:0000D462       xram_fe07_neq_2_2
  00000000:0000D465       code_D465
- 00000000:0000D497       code_D497
+ 00000000:0000D497       xram_fe0a_neq_2
  00000000:0000D4A3       code_D4A3
- 00000000:0000D4B7       code_D4B7
- 00000000:0000D4BF       code_D4BF
- 00000000:0000D4CB       code_D4CB
+ 00000000:0000D4B7       xram_fe0a_neq_0
+ 00000000:0000D4BF       xram_fe0a_neq_1
+ 00000000:0000D4CB       xram_fe0a_neq_2_2
  00000000:0000D4CE       code_D4CE
- 00000000:0000D4F0       code_D4F0
- 00000000:0000D4FB       code_D4FB
- 00000000:0000D516       code_D516
- 00000000:0000D52E       code_D52E
- 00000000:0000D561       code_D561
- 00000000:0000D576       code_D576
- 00000000:0000D599       code_D599
- 00000000:0000D5A5       code_D5A5
- 00000000:0000D5A9       code_D5A9
- 00000000:0000D5C3       code_D5C3
- 00000000:0000D5C7       code_D5C7
+ 00000000:0000D4F0       xram_fe04_less_or_equal_xram_fe03
+ 00000000:0000D4FB       set_xram_faac_6b_faad_8f_fe23_0_fe24_3
+ 00000000:0000D516       set_xram_fe23_0_fe24_1
+ 00000000:0000D52E       xram_fe25_eq_10
+ 00000000:0000D561       xram_fe2a_bit_0_not_set
+ 00000000:0000D576       xram_fe22_eq_81_or_82
+ 00000000:0000D599       xram_fe27_eq_1_or_2_or_3_or_4_or_5
+ 00000000:0000D5A5       xram_fe2a_bit_0_not_set_2
+ 00000000:0000D5A9       xram_fe2a_bit_0_set
+ 00000000:0000D5C3       call_d144_and_ret
+ 00000000:0000D5C7       xram_fe25_eq_20
  00000000:0000D5D0       code_D5D0
- 00000000:0000D5E4       code_D5E4
- 00000000:0000D5EE       code_D5EE
- 00000000:0000D608       code_D608
- 00000000:0000D61A       code_D61A
- 00000000:0000D620       code_D620
- 00000000:0000D62A       code_D62A
- 00000000:0000D657       code_D657
- 00000000:0000D65D       code_D65D
- 00000000:0000D690       code_D690
- 00000000:0000D6C2       code_D6C2
+ 00000000:0000D5E4       xram_fe25_eq_3e
+ 00000000:0000D5EE       xram_fe25_eq_1a
+ 00000000:0000D608       xram_fe2e_neq_81
+ 00000000:0000D61A       r4_neq_ff_or_r5_neq_zero
+ 00000000:0000D620       r4_eq_ff_and_r5_eq_0
+ 00000000:0000D62A       xram_fe25_eq_21
+ 00000000:0000D657       r5_neq_0_or_r4_plus_1_neq_ff
+ 00000000:0000D65D       xram_fe25_eq_3b
+ 00000000:0000D690       r4_plus_1_and_r5_neq_0
+ 00000000:0000D6C2       xram_fe06_leq_ef_or_gt_f9
  00000000:0000D6D2       code_D6D2
  00000000:0000D6DF       code_D6DF
- 00000000:0000D720       code_D720
+ 00000000:0000D720       xram_fe07_neq_2
  00000000:0000D733       code_D733
- 00000000:0000D744       code_D744
- 00000000:0000D74C       code_D74C
- 00000000:0000D755       code_D755
+ 00000000:0000D744       xram_fe07_neq_nil
+ 00000000:0000D74C       xram_fe07_neq_1
+ 00000000:0000D755       xram_fe07_neq_2_2
  00000000:0000D758       code_D758
- 00000000:0000D771       code_D771
- 00000000:0000D774       code_D774
- 00000000:0000D78C       code_D78C
+ 00000000:0000D771       inc_xram_fe09_not_nil
+ 00000000:0000D774       xram_fe08_geq_r5_plus_cy
+ 00000000:0000D78C       xram_fe05_eq_nil
  00000000:0000D79E       code_D79E
  00000000:0000D7BB       code_D7BB
  00000000:0000D7E2       code_D7E2
@@ -1894,135 +1894,135 @@
  00000000:0000D866       code_D866
  00000000:0000D87F       code_D87F
  00000000:0000D882       code_D882
- 00000000:0000D894       code_D894
- 00000000:0000D8C5       code_D8C5
- 00000000:0000D8D5       code_D8D5
+ 00000000:0000D894       xram_fe25_eq_2c
+ 00000000:0000D8C5       r4_eq_0
+ 00000000:0000D8D5       r4_plus_1_neq_0
  00000000:0000D8DA       code_D8DA
  00000000:0000D8FE       code_D8FE
- 00000000:0000D908       code_D908
- 00000000:0000D919       code_D919
- 00000000:0000D96D       code_D96D
+ 00000000:0000D908       xram_fe23_neq_10
+ 00000000:0000D919       xram_f9a4_plus_r6_eq_1
+ 00000000:0000D96D       xram_fe10_neq_ff
  00000000:0000D99B       code_D99B
  00000000:0000D9E0       code_D9E0
  00000000:0000D9FA       code_D9FA
- 00000000:0000DA1B       code_DA1B
+ 00000000:0000DA1B       xram_fe13_less_or_equal_xram_fe14
  00000000:0000DA2A       code_DA2A
  00000000:0000DA39       code_DA39
- 00000000:0000DA70       code_DA70
- 00000000:0000DA83       code_DA83
- 00000000:0000DA86       code_DA86
- 00000000:0000DB08       code_DB08
+ 00000000:0000DA70       xram_f9a4_plus_r6_neq_1
+ 00000000:0000DA83       xram_f9a4_plus_xram_fe15_neq_3
+ 00000000:0000DA86       xram_f9a4_plus_xram_fe15_equal_3
+ 00000000:0000DB08       xram_fe23_eq_10_or_xram_fe10_eq_ff_trampoline
  00000000:0000DB0A       code_DB0A
  00000000:0000DB21       code_DB21
- 00000000:0000DB30       code_DB30
- 00000000:0000DB34       code_DB34
- 00000000:0000DB43       code_DB43
- 00000000:0000DBA5       code_DBA5
+ 00000000:0000DB30       update_some_xram_values_todo_rename_3_trampoline
+ 00000000:0000DB34       xram_fe23_eq_10_or_xram_fe10_eq_ff
+ 00000000:0000DB43       xram_fe25_eq_23
+ 00000000:0000DBA5       xram_f9a4_plus_xram_fe26_plus_1_neq_2
  00000000:0000DBB1       code_DBB1
- 00000000:0000DBD0       code_DBD0
- 00000000:0000DBE7       code_DBE7
- 00000000:0000DBFE       code_DBFE
+ 00000000:0000DBD0       xram_f9a4_plus_xram_fe26_plus_1_neq_0
+ 00000000:0000DBE7       xram_f9a4_plus_xram_fe26_plus_1_neq_1
+ 00000000:0000DBFE       xram_f9a4_plus_xram_fe26_plus_1_neq_2_2
  00000000:0000DC01       code_DC01
- 00000000:0000DC0B       code_DC0B
- 00000000:0000DC54       code_DC54
- 00000000:0000DC5E       code_DC5E
- 00000000:0000DC96       code_DC96
- 00000000:0000DCA4       code_DCA4
- 00000000:0000DCAE       code_DCAE
- 00000000:0000DCF3       code_DCF3
+ 00000000:0000DC0B       xram_fe25_eq_18
+ 00000000:0000DC54       new_xram_fe2d_neq_nil
+ 00000000:0000DC5E       xram_fe25_eq_14
+ 00000000:0000DC96       new_xram_fe2b_or_fe2c_neq_nil
+ 00000000:0000DCA4       r5_neq_ff_or_xram_fe2c_neq_nil
+ 00000000:0000DCAE       xram_fe25_eq_30
+ 00000000:0000DCF3       shift_left_r3_acc_pair_for_r2_times
  00000000:0000DCF8       code_DCF8
- 00000000:0000DD36       code_DD36
- 00000000:0000DD47       code_DD47
- 00000000:0000DD4F       code_DD4F
- 00000000:0000DD58       code_DD58
- 00000000:0000DD60       code_DD60
- 00000000:0000DD6B       code_DD6B
- 00000000:0000DD8C       code_DD8C
- 00000000:0000DD8D       code_DD8D
- 00000000:0000DD93       code_DD93
+ 00000000:0000DD36       some_values_dont_match
+ 00000000:0000DD47       xram_fe30_neq_nil
+ 00000000:0000DD4F       xram_fe30_neq_1
+ 00000000:0000DD58       xram_fe30_neq_5
+ 00000000:0000DD60       xram_fe30_neq_6
+ 00000000:0000DD6B       xram_fe30_neq_7
+ 00000000:0000DD8C       xram_fe30_neq_8
+ 00000000:0000DD8D       set_xram_fe23_to_zero
+ 00000000:0000DD93       set_xram_faac_fe03_fe24_set_xram_faab
  00000000:0000DDAA       code_DDAA
  00000000:0000DDBB       code_DDBB
- 00000000:0000DDD4       code_DDD4
- 00000000:0000DDEA       code_DDEA
- 00000000:0000DE88       code_DE88
- 00000000:0000DE91       code_DE91
+ 00000000:0000DDD4       flash_078f_eq_carry_bit
+ 00000000:0000DDEA       new_xram_fe06_neq_nil
+ 00000000:0000DE88       new_xram_fe06_eq_nil_or_xram_fe05_neq_26
+ 00000000:0000DE91       flash_078f_neq_carry_bit
  00000000:0000DE9B       code_DE9B
- 00000000:0000DE9C       code_DE9C
+ 00000000:0000DE9C       DDAA_trampoline
  00000000:0000DEA0       code_DEA0
- 00000000:0000DEB0       code_DEB0
- 00000000:0000DEC1       code_DEC1
+ 00000000:0000DEB0       xram_fe2b_neq_nil_or_xram_fe2c_neq_nil
+ 00000000:0000DEC1       xram_fe2b_neq_ff_or_xram_fe2c_neq_nil
  00000000:0000DECB       code_DECB
  00000000:0000DECD       code_DECD
- 00000000:0000DEEF       code_DEEF
- 00000000:0000DF0E       code_DF0E
- 00000000:0000DF12       code_DF12
+ 00000000:0000DEEF       flash_078f_neq_carry_bit_2
+ 00000000:0000DF0E       DECB_trampoline
+ 00000000:0000DF12       update_xram_fe00_fe01
  00000000:0000DF1D       code_DF1D
- 00000000:0000DF2B       code_DF2B
- 00000000:0000DF34       code_DF34
- 00000000:0000DF76       code_DF76
+ 00000000:0000DF2B       r5_is_odd
+ 00000000:0000DF34       update_xram_based_on_flash_table_values
+ 00000000:0000DF76       table_value_flash_0460_neq_2
  00000000:0000DF93       code_DF93
- 00000000:0000DFB4       code_DFB4
- 00000000:0000DFD0       code_DFD0
- 00000000:0000DFEC       code_DFEC
+ 00000000:0000DFB4       table_value_flash_0460_not_nil
+ 00000000:0000DFD0       table_value_flash_0460_neq_1
+ 00000000:0000DFEC       table_value_flash_0460_neq_2_2
  00000000:0000DFEF       code_DFEF
- 00000000:0000E052       code_E052
- 00000000:0000E06E       code_E06E
- 00000000:0000E088       code_E088
+ 00000000:0000E052       flash_0460_plus_offset_neq_nil
+ 00000000:0000E06E       flash_0460_plus_offset_neq_1
+ 00000000:0000E088       flash_0460_plus_offset_neq_3
  00000000:0000E089       code_E089
- 00000000:0000E0CB       code_E0CB
+ 00000000:0000E0CB       flash_0460_plus_offset_neq_2
  00000000:0000E0E8       code_E0E8
- 00000000:0000E109       code_E109
- 00000000:0000E125       code_E125
- 00000000:0000E141       code_E141
+ 00000000:0000E109       flash_0460_plus_offset_neq_nil_2
+ 00000000:0000E125       flash_0460_plus_offset_neq_1_2
+ 00000000:0000E141       flash_0460_plus_offset_neq_2_2
  00000000:0000E144       code_E144
- 00000000:0000E1A8       code_E1A8
- 00000000:0000E1C4       code_E1C4
- 00000000:0000E1DE       code_E1DE
+ 00000000:0000E1A8       flash_0460_plus_offset_neq_nil_3
+ 00000000:0000E1C4       flash_0460_plus_offset_neq_1_3
+ 00000000:0000E1DE       flash_0460_plus_offset_neq_3_3
  00000000:0000E1DF       code_E1DF
- 00000000:0000E202       code_E202
- 00000000:0000E241       code_E241
+ 00000000:0000E202       flash_045e_table_value_eq_1
+ 00000000:0000E241       flash_045b_table_value_neq_2_4
  00000000:0000E25E       code_E25E
- 00000000:0000E27F       code_E27F
- 00000000:0000E29B       code_E29B
- 00000000:0000E2B7       code_E2B7
+ 00000000:0000E27F       flash_045b_table_value_neq_nil_4
+ 00000000:0000E29B       flash_045b_table_value_neq_1_4
+ 00000000:0000E2B7       flash_045b_table_value_neq_2_4_2
  00000000:0000E2BA       code_E2BA
- 00000000:0000E2DE       code_E2DE
+ 00000000:0000E2DE       flash_045e_table_value_neq_1
  00000000:0000E2E1       code_E2E1
- 00000000:0000E31F       code_E31F
+ 00000000:0000E31F       flash_045b_table_value_neq_2_5
  00000000:0000E33C       code_E33C
- 00000000:0000E360       code_E360
- 00000000:0000E37C       code_E37C
- 00000000:0000E398       code_E398
+ 00000000:0000E360       flash_045b_table_value_neq_nil_5
+ 00000000:0000E37C       flash_045b_table_value_neq_1_5
+ 00000000:0000E398       flash_045b_table_value_neq_2_5_2
  00000000:0000E39B       code_E39B
- 00000000:0000E39C       code_E39C
- 00000000:0000E3A9       code_E3A9
- 00000000:0000E3CB       code_E3CB
- 00000000:0000E3D8       code_E3D8
- 00000000:0000E402       code_E402
- 00000000:0000E467       code_E467
+ 00000000:0000E39C       xram_fe30_eq_nil
+ 00000000:0000E3A9       xram_fe30_eq_1
+ 00000000:0000E3CB       xram_fe30_eq_5
+ 00000000:0000E3D8       xram_fe30_eq_6
+ 00000000:0000E402       xram_fe05_less_than_2
+ 00000000:0000E467       flash_045b_table_value_neq_2
  00000000:0000E484       code_E484
- 00000000:0000E4A5       code_E4A5
- 00000000:0000E4C1       code_E4C1
- 00000000:0000E4DD       code_E4DD
+ 00000000:0000E4A5       flash_045b_table_value_neq_nil
+ 00000000:0000E4C1       flash_045b_table_value_neq_1
+ 00000000:0000E4DD       flash_045b_table_value_neq_2_2
  00000000:0000E4E0       code_E4E0
- 00000000:0000E553       code_E553
- 00000000:0000E56F       code_E56F
- 00000000:0000E589       code_E589
- 00000000:0000E593       code_E593
- 00000000:0000E60F       code_E60F
- 00000000:0000E62B       code_E62B
- 00000000:0000E645       code_E645
- 00000000:0000E651       code_E651
- 00000000:0000E665       code_E665
+ 00000000:0000E553       flash_045b_table_value_neq_nil_3
+ 00000000:0000E56F       flash_045b_table_value_neq_1_3
+ 00000000:0000E589       flash_045b_table_value_neq_3_3
+ 00000000:0000E593       xram_fe30_eq_7_or_8
+ 00000000:0000E60F       flash_045b_table_value_neq_nil_6
+ 00000000:0000E62B       flash_045b_table_value_neq_1_6
+ 00000000:0000E645       flash_045b_table_value_neq_3_6
+ 00000000:0000E651       copy_xram_word_fe2f_to_faad
+ 00000000:0000E665       copy_ram_to_xram_r2_bytes
  00000000:0000E66D       code_E66D
- 00000000:0000E677       code_E677
- 00000000:0000E687       code_E687
- 00000000:0000E698       code_E698
- 00000000:0000E6A8       code_E6A8
+ 00000000:0000E677       copy_xram_to_xram_r2_bytes
+ 00000000:0000E687       copy_flash_to_xram_r2_bytes
+ 00000000:0000E698       copy_xram_to_xram_r2_bytes_2
+ 00000000:0000E6A8       copy_data_within_xram
  00000000:0000E6B0       code_E6B0
- 00000000:0000E6BA       code_E6BA
- 00000000:0000E6CA       code_E6CA
- 00000000:0000E6EB       code_E6EB
+ 00000000:0000E6BA       copy_xram_to_xram_r2_bytes_3
+ 00000000:0000E6CA       copy_xram_to_xram_r2_bytes_4
+ 00000000:0000E6EB       set_frame_to_flash_045b_table_values
  00000000:0000F004       fail_control_loop_trampoline
  00000000:0000F152       code_F152
  00000000:0000F163       code_F163
